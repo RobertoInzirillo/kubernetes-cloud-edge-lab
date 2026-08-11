@@ -1,9 +1,5 @@
 # E02 — Attribuzione delle NetworkPolicy in K3s/Flannel
 
-**Data:** 4 agosto 2026<br>
-**Identificativo:** `20260804T160803Z`<br>
-**Esito:** completato e verificato
-
 ## 1. Domanda sperimentale
 
 Mantenendo invariati K3s, Flannel VXLAN, topologia e workload, l'enforcement

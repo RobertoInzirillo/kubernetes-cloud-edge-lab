@@ -1,8 +1,5 @@
 # E01 — Flannel VXLAN
 
-**Data:** 1–2 agosto 2026<br>
-**Esito:** completato e verificato
-
 ## 1. Domanda sperimentale
 
 Come viene configurata la rete dei Pod e quale percorso segue un pacchetto

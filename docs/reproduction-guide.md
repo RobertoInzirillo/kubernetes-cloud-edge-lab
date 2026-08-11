@@ -8,12 +8,10 @@ indicato e, salvo diversa indicazione, dalla radice della repository clonata.
 Ogni esperimento usa un cluster distinto; eliminarlo al termine evita che
 interfacce, route o regole residue influenzino il caso successivo.
 
-La guida ricostruisce una procedura pulita a partire dalle configurazioni
-finali validate. Riproduce configurazioni, esperimenti, osservazioni e
-attribuzioni; non ripercorre cronologicamente errori, tentativi intermedi o
-recovery non necessari al risultato sperimentale. Per questo non replica gli
-aggiornamenti Docker intermedi, avvia Calico dalla configurazione finale
-consolidata e non riesegue volontariamente gli errori procedurali storici.
+La guida presenta la procedura consolidata necessaria a riprodurre
+configurazioni, esperimenti, osservazioni e attribuzioni. Non ricostruisce la
+cronologia delle sessioni di sviluppo o dei tentativi intermedi che non
+influiscono sul risultato sperimentale.
 
 Percorso di lavoro:
 
@@ -24,11 +22,11 @@ Percorso di lavoro:
 5. eseguire E01, E02, E10 ed E20 in sequenza;
 6. controllare la rimozione dei cluster creati.
 
-La configurazione sperimentale descritta è quella validata nel laboratorio
-originale. Nota temporanea: il manuale è stato verificato staticamente; la
-nuova sequenza completa sarà provata separatamente su un ambiente pulito. Gli
-output indicati come risultati appartengono agli esperimenti originali e non
-vanno assunti come esito di una nuova replica.
+La configurazione sperimentale descritta è quella validata nel laboratorio.
+La procedura è stata controllata staticamente ed è attualmente in validazione
+end-to-end su un secondo sistema pulito. Gli output indicati come risultati
+appartengono agli esperimenti pubblicati e non vanno assunti come esito di una
+nuova replica.
 
 ## 2. Ambiente di riferimento
 
@@ -37,8 +35,7 @@ architettura `amd64`, kernel `7.0.0-28-generic`, control group v2 (cgroup v2)
 e Berkeley Packet Filter filesystem (bpffs). La procedura Advanced Package
 Tool (APT) seguente è scritta per Ubuntu Noble `amd64` e per il sistema
 compatibile usato nel laboratorio. Altre distribuzioni Linux possono essere
-compatibili, ma i loro comandi di installazione non sono stati verificati in
-questa campagna.
+compatibili, ma i loro comandi di installazione non sono stati verificati.
 
 La macchina deve avere accesso a Internet per repository APT, registry delle
 immagini, release binarie e chart Helm. Le catture richiedono `sudo` perché
@@ -88,14 +85,14 @@ responsabilità; qui i termini sono usati soltanto per leggere i comandi.
 
 Pod IP, ClusterIP dei Service, indirizzi underlay Docker, process identifier
 (PID) dei nodi, sandbox, veth, porte TCP sorgenti e security identity possono
-cambiare dopo una ricreazione o un riavvio. Non copiarli da output storici.
+cambiare dopo una ricreazione o un riavvio. Non copiarli dagli output
+pubblicati.
 Le sezioni operative mostrano come rileggerli prima di ogni controllo.
 
 ## 4. Preparazione dell'host
 
-Gli strumenti richiesti erano già presenti sull'host validato. Su Ubuntu
-24.04 Noble o sul sistema compatibile di riferimento, installare prima i
-pacchetti che li forniscono:
+Su Ubuntu 24.04 Noble o sul sistema compatibile di riferimento, installare i
+pacchetti che forniscono le utility richieste:
 
 ```bash
 sudo apt-get update
@@ -107,8 +104,7 @@ sudo apt-get install -y \
 Questo passaggio prepara utility di download e verifica, strumenti per
 namespace e rete, diagnostica dei processi e ispezione del kernel. È un
 prerequisito operativo della guida pubblica, non una variabile scientifica.
-Nota temporanea: il blocco APT, non necessario sull'host originale già
-predisposto, sarà verificato nella prova su ambiente pulito.
+Il blocco APT è incluso nella validazione end-to-end corrente.
 
 Verificare sistema operativo, architettura e caratteristiche di base:
 
@@ -264,8 +260,8 @@ e accedere nuovamente.
 ### 5.3 kubectl
 
 kubectl `v1.34.9` usa la stessa minor di Kubernetes/K3s del laboratorio. Si
-scaricano binario e checksum pubblicato, poi si confrontano con il valore
-registrato nella campagna:
+scaricano binario e checksum pubblicato, poi si confrontano con il checksum
+atteso:
 
 ```bash
 export KUBECTL_FILE="$TOOLCHAIN_DIR/kubectl-v1.34.9-linux-amd64"
@@ -399,9 +395,9 @@ comparire errori evidenti del daemon.
 | Calico | `v3.32.1` |
 | Cilium | `1.19.6` |
 
-Docker era `29.6.2` in E01/E02, `29.7.1` in E10 e `29.7.2` in E20. Non è
-necessario riprodurre gli aggiornamenti intermedi: la variazione storica è
-documentata come limite, non come variabile sperimentale.
+Docker era `29.6.2` in E01/E02, `29.7.1` in E10 e `29.7.2` in E20. Questa
+variazione dell'ambiente tra le diverse esecuzioni è documentata come limite,
+non come variabile sperimentale.
 
 ### 6.1 Immagine K3s
 
@@ -653,8 +649,8 @@ do
 done
 ```
 
-La prova DNS originale ha usato il nome assoluto, con il punto finale, per
-evitare che un search suffix dell'host alterasse la risoluzione:
+Usare il nome assoluto, con il punto finale, per evitare che un search suffix
+dell'host alteri la risoluzione:
 
 ```bash
 kubectl --context "$TESI_CONTEXT" exec -n net-lab client -- \
@@ -668,12 +664,11 @@ provato; non costituisce un'analisi generale del DNS del cluster.
 
 ### 8.4 Identificativi runtime, veth e cattura inter-node
 
-Prima della cattura ricostruiamo l'associazione Pod–veth. La procedura seguente
-deriva dal metodo finale verificato: individua la sandbox tramite Container
-Runtime Interface (CRI), estrae il PID runtime soltanto dopo il campo
-`netNamespaceClosed`, entra nel suo namespace e usa l'ifindex peer di `eth0`
-per trovare la veth nel nodo. Il primo parser storico, che selezionava il
-valore `pid=1` da `namespace_options`, non viene riproposto.
+Prima della cattura ricostruiamo l'associazione Pod–veth. La procedura individua
+la sandbox tramite Container Runtime Interface (CRI) ed estrae il PID runtime
+soltanto dopo il campo `netNamespaceClosed`, così da non confonderlo con altri
+valori numerici precedenti. Entra quindi nel namespace e usa l'ifindex peer di
+`eth0` per trovare la veth nel nodo.
 
 ```bash
 map_pod_veth() {
@@ -713,8 +708,8 @@ map_pod_veth server-b k3d-tesi-flannel-vxlan-agent-1
 ```
 
 Per ogni Pod controllare che `eth0` mostri il Pod IP corrente e che l'ultima
-riga individui una sola veth del nodo. Nota temporanea: il blocco pubblico
-Pod-veth attende la prova completa su ambiente pulito.
+riga individui una sola veth del nodo. Il blocco Pod–veth è incluso nella
+validazione end-to-end corrente.
 
 Per correlare il GET inter-node al traffico VXLAN UDP 8472, leggiamo poi PID
 host dei nodi e indirizzi underlay correnti:
@@ -919,14 +914,10 @@ controllo separa l'API dichiarativa dall'enforcement e attribuisce il
 comportamento del caso ON al controller K3s basato su kube-router, non a
 Flannel.
 
-Il confronto originale ha acquisito snapshot distinti per stato e ne ha
-normalizzato i campi effimeri. I file pubblici non conservano lo script esatto
-di normalizzazione; per una nuova replica salvare integralmente gli output
-dei comandi mostrati e documentare qualunque trasformazione prima di usare un
-confronto byte per byte.
-
-L'esecuzione originale non rimuoveva singolarmente le due NetworkPolicy:
-venivano eliminate insieme al cluster dedicato.
+Per rendere confrontabili gli snapshot dei tre stati, salvare integralmente
+gli output dei comandi mostrati e documentare qualunque normalizzazione dei
+campi effimeri prima di usare un confronto byte per byte. La rimozione elimina
+le due NetworkPolicy insieme al cluster dedicato.
 
 ```bash
 k3d cluster delete tesi-e02-flannel-netpol-off
@@ -945,14 +936,14 @@ I due chart usati erano:
 563f75f29bdbb13dde13a1d51244b96f42b4fe0eef5be763fb55fa9756f31c93  tigera-operator-v3.32.1.tgz
 ```
 
-La documentazione dell'esperimento originale registra repository, nomi,
-versione e checksum dei due chart, ma non il comando usato per scaricarli. La
+Per Calico 3.32.1 vengono utilizzati i chart ufficiali
+`tigera-operator-v3.32.1.tgz` e
+`crd.projectcalico.org.v1-v3.32.1.tgz`. La
 [release upstream `v3.32.1`](https://github.com/projectcalico/calico/releases/tag/v3.32.1)
-pubblica esattamente `tigera-operator-v3.32.1.tgz` e
-`crd.projectcalico.org.v1-v3.32.1.tgz`; la
+pubblica entrambi gli artefatti e la
 [documentazione ufficiale Helm di Calico](https://docs.tigera.io/calico/latest/getting-started/kubernetes/helm)
-spiega il repository `projectcalico`. La procedura pubblica usa quindi
-`helm pull` per salvarli localmente prima dell'installazione:
+definisce il repository `projectcalico`. I chart vengono scaricati localmente
+con `helm pull` e verificati tramite i checksum SHA-256 riportati di seguito:
 
 ```bash
 export CALICO_CHART_DIR="$(mktemp -d)"
@@ -979,7 +970,7 @@ helm lint "$CALICO_OPERATOR_CHART"
 bash -n scripts/cni/calico/pin-tigera-operator-image.sh
 ```
 
-Gli hash devono coincidere esattamente con quelli osservati nell'esperimento.
+Gli hash devono coincidere esattamente con i checksum attesi.
 In caso contrario non installare i chart: una nuova pubblicazione con la
 stessa versione non può essere assunta equivalente. Prima di creare il
 cluster controlliamo inoltre rendering, valori finali e pin dell'immagine
@@ -1053,13 +1044,10 @@ kubectl --context "$TESI_CONTEXT" apply \
   -f manifests/cni/calico/installation.yaml
 ```
 
-Questa è la sequenza consolidata ricavata dai file finali. Nell'evento
-originale l'operator fu dapprima installato senza Calico API server; il
-controllo si fermò prima del workload, poi ImageSet e release furono aggiornati per
-abilitarlo. Lo stato finale è verificato, ma la sequenza consolidata sopra non
-è stata rieseguita da zero come prova indipendente. Se non converge, fermarsi
-e conservare lo stato; non ricostruire la transizione storica con valori non
-più presenti.
+La sequenza applica direttamente la configurazione finale consolidata. È
+inclusa nella validazione end-to-end corrente su un sistema pulito; non è
+ancora dichiarata validata in quella forma. Se non converge, fermarsi e
+conservare lo stato per la diagnosi.
 
 ### 10.3 Verifica di Calico, CNI e IPAM
 
@@ -1451,8 +1439,10 @@ pgrep -af 'tcpdump|nsenter|timeout'
 Correlare il flusso su veth `lxc*`, `cilium_vxlan` ed `eth0`, con IP dei Pod
 all'interno e UDP 8472 fra gli underlay. In questa modalità il decoder
 `tcpdump` può mostrare il campo VXLAN come `OTV instance`: non interpretarlo
-come assenza del VNI. Nell'esecuzione originale i valori 21766 e 16090
-coincidevano con le security identity delle rispettive sorgenti.
+come assenza del VNI. Nelle
+[evidenze E20 pubblicate](../experiments/cni/e20-cilium-vxlan/evidence/) i
+valori osservati sono 21766 e 16090 e coincidono con le security identity delle
+rispettive sorgenti; in una nuova replica possono cambiare.
 
 ### 11.6 Attribuzione del Service
 
@@ -1597,7 +1587,7 @@ kubectl --context "$TESI_CONTEXT" exec -n kube-system \
 ```
 
 Se e solo se le tre viste conservano un tunnel endpoint diverso dall'underlay
-Docker corrente, il recovery osservato consiste nel ricreare il solo Pod
+Docker corrente, la procedura di ripristino consiste nel ricreare il solo Pod
 Cilium di `agent-1`:
 
 ```bash
@@ -1607,9 +1597,10 @@ kubectl --context "$TESI_CONTEXT" rollout status \
 ```
 
 Rileggere Pod Cilium, `CiliumNode`, node list e IP cache, poi ripetere ICMP e
-HTTP inter-node. Nell'episodio originale questo riallineamento ha ripristinato
-i flussi; la causa della mancata riconciliazione automatica non è stata
-determinata e l'evento non costituisce una proprietà generale di Cilium.
+HTTP inter-node. Nelle evidenze E20 questo riallineamento ha ripristinato i
+flussi; la causa della mancata riconciliazione automatica non è stata
+determinata e il comportamento non costituisce una proprietà generale di
+Cilium.
 
 ### 11.9 Rimozione del cluster
 
@@ -1659,7 +1650,7 @@ login.
 **Controllo:** `id -nG` deve contenere `docker`; `stat -c '%a %U:%G %n'
 /run/docker.sock` deve mostrare `root:docker` e modo `660`.
 
-**Recovery verificata:** logout/login; per un controllo temporaneo usare
+**Ripristino verificato:** logout/login; per un controllo temporaneo usare
 `sg docker -c 'docker version'`.
 
 #### Nodi NotReady durante il bootstrap di Calico o Cilium
@@ -1673,7 +1664,7 @@ ancora installata.
 **Controllo:** verificare che il cluster API risponda e che l'assenza del CNI
 sia la causa riportata dai Pod o dagli eventi.
 
-**Recovery:** completare l'installazione prevista del CNI e attendere il
+**Soluzione:** completare l'installazione prevista del CNI e attendere il
 timeout indicato. Non aggiungere Flannel né un secondo plugin per rendere
 prematuramente `Ready` i nodi.
 
@@ -1687,7 +1678,7 @@ una veth non più esistente.
 **Controllo:** ripetere `docker inspect`, `kubectl get pods -o wide`,
 `crictl pods`, `CiliumEndpoint` o la funzione Pod–veth pertinente.
 
-**Recovery:** rigenerare tutte le variabili runtime; non correggere
+**Soluzione:** rigenerare tutte le variabili runtime; non correggere
 manualmente route o stato CNI sulla base dei valori storici.
 
 #### DNS influenzato da un search suffix
@@ -1699,7 +1690,7 @@ un indirizzo estraneo al cluster.
 
 **Controllo:** confrontare `nslookup` sul nome con e senza punto finale.
 
-**Recovery verificata:** usare il nome assoluto
+**Soluzione verificata:** usare il nome assoluto
 `servers.net-lab.svc.cluster.local.` per la prova E01.
 
 #### Terminazione di tcpdump impedita dal profilo di sicurezza
@@ -1712,13 +1703,13 @@ un indirizzo estraneo al cluster.
 **Controllo:** leggere `cat /proc/$$/attr/current`, controllare i processi con
 `pgrep` e consultare gli eventuali dinieghi del kernel.
 
-**Recovery:** usare un terminale non confinato compatibile con le policy
+**Soluzione:** usare un terminale non confinato compatibile con le policy
 dell'host oppure configurare una regola locale strettamente limitata ai
-segnali necessari. Non disabilitare AppArmor. La regola usata sul particolare
-host originale non è un prerequisito generale.
+segnali necessari. Non disabilitare AppArmor. Una regola AppArmor locale non
+è un prerequisito generale.
 
 L'incoerenza underlay osservata una volta in E20 è trattata separatamente
-nella sezione 11.8, perché diagnosi e recovery riguardano soltanto quel
+nella sezione 11.8, perché diagnosi e ripristino riguardano soltanto quel
 sintomo.
 
 ### 12.3 Dati da conservare

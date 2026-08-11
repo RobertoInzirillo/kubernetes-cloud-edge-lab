@@ -13,13 +13,13 @@ configurazioni precise, non i progetti in astratto.
 
 ## Risultati disponibili
 
-| ID | Configurazione o domanda | Esito |
-|---|---|---|
-| E01 | Flannel VXLAN: percorso Pod-to-Pod intra-node e inter-node | Completato |
-| E02 | NetworkPolicy K3s/Flannel con controller attivo e disabilitato | Completato |
-| E10 | Calico 3.32.1, VXLAN e data plane Linux iptables | Completato |
-| E20 | Cilium 1.19.6, VXLAN e data plane eBPF | Completato |
-| E30 | Confronto controllato derivato da E01, E02, E10 ed E20 | Completato |
+| ID | Configurazione o domanda |
+|---|---|
+| E01 | Flannel VXLAN: percorso Pod-to-Pod intra-node e inter-node |
+| E02 | NetworkPolicy K3s/Flannel con controller attivo e disabilitato |
+| E10 | Calico 3.32.1, VXLAN e data plane Linux iptables |
+| E20 | Cilium 1.19.6, VXLAN e data plane eBPF |
+| E30 | Confronto controllato derivato da E01, E02, E10 ed E20 |
 
 E30 è un confronto analitico: non ha creato cluster, generato traffico o
 prodotto benchmark. Il routing Flannel `host-gw`, Calico BGP/no-overlay, i
@@ -84,5 +84,5 @@ BusyBox sono referenziate mediante digest. Calico e Cilium hanno artefatti
 versionati dedicati.
 
 Ogni esperimento include una selezione delle evidenze originali necessarie a
-sostenere i risultati, con indice pubblico e SHA-256. La selezione non è un
-dataset esaustivo di ogni comando o tentativo della campagna storica.
+sostenere i risultati, con indice pubblico e SHA-256. La selezione non
+comprende tutti i comandi e gli output prodotti durante lo sviluppo.

@@ -1,9 +1,5 @@
 # E10 — Calico VXLAN con data plane Linux
 
-**Data:** 5 agosto 2026<br>
-**Identificativo:** `20260805T160549Z`<br>
-**Esito:** completato e verificato
-
 ## 1. Domanda sperimentale
 
 Mantenendo invariati K3s, topologia, CIDR, workload, kube-proxy e matrici di
@@ -65,9 +61,8 @@ Download e verifica dei chart, rendering, installazione dell'operator,
 ImageSet, Installation, API server e prove del data plane sono descritti nella
 [sezione E10 del manuale](../../../docs/reproduction-guide.md#10-e10--calico-vxlan-con-data-plane-linux).
 
-La configurazione pubblica incorpora lo stato finale con Calico API server
-abilitato. La transizione intermedia osservata durante l'esperimento non è una
-fase richiesta della riproduzione.
+La configurazione pubblica applica direttamente lo stato consolidato con
+Calico API server abilitato.
 
 ## 6. Risultati osservati
 
@@ -102,8 +97,8 @@ ha realizzato i flussi Service osservati.
 
 La [selezione delle evidenze originali](evidence/) documenta configurazione
 finale, CNI/IPAM, percorso L3/VXLAN, attribuzione Service e NetworkPolicy.
-L'indice distingue output, catture, matrici e riepiloghi originali, indicando
-anche il materiale procedurale escluso; `SHA256SUMS` ne verifica l'integrità.
+L'indice distingue output, catture, matrici e riepiloghi originali e ne
+definisce il perimetro; `SHA256SUMS` verifica l'integrità della selezione.
 
 ## 9. Limiti
 
@@ -112,7 +107,7 @@ anche il materiale procedurale escluso; `SHA256SUMS` ne verifica l'integrità.
 - nodi k3d containerizzati, kernel condiviso e underlay Docker;
 - nessuna conclusione su prestazioni, scala o fabric fisico;
 - Docker `29.7.1` differisce dalla versione E01/E02;
-- identificativi runtime e contatori validi soltanto per la sessione.
+- identificativi runtime e contatori da rilevare nuovamente in ogni replica.
 
 ## 10. Rimozione
 

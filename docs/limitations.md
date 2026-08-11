@@ -58,5 +58,5 @@ risultato negativo su tali soluzioni.
 ## Selezione delle evidenze pubbliche
 
 La repository conserva una selezione degli output originali necessari a
-sostenere le conclusioni. Il materiale diagnostico ridondante, procedurale o
-non autorevole non fa parte del dataset pubblico.
+sostenere le conclusioni. Il materiale diagnostico preliminare, ridondante o
+non necessario alle conclusioni non fa parte del dataset pubblico.

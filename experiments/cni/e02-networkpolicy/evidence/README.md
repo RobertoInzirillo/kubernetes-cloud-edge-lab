@@ -3,7 +3,8 @@
 La selezione mantiene separati il cluster con controller NetworkPolicy K3s
 attivo (`policy-on/`) e quello con controller disabilitato (`policy-off/`). I
 file nelle due sottodirectory sono output originali byte-identici. Questo
-indice e `SHA256SUMS` sono metadata della selezione pubblica.
+README e `SHA256SUMS` sono stati aggiunti per indicizzare e verificare la
+selezione.
 
 | File o gruppo | Tipo | Affermazione sostenuta |
 |---|---|---|
@@ -21,4 +22,5 @@ indice e `SHA256SUMS` sono metadata della selezione pubblica.
 Gli snapshot completi e i delta più estesi che duplicavano queste prove non
 sono inclusi. I file vuoti sotto `policy-off/` sono intenzionali: il loro hash
 SHA-256 documenta l'assenza di differenze nel perimetro filtrato. Nomi di
-catene, IPSet, contatori e indirizzi appartengono alla sola sessione originale.
+catene, IPSet, contatori e indirizzi sono valori runtime e possono differire
+in una nuova replica.

@@ -3,7 +3,7 @@
 ## Scopo e perimetro
 
 Questo documento presenta E30, confronto analitico derivato esclusivamente da
-quattro esperimenti già verificati:
+quattro esperimenti:
 
 - [E01 — Flannel VXLAN](../experiments/cni/e01-flannel-vxlan/README.md);
 - [E02 — attribuzione NetworkPolicy](../experiments/cni/e02-networkpolicy/README.md);

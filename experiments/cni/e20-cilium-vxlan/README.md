@@ -1,9 +1,5 @@
 # E20 — Cilium VXLAN con data plane eBPF
 
-**Data:** 7–9 agosto 2026<br>
-**Identificativo:** `20260807T144915Z`<br>
-**Esito:** completato e verificato
-
 ## 1. Domanda sperimentale
 
 Mantenendo K3s, topologia, CIDR, workload, VXLAN, kube-proxy e matrici di
@@ -54,7 +50,7 @@ agent-1: Cilium agent, server-b
 Un solo Cilium Operator coordinava l'allocazione. Il Service `servers`
 selezionava i due endpoint HTTP. Gli
 identificativi `CiliumEndpoint`, le
-security identity, i Pod IP e le veth venivano riletti a ogni sessione.
+security identity, i Pod IP e le veth devono essere riletti a ogni esecuzione.
 
 ## 5. Riproduzione
 
@@ -100,13 +96,13 @@ Le revisioni endpoint sono avanzate da 1 a 2 e 3. Policy map eBPF, contatori e
 verdetti Hubble `FORWARDED` o `POLICY_DENIED` erano coerenti con ciascun
 flusso.
 
-### Anomalia e recovery
+### Anomalia e ripristino
 
 Dopo un riavvio Docker, `agent-1` aveva underlay corrente `172.19.0.3`, mentre
 `CiliumNode`, vista nodi e IP cache conservavano `172.19.0.2` come tunnel
 endpoint. ICMP e HTTP inter-node fallivano. La ricreazione del solo Pod Cilium
 su `agent-1` ha riallineato lo stato a `172.19.0.3`; ICMP e HTTP sono tornati
-funzionanti. Il recovery è verificato, la causa della mancata riconciliazione
+funzionanti. Il ripristino è verificato, la causa della mancata riconciliazione
 automatica non è stata determinata.
 
 ## 7. Attribuzione
@@ -133,8 +129,8 @@ assenti.
 La [selezione delle evidenze originali](evidence/) copre configurazione eBPF,
 IPAM, percorsi, cattura VXLAN, Hubble, attribuzione Service e matrice
 NetworkPolicy. L'indice conserva soltanto tre output mirati per l'anomalia
-underlay e separa gli originali dai metadata editoriali; `SHA256SUMS` ne
-verifica l'integrità.
+underlay e distingue gli output originali dal README; `SHA256SUMS` ne verifica
+l'integrità.
 
 ## 9. Limiti
 
@@ -145,7 +141,7 @@ verifica l'integrità.
 - attribuzione Service limitata a due connessioni ClusterIP dal Pod client;
 - anomalia di riconciliazione circoscritta all'ambiente osservato, con causa
   non determinata;
-- identificativi e indirizzi validi soltanto per la sessione.
+- identificativi e indirizzi da rilevare nuovamente in ogni replica.
 
 ## 10. Rimozione
 
