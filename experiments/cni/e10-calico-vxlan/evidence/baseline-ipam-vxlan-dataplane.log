@@ -1,0 +1,65 @@
+=== IPPOOL ===
+apiVersion: v1
+items:
+- apiVersion: crd.projectcalico.org/v1
+  kind: IPPool
+  metadata:
+    annotations:
+      projectcalico.org/metadata: '{"generation":1,"creationTimestamp":"2026-08-05T16:28:24Z","labels":{"app.kubernetes.io/managed-by":"tigera-operator"}}'
+    creationTimestamp: "2026-08-05T16:28:24Z"
+    generation: 1
+    name: default-ipv4-ippool
+    resourceVersion: "2478"
+    uid: 5343a510-a45a-4ead-b684-5059bd1f6850
+  spec:
+    allowedUses:
+    - Workload
+    - Tunnel
+    assignmentMode: Automatic
+    blockSize: 26
+    cidr: 10.42.0.0/16
+    ipipMode: Never
+    natOutgoing: true
+    nodeSelector: all()
+    vxlanMode: Always
+kind: List
+metadata:
+  resourceVersion: ""
+=== BLOCK AFFINITIES ===
+NAME                                                  AGE
+k3d-tesi-e10-calico-vxlan-agent-0-10-42-113-64-26     24m
+k3d-tesi-e10-calico-vxlan-agent-1-10-42-144-128-26    24m
+k3d-tesi-e10-calico-vxlan-server-0-10-42-219-192-26   24m
+=== IPAM BLOCKS ===
+NAME               CIDR               AFFINITY
+10-42-113-64-26    10.42.113.64/26    host:k3d-tesi-e10-calico-vxlan-agent-0
+10-42-144-128-26   10.42.144.128/26   host:k3d-tesi-e10-calico-vxlan-agent-1
+10-42-219-192-26   10.42.219.192/26   host:k3d-tesi-e10-calico-vxlan-server-0
+=== KUBERNETES NODE CALICO ANNOTATIONS ===
+k3d-tesi-e10-calico-vxlan-agent-0	172.19.0.3/16	10.42.113.64
+k3d-tesi-e10-calico-vxlan-agent-1	172.19.0.4/16	10.42.144.128
+k3d-tesi-e10-calico-vxlan-server-0	172.19.0.2/16	10.42.219.192
+=== FELIX ===
+apiVersion: crd.projectcalico.org/v1
+kind: FelixConfiguration
+metadata:
+  annotations:
+    operator.tigera.io/bpfEnabled: "false"
+    projectcalico.org/metadata: '{"generation":2,"creationTimestamp":"2026-08-05T16:28:25Z","annotations":{"operator.tigera.io/bpfEnabled":"false"},"managedFields":[{"manager":"operator","operation":"Update","apiVersion":"crd.projectcalico.org/v1","time":"2026-08-05T16:28:26Z","fieldsType":"FieldsV1","fieldsV1":{"f:metadata":{"f:annotations":{".":{},"f:operator.tigera.io/bpfEnabled":{}}},"f:spec":{".":{},"f:bpfEnabled":{},"f:healthPort":{},"f:nftablesMode":{},"f:vxlanPort":{},"f:vxlanVNI":{}}}}]}'
+  creationTimestamp: "2026-08-05T16:28:25Z"
+  generation: 3
+  name: default
+  resourceVersion: "1342"
+  uid: b7f14455-5497-44f7-bad8-b23ed3fa2497
+spec:
+  bpfConnectTimeLoadBalancing: TCP
+  bpfEnabled: false
+  bpfHostNetworkedNATWithoutCTLB: Enabled
+  bpfLogLevel: ""
+  floatingIPs: Disabled
+  healthPort: 9099
+  logSeverityScreen: Info
+  nftablesMode: Disabled
+  reportingInterval: 0s
+  vxlanPort: 4789
+  vxlanVNI: 4096

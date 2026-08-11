@@ -1,0 +1,473 @@
+tcpdump: data link type LINUX_SLL2
+tcpdump: listening on any, link-type LINUX_SLL2 (Linux cooked v2), snapshot length 262144 bytes
+2026-08-02 20:30:56.081535 veth588e6b4f P   ifindex 6 26:0d:33:5f:ee:48 ethertype IPv4 (0x0800), length 80: (tos 0x0, ttl 64, id 15364, offset 0, flags [DF], proto TCP (6), length 60)
+    10.42.0.6.42202 > 10.42.1.4.8080: Flags [S], cksum 0x158c (incorrect -> 0x07f0), seq 1922067245, win 64860, options [mss 1410,sackOK,TS val 2888687406 ecr 0,nop,wscale 10], length 0
+E..<<.@.@..Z
+*..
+*......r.k-.......\...........
+.-.........
+
+2026-08-02 20:30:56.081549 cni0  In  ifindex 4 26:0d:33:5f:ee:48 ethertype IPv4 (0x0800), length 80: (tos 0x0, ttl 64, id 15364, offset 0, flags [DF], proto TCP (6), length 60)
+    10.42.0.6.42202 > 10.42.1.4.8080: Flags [S], cksum 0x158c (incorrect -> 0x07f0), seq 1922067245, win 64860, options [mss 1410,sackOK,TS val 2888687406 ecr 0,nop,wscale 10], length 0
+E..<<.@.@..Z
+*..
+*......r.k-.......\...........
+.-.........
+
+2026-08-02 20:30:56.081571 flannel.1 Out ifindex 3 3e:d8:86:9d:74:7c ethertype IPv4 (0x0800), length 80: (tos 0x0, ttl 63, id 15364, offset 0, flags [DF], proto TCP (6), length 60)
+    10.42.0.6.42202 > 10.42.1.4.8080: Flags [S], cksum 0x158c (incorrect -> 0x07f0), seq 1922067245, win 64860, options [mss 1410,sackOK,TS val 2888687406 ecr 0,nop,wscale 10], length 0
+E..<<.@.?..Z
+*..
+*......r.k-.......\...........
+.-.........
+
+2026-08-02 20:30:56.081585 eth0  Out ifindex 2 6a:35:97:68:b1:ad ethertype IPv4 (0x0800), length 130: (tos 0x0, ttl 64, id 12558, offset 0, flags [none], proto UDP (17), length 110)
+    172.18.0.2.54902 > 172.18.0.4.8472: [bad udp cksum 0x1a48 -> 0x0cac!] OTV, flags [I] (0x08), overlay 0, instance 1
+3e:d8:86:9d:74:7c > de:77:b4:92:cc:c7, ethertype IPv4 (0x0800), length 74: (tos 0x0, ttl 63, id 15364, offset 0, flags [DF], proto TCP (6), length 60)
+    10.42.0.6.42202 > 10.42.1.4.8080: Flags [S], cksum 0x158c (incorrect -> 0x07f0), seq 1922067245, win 64860, options [mss 1410,sackOK,TS val 2888687406 ecr 0,nop,wscale 10], length 0
+E..n1...@..F.........v!..Z.H.........w....>...t|..E..<<.@.?..Z
+*..
+*......r.k-.......\...........
+.-.........
+
+2026-08-02 20:30:56.081715 eth0  In  ifindex 2 9e:c7:a2:1e:92:8e ethertype IPv4 (0x0800), length 130: (tos 0x0, ttl 64, id 32371, offset 0, flags [none], proto UDP (17), length 110)
+    172.18.0.4.37710 > 172.18.0.2.8472: [bad udp cksum 0x5d70 -> 0xeebc!] OTV, flags [I] (0x08), overlay 0, instance 1
+de:77:b4:92:cc:c7 > 3e:d8:86:9d:74:7c, ethertype IPv4 (0x0800), length 74: (tos 0x0, ttl 63, id 0, offset 0, flags [DF], proto TCP (6), length 60)
+    10.42.1.4.8080 > 10.42.0.6.42202: Flags [S.], cksum 0x158c (incorrect -> 0xa6d8), seq 3293022983, ack 1922067246, win 64308, options [mss 1410,sackOK,TS val 866181182 ecr 2888687406,nop,wscale 10], length 0
+E..n~s..@............N!..Z]p........>...t|.w......E..<..@.?.&_
+*..
+*.......G..r.k....4...........
+3..>.-.....
+
+2026-08-02 20:30:56.081725 flannel.1 In  ifindex 3 de:77:b4:92:cc:c7 ethertype IPv4 (0x0800), length 80: (tos 0x0, ttl 63, id 0, offset 0, flags [DF], proto TCP (6), length 60)
+    10.42.1.4.8080 > 10.42.0.6.42202: Flags [S.], cksum 0x158c (incorrect -> 0xa6d8), seq 3293022983, ack 1922067246, win 64308, options [mss 1410,sackOK,TS val 866181182 ecr 2888687406,nop,wscale 10], length 0
+E..<..@.?.&_
+*..
+*.......G..r.k....4...........
+3..>.-.....
+
+2026-08-02 20:30:56.081730 cni0  Out ifindex 4 22:40:9b:49:4a:3d ethertype IPv4 (0x0800), length 80: (tos 0x0, ttl 62, id 0, offset 0, flags [DF], proto TCP (6), length 60)
+    10.42.1.4.8080 > 10.42.0.6.42202: Flags [S.], cksum 0x158c (incorrect -> 0xa6d8), seq 3293022983, ack 1922067246, win 64308, options [mss 1410,sackOK,TS val 866181182 ecr 2888687406,nop,wscale 10], length 0
+E..<..@.>.'_
+*..
+*.......G..r.k....4...........
+3..>.-.....
+
+2026-08-02 20:30:56.081731 veth588e6b4f Out ifindex 6 22:40:9b:49:4a:3d ethertype IPv4 (0x0800), length 80: (tos 0x0, ttl 62, id 0, offset 0, flags [DF], proto TCP (6), length 60)
+    10.42.1.4.8080 > 10.42.0.6.42202: Flags [S.], cksum 0x158c (incorrect -> 0xa6d8), seq 3293022983, ack 1922067246, win 64308, options [mss 1410,sackOK,TS val 866181182 ecr 2888687406,nop,wscale 10], length 0
+E..<..@.>.'_
+*..
+*.......G..r.k....4...........
+3..>.-.....
+
+2026-08-02 20:30:56.081758 veth588e6b4f P   ifindex 6 26:0d:33:5f:ee:48 ethertype IPv4 (0x0800), length 72: (tos 0x0, ttl 64, id 15365, offset 0, flags [DF], proto TCP (6), length 52)
+    10.42.0.6.42202 > 10.42.1.4.8080: Flags [.], cksum 0x1584 (incorrect -> 0xd069), seq 1, ack 1, win 64, options [nop,nop,TS val 2888687407 ecr 866181182], length 0
+E..4<.@.@..a
+*..
+*......r.k..G.....@.......
+.-./3..>
+2026-08-02 20:30:56.081761 cni0  In  ifindex 4 26:0d:33:5f:ee:48 ethertype IPv4 (0x0800), length 72: (tos 0x0, ttl 64, id 15365, offset 0, flags [DF], proto TCP (6), length 52)
+    10.42.0.6.42202 > 10.42.1.4.8080: Flags [.], cksum 0x1584 (incorrect -> 0xd069), seq 1, ack 1, win 64, options [nop,nop,TS val 2888687407 ecr 866181182], length 0
+E..4<.@.@..a
+*..
+*......r.k..G.....@.......
+.-./3..>
+2026-08-02 20:30:56.081765 flannel.1 Out ifindex 3 3e:d8:86:9d:74:7c ethertype IPv4 (0x0800), length 72: (tos 0x0, ttl 63, id 15365, offset 0, flags [DF], proto TCP (6), length 52)
+    10.42.0.6.42202 > 10.42.1.4.8080: Flags [.], cksum 0x1584 (incorrect -> 0xd069), seq 1, ack 1, win 64, options [nop,nop,TS val 2888687407 ecr 866181182], length 0
+E..4<.@.?..a
+*..
+*......r.k..G.....@.......
+.-./3..>
+2026-08-02 20:30:56.081771 eth0  Out ifindex 2 6a:35:97:68:b1:ad ethertype IPv4 (0x0800), length 122: (tos 0x0, ttl 64, id 12559, offset 0, flags [none], proto UDP (17), length 102)
+    172.18.0.2.54902 > 172.18.0.4.8472: [bad udp cksum 0x1a50 -> 0xd535!] OTV, flags [I] (0x08), overlay 0, instance 1
+3e:d8:86:9d:74:7c > de:77:b4:92:cc:c7, ethertype IPv4 (0x0800), length 66: (tos 0x0, ttl 63, id 15365, offset 0, flags [DF], proto TCP (6), length 52)
+    10.42.0.6.42202 > 10.42.1.4.8080: Flags [.], cksum 0x1584 (incorrect -> 0xd069), seq 1, ack 1, win 64, options [nop,nop,TS val 2888687407 ecr 866181182], length 0
+E..f1...@..M.........v!..R.P.........w....>...t|..E..4<.@.?..a
+*..
+*......r.k..G.....@.......
+.-./3..>
+2026-08-02 20:30:56.081859 veth588e6b4f P   ifindex 6 26:0d:33:5f:ee:48 ethertype IPv4 (0x0800), length 149: (tos 0x0, ttl 64, id 15366, offset 0, flags [DF], proto TCP (6), length 129)
+    10.42.0.6.42202 > 10.42.1.4.8080: Flags [P.], cksum 0x15d1 (incorrect -> 0x50da), seq 1:78, ack 1, win 64, options [nop,nop,TS val 2888687407 ecr 866181182], length 77: HTTP, length: 77
+	GET / HTTP/1.1
+	Host: 10.42.1.4:8080
+	User-Agent: Wget
+	Connection: close
+	
+E...<.@.@...
+*..
+*......r.k..G.....@.......
+.-./3..>GET / HTTP/1.1
+Host: 10.42.1.4:8080
+User-Agent: Wget
+Connection: close
+
+
+2026-08-02 20:30:56.081864 cni0  In  ifindex 4 26:0d:33:5f:ee:48 ethertype IPv4 (0x0800), length 149: (tos 0x0, ttl 64, id 15366, offset 0, flags [DF], proto TCP (6), length 129)
+    10.42.0.6.42202 > 10.42.1.4.8080: Flags [P.], cksum 0x15d1 (incorrect -> 0x50da), seq 1:78, ack 1, win 64, options [nop,nop,TS val 2888687407 ecr 866181182], length 77: HTTP, length: 77
+	GET / HTTP/1.1
+	Host: 10.42.1.4:8080
+	User-Agent: Wget
+	Connection: close
+	
+E...<.@.@...
+*..
+*......r.k..G.....@.......
+.-./3..>GET / HTTP/1.1
+Host: 10.42.1.4:8080
+User-Agent: Wget
+Connection: close
+
+
+2026-08-02 20:30:56.081871 flannel.1 Out ifindex 3 3e:d8:86:9d:74:7c ethertype IPv4 (0x0800), length 149: (tos 0x0, ttl 63, id 15366, offset 0, flags [DF], proto TCP (6), length 129)
+    10.42.0.6.42202 > 10.42.1.4.8080: Flags [P.], cksum 0x15d1 (incorrect -> 0x50da), seq 1:78, ack 1, win 64, options [nop,nop,TS val 2888687407 ecr 866181182], length 77: HTTP, length: 77
+	GET / HTTP/1.1
+	Host: 10.42.1.4:8080
+	User-Agent: Wget
+	Connection: close
+	
+E...<.@.?...
+*..
+*......r.k..G.....@.......
+.-./3..>GET / HTTP/1.1
+Host: 10.42.1.4:8080
+User-Agent: Wget
+Connection: close
+
+
+2026-08-02 20:30:56.081878 eth0  Out ifindex 2 6a:35:97:68:b1:ad ethertype IPv4 (0x0800), length 199: (tos 0x0, ttl 64, id 12560, offset 0, flags [none], proto UDP (17), length 179)
+    172.18.0.2.54902 > 172.18.0.4.8472: [bad udp cksum 0x1a03 -> 0x550c!] OTV, flags [I] (0x08), overlay 0, instance 1
+3e:d8:86:9d:74:7c > de:77:b4:92:cc:c7, ethertype IPv4 (0x0800), length 143: (tos 0x0, ttl 63, id 15366, offset 0, flags [DF], proto TCP (6), length 129)
+    10.42.0.6.42202 > 10.42.1.4.8080: Flags [P.], cksum 0x15d1 (incorrect -> 0x50da), seq 1:78, ack 1, win 64, options [nop,nop,TS val 2888687407 ecr 866181182], length 77: HTTP, length: 77
+	GET / HTTP/1.1
+	Host: 10.42.1.4:8080
+	User-Agent: Wget
+	Connection: close
+	
+E...1...@............v!..............w....>...t|..E...<.@.?...
+*..
+*......r.k..G.....@.......
+.-./3..>GET / HTTP/1.1
+Host: 10.42.1.4:8080
+User-Agent: Wget
+Connection: close
+
+
+2026-08-02 20:30:56.081923 eth0  In  ifindex 2 9e:c7:a2:1e:92:8e ethertype IPv4 (0x0800), length 122: (tos 0x0, ttl 64, id 32372, offset 0, flags [none], proto UDP (17), length 102)
+    172.18.0.4.37710 > 172.18.0.2.8472: [bad udp cksum 0x5d78 -> 0x1812!] OTV, flags [I] (0x08), overlay 0, instance 1
+de:77:b4:92:cc:c7 > 3e:d8:86:9d:74:7c, ethertype IPv4 (0x0800), length 66: (tos 0x0, ttl 63, id 62117, offset 0, flags [DF], proto TCP (6), length 52)
+    10.42.1.4.8080 > 10.42.0.6.42202: Flags [.], cksum 0x1584 (incorrect -> 0xd01d), seq 1, ack 78, win 63, options [nop,nop,TS val 866181182 ecr 2888687407], length 0
+E..f~t..@............N!..R]x........>...t|.w......E..4..@.?.3.
+*..
+*.......G..r.k{...?.......
+3..>.-./
+2026-08-02 20:30:56.081929 flannel.1 In  ifindex 3 de:77:b4:92:cc:c7 ethertype IPv4 (0x0800), length 72: (tos 0x0, ttl 63, id 62117, offset 0, flags [DF], proto TCP (6), length 52)
+    10.42.1.4.8080 > 10.42.0.6.42202: Flags [.], cksum 0x1584 (incorrect -> 0xd01d), seq 1, ack 78, win 63, options [nop,nop,TS val 866181182 ecr 2888687407], length 0
+E..4..@.?.3.
+*..
+*.......G..r.k{...?.......
+3..>.-./
+2026-08-02 20:30:56.081934 cni0  Out ifindex 4 22:40:9b:49:4a:3d ethertype IPv4 (0x0800), length 72: (tos 0x0, ttl 62, id 62117, offset 0, flags [DF], proto TCP (6), length 52)
+    10.42.1.4.8080 > 10.42.0.6.42202: Flags [.], cksum 0x1584 (incorrect -> 0xd01d), seq 1, ack 78, win 63, options [nop,nop,TS val 866181182 ecr 2888687407], length 0
+E..4..@.>.4.
+*..
+*.......G..r.k{...?.......
+3..>.-./
+2026-08-02 20:30:56.081936 veth588e6b4f Out ifindex 6 22:40:9b:49:4a:3d ethertype IPv4 (0x0800), length 72: (tos 0x0, ttl 62, id 62117, offset 0, flags [DF], proto TCP (6), length 52)
+    10.42.1.4.8080 > 10.42.0.6.42202: Flags [.], cksum 0x1584 (incorrect -> 0xd01d), seq 1, ack 78, win 63, options [nop,nop,TS val 866181182 ecr 2888687407], length 0
+E..4..@.>.4.
+*..
+*.......G..r.k{...?.......
+3..>.-./
+2026-08-02 20:30:56.083835 eth0  In  ifindex 2 9e:c7:a2:1e:92:8e ethertype IPv4 (0x0800), length 329: (tos 0x0, ttl 64, id 32373, offset 0, flags [none], proto UDP (17), length 309)
+    172.18.0.4.37710 > 172.18.0.2.8472: [bad udp cksum 0x5ca9 -> 0x4f0b!] OTV, flags [I] (0x08), overlay 0, instance 1
+de:77:b4:92:cc:c7 > 3e:d8:86:9d:74:7c, ethertype IPv4 (0x0800), length 273: (tos 0x0, ttl 63, id 62118, offset 0, flags [DF], proto TCP (6), length 259)
+    10.42.1.4.8080 > 10.42.0.6.42202: Flags [P.], cksum 0x1653 (incorrect -> 0x08b5), seq 1:208, ack 78, win 63, options [nop,nop,TS val 866181184 ecr 2888687407], length 207: HTTP, length: 207
+	HTTP/1.1 200 OK
+	Date: Sun, 02 Aug 2026 18:30:56 GMT
+	Connection: close
+	Content-type: text/html
+	Accept-Ranges: bytes
+	Last-Modified: Sun, 02 Aug 2026 13:22:29 GMT
+	ETag: "6a6f4495-9"
+	Content-Length: 9
+	
+E..5~u..@............N!..!\.........>...t|.w......E.....@.?.2.
+*..
+*.......G..r.k{...?.S.....
+3..@.-./HTTP/1.1 200 OK
+Date: Sun, 02 Aug 2026 18:30:56 GMT
+Connection: close
+Content-type: text/html
+Accept-Ranges: bytes
+Last-Modified: Sun, 02 Aug 2026 13:22:29 GMT
+ETag: "6a6f4495-9"
+Content-Length: 9
+
+
+2026-08-02 20:30:56.083851 flannel.1 In  ifindex 3 de:77:b4:92:cc:c7 ethertype IPv4 (0x0800), length 279: (tos 0x0, ttl 63, id 62118, offset 0, flags [DF], proto TCP (6), length 259)
+    10.42.1.4.8080 > 10.42.0.6.42202: Flags [P.], cksum 0x1653 (incorrect -> 0x08b5), seq 1:208, ack 78, win 63, options [nop,nop,TS val 866181184 ecr 2888687407], length 207: HTTP, length: 207
+	HTTP/1.1 200 OK
+	Date: Sun, 02 Aug 2026 18:30:56 GMT
+	Connection: close
+	Content-type: text/html
+	Accept-Ranges: bytes
+	Last-Modified: Sun, 02 Aug 2026 13:22:29 GMT
+	ETag: "6a6f4495-9"
+	Content-Length: 9
+	
+E.....@.?.2.
+*..
+*.......G..r.k{...?.S.....
+3..@.-./HTTP/1.1 200 OK
+Date: Sun, 02 Aug 2026 18:30:56 GMT
+Connection: close
+Content-type: text/html
+Accept-Ranges: bytes
+Last-Modified: Sun, 02 Aug 2026 13:22:29 GMT
+ETag: "6a6f4495-9"
+Content-Length: 9
+
+
+2026-08-02 20:30:56.083860 cni0  Out ifindex 4 22:40:9b:49:4a:3d ethertype IPv4 (0x0800), length 279: (tos 0x0, ttl 62, id 62118, offset 0, flags [DF], proto TCP (6), length 259)
+    10.42.1.4.8080 > 10.42.0.6.42202: Flags [P.], cksum 0x1653 (incorrect -> 0x08b5), seq 1:208, ack 78, win 63, options [nop,nop,TS val 866181184 ecr 2888687407], length 207: HTTP, length: 207
+	HTTP/1.1 200 OK
+	Date: Sun, 02 Aug 2026 18:30:56 GMT
+	Connection: close
+	Content-type: text/html
+	Accept-Ranges: bytes
+	Last-Modified: Sun, 02 Aug 2026 13:22:29 GMT
+	ETag: "6a6f4495-9"
+	Content-Length: 9
+	
+E.....@.>.3.
+*..
+*.......G..r.k{...?.S.....
+3..@.-./HTTP/1.1 200 OK
+Date: Sun, 02 Aug 2026 18:30:56 GMT
+Connection: close
+Content-type: text/html
+Accept-Ranges: bytes
+Last-Modified: Sun, 02 Aug 2026 13:22:29 GMT
+ETag: "6a6f4495-9"
+Content-Length: 9
+
+
+2026-08-02 20:30:56.083862 veth588e6b4f Out ifindex 6 22:40:9b:49:4a:3d ethertype IPv4 (0x0800), length 279: (tos 0x0, ttl 62, id 62118, offset 0, flags [DF], proto TCP (6), length 259)
+    10.42.1.4.8080 > 10.42.0.6.42202: Flags [P.], cksum 0x1653 (incorrect -> 0x08b5), seq 1:208, ack 78, win 63, options [nop,nop,TS val 866181184 ecr 2888687407], length 207: HTTP, length: 207
+	HTTP/1.1 200 OK
+	Date: Sun, 02 Aug 2026 18:30:56 GMT
+	Connection: close
+	Content-type: text/html
+	Accept-Ranges: bytes
+	Last-Modified: Sun, 02 Aug 2026 13:22:29 GMT
+	ETag: "6a6f4495-9"
+	Content-Length: 9
+	
+E.....@.>.3.
+*..
+*.......G..r.k{...?.S.....
+3..@.-./HTTP/1.1 200 OK
+Date: Sun, 02 Aug 2026 18:30:56 GMT
+Connection: close
+Content-type: text/html
+Accept-Ranges: bytes
+Last-Modified: Sun, 02 Aug 2026 13:22:29 GMT
+ETag: "6a6f4495-9"
+Content-Length: 9
+
+
+2026-08-02 20:30:56.083880 veth588e6b4f P   ifindex 6 26:0d:33:5f:ee:48 ethertype IPv4 (0x0800), length 72: (tos 0x0, ttl 64, id 15367, offset 0, flags [DF], proto TCP (6), length 52)
+    10.42.0.6.42202 > 10.42.1.4.8080: Flags [.], cksum 0x1584 (incorrect -> 0xcf49), seq 78, ack 208, win 64, options [nop,nop,TS val 2888687409 ecr 866181184], length 0
+E..4<.@.@.._
+*..
+*......r.k{.G.....@.......
+.-.13..@
+2026-08-02 20:30:56.083883 cni0  In  ifindex 4 26:0d:33:5f:ee:48 ethertype IPv4 (0x0800), length 72: (tos 0x0, ttl 64, id 15367, offset 0, flags [DF], proto TCP (6), length 52)
+    10.42.0.6.42202 > 10.42.1.4.8080: Flags [.], cksum 0x1584 (incorrect -> 0xcf49), seq 78, ack 208, win 64, options [nop,nop,TS val 2888687409 ecr 866181184], length 0
+E..4<.@.@.._
+*..
+*......r.k{.G.....@.......
+.-.13..@
+2026-08-02 20:30:56.083886 flannel.1 Out ifindex 3 3e:d8:86:9d:74:7c ethertype IPv4 (0x0800), length 72: (tos 0x0, ttl 63, id 15367, offset 0, flags [DF], proto TCP (6), length 52)
+    10.42.0.6.42202 > 10.42.1.4.8080: Flags [.], cksum 0x1584 (incorrect -> 0xcf49), seq 78, ack 208, win 64, options [nop,nop,TS val 2888687409 ecr 866181184], length 0
+E..4<.@.?.._
+*..
+*......r.k{.G.....@.......
+.-.13..@
+2026-08-02 20:30:56.083892 eth0  Out ifindex 2 6a:35:97:68:b1:ad ethertype IPv4 (0x0800), length 122: (tos 0x0, ttl 64, id 12562, offset 0, flags [none], proto UDP (17), length 102)
+    172.18.0.2.54902 > 172.18.0.4.8472: [bad udp cksum 0x1a50 -> 0xd415!] OTV, flags [I] (0x08), overlay 0, instance 1
+3e:d8:86:9d:74:7c > de:77:b4:92:cc:c7, ethertype IPv4 (0x0800), length 66: (tos 0x0, ttl 63, id 15367, offset 0, flags [DF], proto TCP (6), length 52)
+    10.42.0.6.42202 > 10.42.1.4.8080: Flags [.], cksum 0x1584 (incorrect -> 0xcf49), seq 78, ack 208, win 64, options [nop,nop,TS val 2888687409 ecr 866181184], length 0
+E..f1...@..J.........v!..R.P.........w....>...t|..E..4<.@.?.._
+*..
+*......r.k{.G.....@.......
+.-.13..@
+2026-08-02 20:30:56.084193 eth0  In  ifindex 2 9e:c7:a2:1e:92:8e ethertype IPv4 (0x0800), length 131: (tos 0x0, ttl 64, id 32374, offset 0, flags [none], proto UDP (17), length 111)
+    172.18.0.4.37710 > 172.18.0.2.8472: [bad udp cksum 0x5d6f -> 0x946b!] OTV, flags [I] (0x08), overlay 0, instance 1
+de:77:b4:92:cc:c7 > 3e:d8:86:9d:74:7c, ethertype IPv4 (0x0800), length 75: (tos 0x0, ttl 63, id 62119, offset 0, flags [DF], proto TCP (6), length 61)
+    10.42.1.4.8080 > 10.42.0.6.42202: Flags [P.], cksum 0x158d (incorrect -> 0x4c89), seq 208:217, ack 78, win 63, options [nop,nop,TS val 866181184 ecr 2888687409], length 9: HTTP
+E..o~v..@............N!..[]o........>...t|.w......E..=..@.?.3.
+*..
+*.......G..r.k{...?.......
+3..@.-.1server-b
+
+2026-08-02 20:30:56.084200 flannel.1 In  ifindex 3 de:77:b4:92:cc:c7 ethertype IPv4 (0x0800), length 81: (tos 0x0, ttl 63, id 62119, offset 0, flags [DF], proto TCP (6), length 61)
+    10.42.1.4.8080 > 10.42.0.6.42202: Flags [P.], cksum 0x158d (incorrect -> 0x4c89), seq 208:217, ack 78, win 63, options [nop,nop,TS val 866181184 ecr 2888687409], length 9: HTTP
+E..=..@.?.3.
+*..
+*.......G..r.k{...?.......
+3..@.-.1server-b
+
+2026-08-02 20:30:56.084204 cni0  Out ifindex 4 22:40:9b:49:4a:3d ethertype IPv4 (0x0800), length 81: (tos 0x0, ttl 62, id 62119, offset 0, flags [DF], proto TCP (6), length 61)
+    10.42.1.4.8080 > 10.42.0.6.42202: Flags [P.], cksum 0x158d (incorrect -> 0x4c89), seq 208:217, ack 78, win 63, options [nop,nop,TS val 866181184 ecr 2888687409], length 9: HTTP
+E..=..@.>.4.
+*..
+*.......G..r.k{...?.......
+3..@.-.1server-b
+
+2026-08-02 20:30:56.084206 veth588e6b4f Out ifindex 6 22:40:9b:49:4a:3d ethertype IPv4 (0x0800), length 81: (tos 0x0, ttl 62, id 62119, offset 0, flags [DF], proto TCP (6), length 61)
+    10.42.1.4.8080 > 10.42.0.6.42202: Flags [P.], cksum 0x158d (incorrect -> 0x4c89), seq 208:217, ack 78, win 63, options [nop,nop,TS val 866181184 ecr 2888687409], length 9: HTTP
+E..=..@.>.4.
+*..
+*.......G..r.k{...?.......
+3..@.-.1server-b
+
+2026-08-02 20:30:56.084214 veth588e6b4f P   ifindex 6 26:0d:33:5f:ee:48 ethertype IPv4 (0x0800), length 72: (tos 0x0, ttl 64, id 15368, offset 0, flags [DF], proto TCP (6), length 52)
+    10.42.0.6.42202 > 10.42.1.4.8080: Flags [.], cksum 0x1584 (incorrect -> 0xcf40), seq 78, ack 217, win 64, options [nop,nop,TS val 2888687409 ecr 866181184], length 0
+E..4<.@.@..^
+*..
+*......r.k{.G.....@.......
+.-.13..@
+2026-08-02 20:30:56.084215 cni0  In  ifindex 4 26:0d:33:5f:ee:48 ethertype IPv4 (0x0800), length 72: (tos 0x0, ttl 64, id 15368, offset 0, flags [DF], proto TCP (6), length 52)
+    10.42.0.6.42202 > 10.42.1.4.8080: Flags [.], cksum 0x1584 (incorrect -> 0xcf40), seq 78, ack 217, win 64, options [nop,nop,TS val 2888687409 ecr 866181184], length 0
+E..4<.@.@..^
+*..
+*......r.k{.G.....@.......
+.-.13..@
+2026-08-02 20:30:56.084218 flannel.1 Out ifindex 3 3e:d8:86:9d:74:7c ethertype IPv4 (0x0800), length 72: (tos 0x0, ttl 63, id 15368, offset 0, flags [DF], proto TCP (6), length 52)
+    10.42.0.6.42202 > 10.42.1.4.8080: Flags [.], cksum 0x1584 (incorrect -> 0xcf40), seq 78, ack 217, win 64, options [nop,nop,TS val 2888687409 ecr 866181184], length 0
+E..4<.@.?..^
+*..
+*......r.k{.G.....@.......
+.-.13..@
+2026-08-02 20:30:56.084221 eth0  Out ifindex 2 6a:35:97:68:b1:ad ethertype IPv4 (0x0800), length 122: (tos 0x0, ttl 64, id 12563, offset 0, flags [none], proto UDP (17), length 102)
+    172.18.0.2.54902 > 172.18.0.4.8472: [bad udp cksum 0x1a50 -> 0xd40c!] OTV, flags [I] (0x08), overlay 0, instance 1
+3e:d8:86:9d:74:7c > de:77:b4:92:cc:c7, ethertype IPv4 (0x0800), length 66: (tos 0x0, ttl 63, id 15368, offset 0, flags [DF], proto TCP (6), length 52)
+    10.42.0.6.42202 > 10.42.1.4.8080: Flags [.], cksum 0x1584 (incorrect -> 0xcf40), seq 78, ack 217, win 64, options [nop,nop,TS val 2888687409 ecr 866181184], length 0
+E..f1...@..I.........v!..R.P.........w....>...t|..E..4<.@.?..^
+*..
+*......r.k{.G.....@.......
+.-.13..@
+2026-08-02 20:30:56.084265 eth0  In  ifindex 2 9e:c7:a2:1e:92:8e ethertype IPv4 (0x0800), length 122: (tos 0x0, ttl 64, id 32375, offset 0, flags [none], proto UDP (17), length 102)
+    172.18.0.4.37710 > 172.18.0.2.8472: [bad udp cksum 0x5d78 -> 0x1735!] OTV, flags [I] (0x08), overlay 0, instance 1
+de:77:b4:92:cc:c7 > 3e:d8:86:9d:74:7c, ethertype IPv4 (0x0800), length 66: (tos 0x0, ttl 63, id 62120, offset 0, flags [DF], proto TCP (6), length 52)
+    10.42.1.4.8080 > 10.42.0.6.42202: Flags [F.], cksum 0x1584 (incorrect -> 0xcf40), seq 217, ack 78, win 63, options [nop,nop,TS val 866181184 ecr 2888687409], length 0
+E..f~w..@............N!..R]x........>...t|.w......E..4..@.?.3.
+*..
+*.......G..r.k{...?.......
+3..@.-.1
+2026-08-02 20:30:56.084270 flannel.1 In  ifindex 3 de:77:b4:92:cc:c7 ethertype IPv4 (0x0800), length 72: (tos 0x0, ttl 63, id 62120, offset 0, flags [DF], proto TCP (6), length 52)
+    10.42.1.4.8080 > 10.42.0.6.42202: Flags [F.], cksum 0x1584 (incorrect -> 0xcf40), seq 217, ack 78, win 63, options [nop,nop,TS val 866181184 ecr 2888687409], length 0
+E..4..@.?.3.
+*..
+*.......G..r.k{...?.......
+3..@.-.1
+2026-08-02 20:30:56.084274 cni0  Out ifindex 4 22:40:9b:49:4a:3d ethertype IPv4 (0x0800), length 72: (tos 0x0, ttl 62, id 62120, offset 0, flags [DF], proto TCP (6), length 52)
+    10.42.1.4.8080 > 10.42.0.6.42202: Flags [F.], cksum 0x1584 (incorrect -> 0xcf40), seq 217, ack 78, win 63, options [nop,nop,TS val 866181184 ecr 2888687409], length 0
+E..4..@.>.4.
+*..
+*.......G..r.k{...?.......
+3..@.-.1
+2026-08-02 20:30:56.084275 veth588e6b4f Out ifindex 6 22:40:9b:49:4a:3d ethertype IPv4 (0x0800), length 72: (tos 0x0, ttl 62, id 62120, offset 0, flags [DF], proto TCP (6), length 52)
+    10.42.1.4.8080 > 10.42.0.6.42202: Flags [F.], cksum 0x1584 (incorrect -> 0xcf40), seq 217, ack 78, win 63, options [nop,nop,TS val 866181184 ecr 2888687409], length 0
+E..4..@.>.4.
+*..
+*.......G..r.k{...?.......
+3..@.-.1
+2026-08-02 20:30:56.084288 veth588e6b4f P   ifindex 6 26:0d:33:5f:ee:48 ethertype IPv4 (0x0800), length 72: (tos 0x0, ttl 64, id 15369, offset 0, flags [DF], proto TCP (6), length 52)
+    10.42.0.6.42202 > 10.42.1.4.8080: Flags [F.], cksum 0x1584 (incorrect -> 0xcf3f), seq 78, ack 217, win 64, options [nop,nop,TS val 2888687409 ecr 866181184], length 0
+E..4<	@.@..]
+*..
+*......r.k{.G.....@.......
+.-.13..@
+2026-08-02 20:30:56.084295 cni0  In  ifindex 4 26:0d:33:5f:ee:48 ethertype IPv4 (0x0800), length 72: (tos 0x0, ttl 64, id 15369, offset 0, flags [DF], proto TCP (6), length 52)
+    10.42.0.6.42202 > 10.42.1.4.8080: Flags [F.], cksum 0x1584 (incorrect -> 0xcf3f), seq 78, ack 217, win 64, options [nop,nop,TS val 2888687409 ecr 866181184], length 0
+E..4<	@.@..]
+*..
+*......r.k{.G.....@.......
+.-.13..@
+2026-08-02 20:30:56.084304 flannel.1 Out ifindex 3 3e:d8:86:9d:74:7c ethertype IPv4 (0x0800), length 72: (tos 0x0, ttl 63, id 15369, offset 0, flags [DF], proto TCP (6), length 52)
+    10.42.0.6.42202 > 10.42.1.4.8080: Flags [F.], cksum 0x1584 (incorrect -> 0xcf3f), seq 78, ack 217, win 64, options [nop,nop,TS val 2888687409 ecr 866181184], length 0
+E..4<	@.?..]
+*..
+*......r.k{.G.....@.......
+.-.13..@
+2026-08-02 20:30:56.084315 eth0  Out ifindex 2 6a:35:97:68:b1:ad ethertype IPv4 (0x0800), length 122: (tos 0x0, ttl 64, id 12564, offset 0, flags [none], proto UDP (17), length 102)
+    172.18.0.2.54902 > 172.18.0.4.8472: [bad udp cksum 0x1a50 -> 0xd40b!] OTV, flags [I] (0x08), overlay 0, instance 1
+3e:d8:86:9d:74:7c > de:77:b4:92:cc:c7, ethertype IPv4 (0x0800), length 66: (tos 0x0, ttl 63, id 15369, offset 0, flags [DF], proto TCP (6), length 52)
+    10.42.0.6.42202 > 10.42.1.4.8080: Flags [F.], cksum 0x1584 (incorrect -> 0xcf3f), seq 78, ack 217, win 64, options [nop,nop,TS val 2888687409 ecr 866181184], length 0
+E..f1...@..H.........v!..R.P.........w....>...t|..E..4<	@.?..]
+*..
+*......r.k{.G.....@.......
+.-.13..@
+2026-08-02 20:30:56.084366 eth0  In  ifindex 2 9e:c7:a2:1e:92:8e ethertype IPv4 (0x0800), length 122: (tos 0x0, ttl 64, id 32376, offset 0, flags [none], proto UDP (17), length 102)
+    172.18.0.4.37710 > 172.18.0.2.8472: [bad udp cksum 0x5d78 -> 0x1734!] OTV, flags [I] (0x08), overlay 0, instance 1
+de:77:b4:92:cc:c7 > 3e:d8:86:9d:74:7c, ethertype IPv4 (0x0800), length 66: (tos 0x0, ttl 63, id 62121, offset 0, flags [DF], proto TCP (6), length 52)
+    10.42.1.4.8080 > 10.42.0.6.42202: Flags [.], cksum 0x1584 (incorrect -> 0xcf3f), seq 218, ack 79, win 63, options [nop,nop,TS val 866181184 ecr 2888687409], length 0
+E..f~x..@............N!..R]x........>...t|.w......E..4..@.?.3.
+*..
+*.......G..r.k|...?.......
+3..@.-.1
+2026-08-02 20:30:56.084372 flannel.1 In  ifindex 3 de:77:b4:92:cc:c7 ethertype IPv4 (0x0800), length 72: (tos 0x0, ttl 63, id 62121, offset 0, flags [DF], proto TCP (6), length 52)
+    10.42.1.4.8080 > 10.42.0.6.42202: Flags [.], cksum 0x1584 (incorrect -> 0xcf3f), seq 218, ack 79, win 63, options [nop,nop,TS val 866181184 ecr 2888687409], length 0
+E..4..@.?.3.
+*..
+*.......G..r.k|...?.......
+3..@.-.1
+2026-08-02 20:30:56.084376 cni0  Out ifindex 4 22:40:9b:49:4a:3d ethertype IPv4 (0x0800), length 72: (tos 0x0, ttl 62, id 62121, offset 0, flags [DF], proto TCP (6), length 52)
+    10.42.1.4.8080 > 10.42.0.6.42202: Flags [.], cksum 0x1584 (incorrect -> 0xcf3f), seq 218, ack 79, win 63, options [nop,nop,TS val 866181184 ecr 2888687409], length 0
+E..4..@.>.4.
+*..
+*.......G..r.k|...?.......
+3..@.-.1
+2026-08-02 20:30:56.084378 veth588e6b4f Out ifindex 6 22:40:9b:49:4a:3d ethertype IPv4 (0x0800), length 72: (tos 0x0, ttl 62, id 62121, offset 0, flags [DF], proto TCP (6), length 52)
+    10.42.1.4.8080 > 10.42.0.6.42202: Flags [.], cksum 0x1584 (incorrect -> 0xcf3f), seq 218, ack 79, win 63, options [nop,nop,TS val 866181184 ecr 2888687409], length 0
+E..4..@.>.4.
+*..
+*.......G..r.k|...?.......
+3..@.-.1
+2026-08-02 20:30:56.084389 veth588e6b4f P   ifindex 6 26:0d:33:5f:ee:48 ethertype IPv4 (0x0800), length 72: (tos 0x0, ttl 64, id 15370, offset 0, flags [DF], proto TCP (6), length 52)
+    10.42.0.6.42202 > 10.42.1.4.8080: Flags [.], cksum 0x1584 (incorrect -> 0xcf3e), seq 79, ack 218, win 64, options [nop,nop,TS val 2888687409 ecr 866181184], length 0
+E..4<
+@.@..\
+*..
+*......r.k|.G.....@.......
+.-.13..@
+2026-08-02 20:30:56.084391 cni0  In  ifindex 4 26:0d:33:5f:ee:48 ethertype IPv4 (0x0800), length 72: (tos 0x0, ttl 64, id 15370, offset 0, flags [DF], proto TCP (6), length 52)
+    10.42.0.6.42202 > 10.42.1.4.8080: Flags [.], cksum 0x1584 (incorrect -> 0xcf3e), seq 79, ack 218, win 64, options [nop,nop,TS val 2888687409 ecr 866181184], length 0
+E..4<
+@.@..\
+*..
+*......r.k|.G.....@.......
+.-.13..@
+2026-08-02 20:30:56.084393 flannel.1 Out ifindex 3 3e:d8:86:9d:74:7c ethertype IPv4 (0x0800), length 72: (tos 0x0, ttl 63, id 15370, offset 0, flags [DF], proto TCP (6), length 52)
+    10.42.0.6.42202 > 10.42.1.4.8080: Flags [.], cksum 0x1584 (incorrect -> 0xcf3e), seq 79, ack 218, win 64, options [nop,nop,TS val 2888687409 ecr 866181184], length 0
+E..4<
+@.?..\
+*..
+*......r.k|.G.....@.......
+.-.13..@
+2026-08-02 20:30:56.084397 eth0  Out ifindex 2 6a:35:97:68:b1:ad ethertype IPv4 (0x0800), length 122: (tos 0x0, ttl 64, id 12565, offset 0, flags [none], proto UDP (17), length 102)
+    172.18.0.2.54902 > 172.18.0.4.8472: [bad udp cksum 0x1a50 -> 0xd40a!] OTV, flags [I] (0x08), overlay 0, instance 1
+3e:d8:86:9d:74:7c > de:77:b4:92:cc:c7, ethertype IPv4 (0x0800), length 66: (tos 0x0, ttl 63, id 15370, offset 0, flags [DF], proto TCP (6), length 52)
+    10.42.0.6.42202 > 10.42.1.4.8080: Flags [.], cksum 0x1584 (incorrect -> 0xcf3e), seq 79, ack 218, win 64, options [nop,nop,TS val 2888687409 ecr 866181184], length 0
+E..f1...@..G.........v!..R.P.........w....>...t|..E..4<
+@.?..\
+*..
+*......r.k|.G.....@.......
+.-.13..@
+/usr/bin/timeout: sending signal TERM to command '/usr/bin/tcpdump'
+
+52 packets captured
+52 packets received by filter
+0 packets dropped by kernel

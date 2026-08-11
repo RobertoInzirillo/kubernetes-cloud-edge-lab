@@ -1,0 +1,387 @@
+timestamp=2026-08-05T19:49:05,249116781+02:00 state=final-corrected-filter
+=== calico-kube-controllers selected logs ===
+I0805 17:34:08.634783      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:34:08.648076      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:34:08.659318      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:34:18.683006      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:34:18.693793      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:34:18.703349      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:34:28.726568      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:34:28.736325      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:34:28.745913      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:34:38.767858      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:34:38.777724      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:34:38.788767      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:34:48.813313      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:34:48.823704      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:34:48.833491      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:34:58.854297      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:34:58.863933      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:34:58.873100      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:35:08.895655      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:35:08.905238      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:35:08.914557      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:35:18.938326      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:35:18.948752      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:35:18.959080      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:35:28.983732      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:35:28.996956      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:35:29.006277      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:35:39.035054      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:35:39.044363      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:35:39.053612      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:35:49.075788      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:35:49.085703      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:35:49.094949      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:35:59.116332      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:35:59.125858      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:35:59.135377      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:36:09.160513      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:36:09.171110      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:36:09.181230      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:36:19.205699      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:36:19.215474      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:36:19.224899      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:36:29.246960      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:36:29.257800      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:36:29.267618      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:36:39.291744      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:36:39.302161      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:36:39.313169      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:36:49.333437      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:36:49.342679      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:36:49.352520      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:36:59.376604      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:36:59.385835      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:36:59.395031      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:37:09.417465      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:37:09.426993      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:37:09.436596      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:37:19.459577      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:37:19.468969      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:37:19.478573      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:37:29.499528      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:37:29.509122      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:37:29.518406      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:37:39.539750      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:37:39.549296      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:37:39.558486      15 warnings.go:107] "Warning: unknown field \"status\""
+2026-08-05 17:37:43.321 [INFO][15] kube-controllers/loadbalancer_controller.go 264: Running periodic IPAM sync of Service LoadBalancer
+2026-08-05 17:37:43.326 [INFO][15] kube-controllers/hostendpoints.go 157: Running periodic HostEndpoint sync
+2026-08-05 17:37:43.326 [INFO][15] kube-controllers/hostendpoints.go 259: Syncing all HostEndpoints
+I0805 17:37:49.580476      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:37:49.590307      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:37:49.600028      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:37:59.622354      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:37:59.632028      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:37:59.642944      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:38:09.667197      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:38:09.677088      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:38:09.686753      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:38:19.707919      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:38:19.717605      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:38:19.726748      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:38:29.747996      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:38:29.757137      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:38:29.766574      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:38:39.787901      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:38:39.797267      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:38:39.806940      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:38:49.828218      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:38:49.837550      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:38:49.847232      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:38:59.869508      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:38:59.879058      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:38:59.888743      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:39:09.911644      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:39:09.921329      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:39:09.931743      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:39:19.953552      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:39:19.963157      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:39:19.972255      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:39:29.993853      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:39:30.003326      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:39:30.013040      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:39:40.033777      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:39:40.042820      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:39:40.052352      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:39:50.073941      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:39:50.083503      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:39:50.092884      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:40:00.114716      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:40:00.124329      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:40:00.133745      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:40:10.157721      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:40:10.167171      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:40:10.176822      15 warnings.go:107] "Warning: unknown field \"status\""
+2026-08-05 17:40:13.325 [INFO][15] kube-controllers/ipam.go 347: Marking IPAM for full resync reason="periodic sync"
+I0805 17:40:20.198319      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:40:20.208260      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:40:20.218294      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:40:30.240042      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:40:30.249439      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:40:30.258785      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:40:40.279513      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:40:40.289112      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:40:40.298718      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:40:50.320361      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:40:50.330225      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:40:50.340291      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:41:00.362645      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:41:00.372040      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:41:00.381795      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:41:10.405831      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:41:10.415280      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:41:10.424598      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:41:20.445828      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:41:20.455161      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:41:20.464983      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:41:30.486504      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:41:30.496153      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:41:30.505748      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:41:40.526553      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:41:40.536508      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:41:40.546385      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:41:50.567399      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:41:50.577404      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:41:50.587541      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:42:00.611869      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:42:00.621825      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:42:00.631220      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:42:10.652296      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:42:10.661699      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:42:10.670904      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:42:20.690833      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:42:20.700336      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:42:20.710520      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:42:30.733926      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:42:30.743109      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:42:30.752281      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:42:40.773551      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:42:40.782777      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:42:40.792074      15 warnings.go:107] "Warning: unknown field \"status\""
+2026-08-05 17:42:43.322 [INFO][15] kube-controllers/loadbalancer_controller.go 264: Running periodic IPAM sync of Service LoadBalancer
+2026-08-05 17:42:43.325 [INFO][15] kube-controllers/hostendpoints.go 157: Running periodic HostEndpoint sync
+2026-08-05 17:42:43.325 [INFO][15] kube-controllers/hostendpoints.go 259: Syncing all HostEndpoints
+I0805 17:42:50.819380      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:42:50.829456      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:42:50.838645      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:43:00.861374      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:43:00.871079      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:43:00.880353      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:43:10.903360      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:43:10.912925      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:43:10.923364      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:43:20.943868      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:43:20.955284      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:43:20.965978      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:43:30.989146      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:43:31.000055      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:43:31.009827      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:43:41.033916      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:43:41.043545      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:43:41.053069      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:43:51.075734      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:43:51.085770      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:43:51.094934      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:44:01.119489      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:44:01.129106      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:44:01.138857      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:44:11.166077      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:44:11.175816      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:44:11.185795      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:44:21.208136      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:44:21.217545      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:44:21.227089      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:44:31.249330      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:44:31.258979      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:44:31.268160      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:44:41.291947      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:44:41.301509      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:44:41.311280      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:44:51.332281      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:44:51.341784      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:44:51.351128      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:45:01.371583      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:45:01.381335      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:45:01.390906      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:45:11.415824      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:45:11.425398      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:45:11.435299      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:45:21.456599      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:45:21.466913      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:45:21.479643      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:45:31.494754      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:45:31.499454      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:45:31.505516      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:45:41.527141      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:45:41.536684      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:45:41.546319      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:45:51.572369      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:45:51.581915      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:45:51.591264      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:46:01.614562      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:46:01.624179      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:46:01.633570      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:46:11.659401      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:46:11.668992      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:46:11.678121      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:46:21.701013      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:46:21.708267      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:46:21.714345      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:46:31.734606      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:46:31.743972      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:46:31.753429      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:46:41.775895      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:46:41.785073      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:46:41.794304      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:46:51.823507      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:46:51.832929      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:46:51.842079      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:47:01.862903      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:47:01.872676      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:47:01.882450      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:47:11.906067      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:47:11.915301      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:47:11.924726      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:47:21.946119      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:47:21.955535      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:47:21.965046      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:47:31.989044      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:47:31.998212      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:47:32.007722      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:47:42.030968      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:47:42.041313      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:47:42.050752      15 warnings.go:107] "Warning: unknown field \"status\""
+2026-08-05 17:47:43.322 [INFO][15] kube-controllers/loadbalancer_controller.go 264: Running periodic IPAM sync of Service LoadBalancer
+2026-08-05 17:47:43.326 [INFO][15] kube-controllers/ipam.go 347: Marking IPAM for full resync reason="periodic sync"
+2026-08-05 17:47:43.326 [INFO][15] kube-controllers/hostendpoints.go 157: Running periodic HostEndpoint sync
+2026-08-05 17:47:43.326 [INFO][15] kube-controllers/hostendpoints.go 259: Syncing all HostEndpoints
+I0805 17:47:52.078432      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:47:52.087765      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:47:52.097043      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:48:02.129436      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:48:02.140494      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:48:02.151478      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:48:12.178517      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:48:12.189338      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:48:12.199267      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:48:22.220264      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:48:22.229888      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:48:22.239605      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:48:32.260889      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:48:32.271154      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:48:32.282683      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:48:42.307179      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:48:42.316996      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:48:42.326424      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:48:52.351566      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:48:52.361769      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:48:52.372012      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:49:02.397306      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:49:02.406511      15 warnings.go:107] "Warning: unknown field \"status\""
+I0805 17:49:02.415835      15 warnings.go:107] "Warning: unknown field \"status\""
+=== Felix selected logs by calico-node Pod ===
+--- pod/calico-node-ql8fh ---
+2026-08-05 17:34:15.103 [INFO][74] felix/summary.go 100: Summarising 4 dataplane reconciliation loops over 1m55.3s: avg=71ms longest=82ms (resync-calico-arp-v4)
+2026-08-05 17:35:19.874 [INFO][74] felix/summary.go 100: Summarising 5 dataplane reconciliation loops over 1m4.8s: avg=51ms longest=80ms (resync-calico-arp-v4,resync-ipsets-v4)
+2026-08-05 17:36:59.720 [INFO][74] felix/summary.go 100: Summarising 4 dataplane reconciliation loops over 1m39.8s: avg=61ms longest=83ms (resync-calico-arp-v4)
+2026-08-05 17:38:05.524 [INFO][74] felix/summary.go 100: Summarising 5 dataplane reconciliation loops over 1m5.8s: avg=60ms longest=83ms (resync-calico-arp-v4)
+2026-08-05 17:39:06.366 [INFO][74] felix/summary.go 100: Summarising 3 dataplane reconciliation loops over 1m0.8s: avg=72ms longest=86ms (resync-calico-arp-v4)
+2026-08-05 17:40:26.205 [INFO][74] felix/summary.go 100: Summarising 2 dataplane reconciliation loops over 1m19.8s: avg=46ms longest=48ms (resync-calico-arp-v4,resync-calico-v4)
+2026-08-05 17:42:08.217 [INFO][74] felix/summary.go 100: Summarising 5 dataplane reconciliation loops over 1m42s: avg=65ms longest=82ms (resync-calico-arp-v4)
+2026-08-05 17:43:26.254 [INFO][74] felix/summary.go 100: Summarising 4 dataplane reconciliation loops over 1m18s: avg=52ms longest=82ms (resync-calico-arp-v4)
+2026-08-05 17:45:13.328 [INFO][74] felix/summary.go 100: Summarising 5 dataplane reconciliation loops over 1m47.1s: avg=68ms longest=86ms (resync-calico-arp-v4)
+2026-08-05 17:46:09.166 [INFO][74] felix/label_inheritance_index.go 187: Updating selector id=Policy(Name=default-deny-ingress, Namespace=net-lab, Kind=KubernetesNetworkPolicy) selector=(projectcalico.org/orchestrator == "k8s" && projectcalico.org/namespace == "net-lab")
+2026-08-05 17:46:09.166 [INFO][74] felix/int_dataplane.go 2514: Received *proto.ActivePolicyUpdate update from calculation graph. msg=id:{name:"default-deny-ingress"  namespace:"net-lab"  kind:"KubernetesNetworkPolicy"}  policy:{namespace:"net-lab"  original_selector:"(projectcalico.org/orchestrator == \"k8s\" && projectcalico.org/namespace == \"net-lab\")"  tier:"default"}
+2026-08-05 17:46:09.166 [INFO][74] felix/int_dataplane.go 2514: Received *proto.WorkloadEndpointUpdate update from calculation graph. msg=id:{orchestrator_id:"k8s"  workload_id:"net-lab/server-b"  endpoint_id:"eth0"}  endpoint:{state:"active"  name:"caliec1544aea47"  profile_ids:"kns.net-lab"  profile_ids:"ksa.net-lab.default"  ipv4_nets:"10.42.144.131/32"  tiers:{name:"default"  ingress_policies:{name:"default-deny-ingress"  namespace:"net-lab"  kind:"KubernetesNetworkPolicy"}  default_action:"Deny"}}
+2026-08-05 17:46:09.166 [INFO][74] felix/endpoint_mgr.go 790: Updating per-endpoint chains. id=types.WorkloadEndpointID{OrchestratorId:"k8s", WorkloadId:"net-lab/server-b", EndpointId:"eth0"}
+2026-08-05 17:46:09.166 [INFO][74] felix/endpoint_mgr.go 823: Updating endpoint routes. id=types.WorkloadEndpointID{OrchestratorId:"k8s", WorkloadId:"net-lab/server-b", EndpointId:"eth0"}
+2026-08-05 17:46:09.167 [INFO][74] felix/endpoint_mgr.go 836: Updating QoS bandwidth state if changed id=types.WorkloadEndpointID{OrchestratorId:"k8s", WorkloadId:"net-lab/server-b", EndpointId:"eth0"}
+2026-08-05 17:46:09.167 [INFO][74] felix/endpoint_mgr.go 1589: Applying /proc/sys configuration to interface. ifaceName="caliec1544aea47"
+2026-08-05 17:46:09.167 [INFO][74] felix/endpoint_mgr.go 663: Re-evaluated workload endpoint status adminUp=true failed=false known=true operUp=true status="up" workloadEndpointID=types.WorkloadEndpointID{OrchestratorId:"k8s", WorkloadId:"net-lab/server-b", EndpointId:"eth0"}
+2026-08-05 17:46:09.167 [INFO][74] felix/status_combiner.go 62: Storing endpoint status update ipVersion=0x4 status="up" workload=types.WorkloadEndpointID{OrchestratorId:"k8s", WorkloadId:"net-lab/server-b", EndpointId:"eth0"}
+2026-08-05 17:46:09.196 [INFO][74] felix/status_combiner.go 95: Endpoint up for at least one IP version id=types.WorkloadEndpointID{OrchestratorId:"k8s", WorkloadId:"net-lab/server-b", EndpointId:"eth0"} ipVersion=0x4 status="up"
+2026-08-05 17:46:09.197 [INFO][74] felix/status_combiner.go 114: Reporting combined status. id=types.WorkloadEndpointID{OrchestratorId:"k8s", WorkloadId:"net-lab/server-b", EndpointId:"eth0"} status="up"
+2026-08-05 17:46:14.275 [INFO][74] felix/summary.go 100: Summarising 5 dataplane reconciliation loops over 1m0.9s: avg=49ms longest=80ms (resync-calico-arp-v4,resync-ipsets-v4)
+2026-08-05 17:47:29.295 [INFO][74] felix/summary.go 100: Summarising 9 dataplane reconciliation loops over 1m15s: avg=50ms longest=83ms (resync-calico-arp-v4,resync-ipsets-v4)
+2026-08-05 17:47:29.346 [INFO][74] felix/label_inheritance_index.go 187: Updating selector id=Policy(Name=allow-client-to-http-servers, Namespace=net-lab, Kind=KubernetesNetworkPolicy) selector=((projectcalico.org/orchestrator == "k8s" && app.kubernetes.io/name == "http-server") && projectcalico.org/namespace == "net-lab")
+2026-08-05 17:47:29.346 [INFO][74] felix/calc_graph.go 322: IPSet now active ipSet=IPSetData{selector:"(projectcalico.org/namespace == \"net-lab\" && (projectcalico.org/orchestrator == \"k8s\" && app.kubernetes.io/name == \"network-client\"))", uniqueID:"s:Rg3IfxXscbcLY3pBS4WamP6haRZJaDISxDVQbA"}
+2026-08-05 17:47:29.347 [INFO][74] felix/int_dataplane.go 2514: Received *proto.IPSetUpdate update from calculation graph. msg=id:"s:Rg3IfxXscbcLY3pBS4WamP6haRZJaDISxDVQbA"  members:"10.42.113.67/32"  type:NET
+2026-08-05 17:47:29.347 [INFO][74] felix/ipsets.go 179: Queueing IP set for creation family="inet" setID="s:Rg3IfxXscbcLY3pBS4WamP6haRZJaDISxDVQbA" setType="hash:net"
+2026-08-05 17:47:29.348 [INFO][74] felix/int_dataplane.go 2514: Received *proto.ActivePolicyUpdate update from calculation graph. msg=id:{name:"allow-client-to-http-servers"  namespace:"net-lab"  kind:"KubernetesNetworkPolicy"}  policy:{namespace:"net-lab"  inbound_rules:{action:"allow"  protocol:{name:"tcp"}  dst_ports:{first:8080  last:8080}  src_ip_set_ids:"s:Rg3IfxXscbcLY3pBS4WamP6haRZJaDISxDVQbA"  original_src_selector:"projectcalico.org/orchestrator == 'k8s' && app.kubernetes.io/name == 'network-client'"  rule_id:"5Q5Ds_MZxcNhr4Ci"}  original_selector:"((projectcalico.org/orchestrator == \"k8s\" && app.kubernetes.io/name == \"http-server\") && projectcalico.org/namespace == \"net-lab\")"  tier:"default"}
+2026-08-05 17:47:29.348 [INFO][74] felix/int_dataplane.go 2514: Received *proto.WorkloadEndpointUpdate update from calculation graph. msg=id:{orchestrator_id:"k8s"  workload_id:"net-lab/server-b"  endpoint_id:"eth0"}  endpoint:{state:"active"  name:"caliec1544aea47"  profile_ids:"kns.net-lab"  profile_ids:"ksa.net-lab.default"  ipv4_nets:"10.42.144.131/32"  tiers:{name:"default"  ingress_policies:{name:"allow-client-to-http-servers"  namespace:"net-lab"  kind:"KubernetesNetworkPolicy"}  ingress_policies:{name:"default-deny-ingress"  namespace:"net-lab"  kind:"KubernetesNetworkPolicy"}  default_action:"Deny"}}
+2026-08-05 17:47:29.348 [INFO][74] felix/endpoint_mgr.go 790: Updating per-endpoint chains. id=types.WorkloadEndpointID{OrchestratorId:"k8s", WorkloadId:"net-lab/server-b", EndpointId:"eth0"}
+2026-08-05 17:47:29.349 [INFO][74] felix/endpoint_mgr.go 823: Updating endpoint routes. id=types.WorkloadEndpointID{OrchestratorId:"k8s", WorkloadId:"net-lab/server-b", EndpointId:"eth0"}
+2026-08-05 17:47:29.350 [INFO][74] felix/endpoint_mgr.go 836: Updating QoS bandwidth state if changed id=types.WorkloadEndpointID{OrchestratorId:"k8s", WorkloadId:"net-lab/server-b", EndpointId:"eth0"}
+2026-08-05 17:47:29.351 [INFO][74] felix/endpoint_mgr.go 1589: Applying /proc/sys configuration to interface. ifaceName="caliec1544aea47"
+2026-08-05 17:47:29.352 [INFO][74] felix/endpoint_mgr.go 663: Re-evaluated workload endpoint status adminUp=true failed=false known=true operUp=true status="up" workloadEndpointID=types.WorkloadEndpointID{OrchestratorId:"k8s", WorkloadId:"net-lab/server-b", EndpointId:"eth0"}
+2026-08-05 17:47:29.352 [INFO][74] felix/status_combiner.go 62: Storing endpoint status update ipVersion=0x4 status="up" workload=types.WorkloadEndpointID{OrchestratorId:"k8s", WorkloadId:"net-lab/server-b", EndpointId:"eth0"}
+2026-08-05 17:47:29.417 [INFO][74] felix/status_combiner.go 95: Endpoint up for at least one IP version id=types.WorkloadEndpointID{OrchestratorId:"k8s", WorkloadId:"net-lab/server-b", EndpointId:"eth0"} ipVersion=0x4 status="up"
+2026-08-05 17:47:29.417 [INFO][74] felix/status_combiner.go 114: Reporting combined status. id=types.WorkloadEndpointID{OrchestratorId:"k8s", WorkloadId:"net-lab/server-b", EndpointId:"eth0"} status="up"
+2026-08-05 17:48:39.611 [INFO][74] felix/summary.go 100: Summarising 8 dataplane reconciliation loops over 1m10.3s: avg=58ms longest=81ms (resync-calico-arp-v4,resync-ipsets-v4)
+--- pod/calico-node-rrmrc ---
+2026-08-05 17:34:14.851 [INFO][71] felix/summary.go 100: Summarising 3 dataplane reconciliation loops over 1m9.5s: avg=68ms longest=94ms (resync-calico-arp-v4)
+2026-08-05 17:35:39.595 [INFO][71] felix/summary.go 100: Summarising 4 dataplane reconciliation loops over 1m24.7s: avg=58ms longest=93ms (resync-calico-arp-v4)
+2026-08-05 17:36:40.065 [INFO][71] felix/summary.go 100: Summarising 3 dataplane reconciliation loops over 1m0.5s: avg=58ms longest=74ms (resync-calico-arp-v4,resync-ipsets-v4)
+2026-08-05 17:37:45.957 [INFO][71] felix/summary.go 100: Summarising 4 dataplane reconciliation loops over 1m5.9s: avg=66ms longest=93ms (resync-calico-arp-v4)
+2026-08-05 17:38:59.834 [INFO][71] felix/summary.go 100: Summarising 3 dataplane reconciliation loops over 1m13.9s: avg=75ms longest=98ms (resync-calico-arp-v4)
+2026-08-05 17:40:17.709 [INFO][71] felix/summary.go 100: Summarising 3 dataplane reconciliation loops over 1m17.9s: avg=64ms longest=105ms (resync-calico-arp-v4)
+2026-08-05 17:41:51.087 [INFO][71] felix/summary.go 100: Summarising 5 dataplane reconciliation loops over 1m33.4s: avg=62ms longest=96ms (resync-calico-arp-v4)
+2026-08-05 17:43:23.094 [INFO][71] felix/summary.go 100: Summarising 4 dataplane reconciliation loops over 1m32s: avg=67ms longest=93ms (resync-calico-arp-v4)
+2026-08-05 17:44:56.478 [INFO][71] felix/summary.go 100: Summarising 5 dataplane reconciliation loops over 1m33.4s: avg=65ms longest=100ms (resync-calico-arp-v4)
+2026-08-05 17:46:09.166 [INFO][71] felix/label_inheritance_index.go 187: Updating selector id=Policy(Name=default-deny-ingress, Namespace=net-lab, Kind=KubernetesNetworkPolicy) selector=(projectcalico.org/orchestrator == "k8s" && projectcalico.org/namespace == "net-lab")
+2026-08-05 17:46:24.529 [INFO][71] felix/summary.go 100: Summarising 4 dataplane reconciliation loops over 1m28.1s: avg=51ms longest=76ms (resync-calico-arp-v4,resync-ipsets-v4)
+2026-08-05 17:47:29.346 [INFO][71] felix/label_inheritance_index.go 187: Updating selector id=Policy(Name=allow-client-to-http-servers, Namespace=net-lab, Kind=KubernetesNetworkPolicy) selector=((projectcalico.org/orchestrator == "k8s" && app.kubernetes.io/name == "http-server") && projectcalico.org/namespace == "net-lab")
+2026-08-05 17:48:08.003 [INFO][71] felix/summary.go 100: Summarising 5 dataplane reconciliation loops over 1m43.5s: avg=64ms longest=93ms (resync-calico-arp-v4)
+--- pod/calico-node-wgb99 ---
+2026-08-05 17:34:59.781 [INFO][84] felix/summary.go 100: Summarising 4 dataplane reconciliation loops over 1m10s: avg=55ms longest=86ms (resync-calico-arp-v4)
+2026-08-05 17:36:14.766 [INFO][84] felix/summary.go 100: Summarising 4 dataplane reconciliation loops over 1m15s: avg=57ms longest=85ms (resync-calico-arp-v4,resync-ipsets-v4)
+2026-08-05 17:37:17.856 [INFO][84] felix/summary.go 100: Summarising 3 dataplane reconciliation loops over 1m3.1s: avg=57ms longest=79ms (resync-calico-arp-v4,resync-ipsets-v4)
+2026-08-05 17:38:42.664 [INFO][84] felix/summary.go 100: Summarising 4 dataplane reconciliation loops over 1m24.8s: avg=61ms longest=93ms (resync-calico-arp-v4)
+2026-08-05 17:39:59.547 [INFO][84] felix/summary.go 100: Summarising 3 dataplane reconciliation loops over 1m16.9s: avg=57ms longest=87ms (resync-calico-arp-v4)
+2026-08-05 17:40:59.880 [INFO][84] felix/summary.go 100: Summarising 4 dataplane reconciliation loops over 1m0.3s: avg=53ms longest=79ms (resync-calico-arp-v4,resync-ipsets-v4)
+2026-08-05 17:42:00.616 [INFO][84] felix/summary.go 100: Summarising 3 dataplane reconciliation loops over 1m0.7s: avg=72ms longest=87ms (resync-calico-arp-v4)
+2026-08-05 17:43:20.570 [INFO][84] felix/summary.go 100: Summarising 3 dataplane reconciliation loops over 1m20s: avg=60ms longest=92ms (resync-calico-arp-v4)
+2026-08-05 17:45:06.715 [INFO][84] felix/summary.go 100: Summarising 5 dataplane reconciliation loops over 1m46.1s: avg=71ms longest=99ms (resync-calico-arp-v4)
+2026-08-05 17:46:09.166 [INFO][84] felix/label_inheritance_index.go 187: Updating selector id=Policy(Name=default-deny-ingress, Namespace=net-lab, Kind=KubernetesNetworkPolicy) selector=(projectcalico.org/orchestrator == "k8s" && projectcalico.org/namespace == "net-lab")
+2026-08-05 17:46:09.166 [INFO][84] felix/int_dataplane.go 2514: Received *proto.ActivePolicyUpdate update from calculation graph. msg=id:{name:"default-deny-ingress"  namespace:"net-lab"  kind:"KubernetesNetworkPolicy"}  policy:{namespace:"net-lab"  original_selector:"(projectcalico.org/orchestrator == \"k8s\" && projectcalico.org/namespace == \"net-lab\")"  tier:"default"}
+2026-08-05 17:46:09.166 [INFO][84] felix/int_dataplane.go 2514: Received *proto.WorkloadEndpointUpdate update from calculation graph. msg=id:{orchestrator_id:"k8s"  workload_id:"net-lab/client"  endpoint_id:"eth0"}  endpoint:{state:"active"  name:"cali651ff5ba98e"  profile_ids:"kns.net-lab"  profile_ids:"ksa.net-lab.default"  ipv4_nets:"10.42.113.67/32"  tiers:{name:"default"  ingress_policies:{name:"default-deny-ingress"  namespace:"net-lab"  kind:"KubernetesNetworkPolicy"}  default_action:"Deny"}}
+2026-08-05 17:46:09.166 [INFO][84] felix/int_dataplane.go 2514: Received *proto.WorkloadEndpointUpdate update from calculation graph. msg=id:{orchestrator_id:"k8s"  workload_id:"net-lab/server-a"  endpoint_id:"eth0"}  endpoint:{state:"active"  name:"cali2f026170013"  profile_ids:"kns.net-lab"  profile_ids:"ksa.net-lab.default"  ipv4_nets:"10.42.113.68/32"  tiers:{name:"default"  ingress_policies:{name:"default-deny-ingress"  namespace:"net-lab"  kind:"KubernetesNetworkPolicy"}  default_action:"Deny"}}
+2026-08-05 17:46:09.166 [INFO][84] felix/endpoint_mgr.go 790: Updating per-endpoint chains. id=types.WorkloadEndpointID{OrchestratorId:"k8s", WorkloadId:"net-lab/client", EndpointId:"eth0"}
+2026-08-05 17:46:09.167 [INFO][84] felix/endpoint_mgr.go 823: Updating endpoint routes. id=types.WorkloadEndpointID{OrchestratorId:"k8s", WorkloadId:"net-lab/client", EndpointId:"eth0"}
+2026-08-05 17:46:09.167 [INFO][84] felix/endpoint_mgr.go 836: Updating QoS bandwidth state if changed id=types.WorkloadEndpointID{OrchestratorId:"k8s", WorkloadId:"net-lab/client", EndpointId:"eth0"}
+2026-08-05 17:46:09.167 [INFO][84] felix/endpoint_mgr.go 790: Updating per-endpoint chains. id=types.WorkloadEndpointID{OrchestratorId:"k8s", WorkloadId:"net-lab/server-a", EndpointId:"eth0"}
+2026-08-05 17:46:09.167 [INFO][84] felix/endpoint_mgr.go 823: Updating endpoint routes. id=types.WorkloadEndpointID{OrchestratorId:"k8s", WorkloadId:"net-lab/server-a", EndpointId:"eth0"}
+2026-08-05 17:46:09.167 [INFO][84] felix/endpoint_mgr.go 836: Updating QoS bandwidth state if changed id=types.WorkloadEndpointID{OrchestratorId:"k8s", WorkloadId:"net-lab/server-a", EndpointId:"eth0"}
+2026-08-05 17:46:09.168 [INFO][84] felix/endpoint_mgr.go 1589: Applying /proc/sys configuration to interface. ifaceName="cali651ff5ba98e"
+2026-08-05 17:46:09.168 [INFO][84] felix/endpoint_mgr.go 1589: Applying /proc/sys configuration to interface. ifaceName="cali2f026170013"
+2026-08-05 17:46:09.168 [INFO][84] felix/endpoint_mgr.go 663: Re-evaluated workload endpoint status adminUp=true failed=false known=true operUp=true status="up" workloadEndpointID=types.WorkloadEndpointID{OrchestratorId:"k8s", WorkloadId:"net-lab/server-a", EndpointId:"eth0"}
+2026-08-05 17:46:09.168 [INFO][84] felix/status_combiner.go 62: Storing endpoint status update ipVersion=0x4 status="up" workload=types.WorkloadEndpointID{OrchestratorId:"k8s", WorkloadId:"net-lab/server-a", EndpointId:"eth0"}
+2026-08-05 17:46:09.168 [INFO][84] felix/endpoint_mgr.go 663: Re-evaluated workload endpoint status adminUp=true failed=false known=true operUp=true status="up" workloadEndpointID=types.WorkloadEndpointID{OrchestratorId:"k8s", WorkloadId:"net-lab/client", EndpointId:"eth0"}
+2026-08-05 17:46:09.168 [INFO][84] felix/status_combiner.go 62: Storing endpoint status update ipVersion=0x4 status="up" workload=types.WorkloadEndpointID{OrchestratorId:"k8s", WorkloadId:"net-lab/client", EndpointId:"eth0"}
+2026-08-05 17:46:09.194 [INFO][84] felix/status_combiner.go 95: Endpoint up for at least one IP version id=types.WorkloadEndpointID{OrchestratorId:"k8s", WorkloadId:"net-lab/server-a", EndpointId:"eth0"} ipVersion=0x4 status="up"
+2026-08-05 17:46:09.195 [INFO][84] felix/status_combiner.go 114: Reporting combined status. id=types.WorkloadEndpointID{OrchestratorId:"k8s", WorkloadId:"net-lab/server-a", EndpointId:"eth0"} status="up"
+2026-08-05 17:46:09.195 [INFO][84] felix/status_combiner.go 95: Endpoint up for at least one IP version id=types.WorkloadEndpointID{OrchestratorId:"k8s", WorkloadId:"net-lab/client", EndpointId:"eth0"} ipVersion=0x4 status="up"
+2026-08-05 17:46:09.195 [INFO][84] felix/status_combiner.go 114: Reporting combined status. id=types.WorkloadEndpointID{OrchestratorId:"k8s", WorkloadId:"net-lab/client", EndpointId:"eth0"} status="up"
+2026-08-05 17:46:09.195 [INFO][84] felix/summary.go 100: Summarising 4 dataplane reconciliation loops over 1m2.5s: avg=50ms longest=86ms (resync-calico-arp-v4)
+2026-08-05 17:47:29.293 [INFO][84] felix/summary.go 100: Summarising 9 dataplane reconciliation loops over 1m20.1s: avg=50ms longest=89ms (resync-calico-arp-v4,resync-ipsets-v4)
+2026-08-05 17:47:29.346 [INFO][84] felix/label_inheritance_index.go 187: Updating selector id=Policy(Name=allow-client-to-http-servers, Namespace=net-lab, Kind=KubernetesNetworkPolicy) selector=((projectcalico.org/orchestrator == "k8s" && app.kubernetes.io/name == "http-server") && projectcalico.org/namespace == "net-lab")
+2026-08-05 17:47:29.346 [INFO][84] felix/calc_graph.go 322: IPSet now active ipSet=IPSetData{selector:"(projectcalico.org/namespace == \"net-lab\" && (projectcalico.org/orchestrator == \"k8s\" && app.kubernetes.io/name == \"network-client\"))", uniqueID:"s:Rg3IfxXscbcLY3pBS4WamP6haRZJaDISxDVQbA"}
+2026-08-05 17:47:29.347 [INFO][84] felix/int_dataplane.go 2514: Received *proto.IPSetUpdate update from calculation graph. msg=id:"s:Rg3IfxXscbcLY3pBS4WamP6haRZJaDISxDVQbA"  members:"10.42.113.67/32"  type:NET
+2026-08-05 17:47:29.347 [INFO][84] felix/ipsets.go 179: Queueing IP set for creation family="inet" setID="s:Rg3IfxXscbcLY3pBS4WamP6haRZJaDISxDVQbA" setType="hash:net"
+2026-08-05 17:47:29.348 [INFO][84] felix/int_dataplane.go 2514: Received *proto.ActivePolicyUpdate update from calculation graph. msg=id:{name:"allow-client-to-http-servers"  namespace:"net-lab"  kind:"KubernetesNetworkPolicy"}  policy:{namespace:"net-lab"  inbound_rules:{action:"allow"  protocol:{name:"tcp"}  dst_ports:{first:8080  last:8080}  src_ip_set_ids:"s:Rg3IfxXscbcLY3pBS4WamP6haRZJaDISxDVQbA"  original_src_selector:"projectcalico.org/orchestrator == 'k8s' && app.kubernetes.io/name == 'network-client'"  rule_id:"5Q5Ds_MZxcNhr4Ci"}  original_selector:"((projectcalico.org/orchestrator == \"k8s\" && app.kubernetes.io/name == \"http-server\") && projectcalico.org/namespace == \"net-lab\")"  tier:"default"}
+2026-08-05 17:47:29.348 [INFO][84] felix/int_dataplane.go 2514: Received *proto.WorkloadEndpointUpdate update from calculation graph. msg=id:{orchestrator_id:"k8s"  workload_id:"net-lab/server-a"  endpoint_id:"eth0"}  endpoint:{state:"active"  name:"cali2f026170013"  profile_ids:"kns.net-lab"  profile_ids:"ksa.net-lab.default"  ipv4_nets:"10.42.113.68/32"  tiers:{name:"default"  ingress_policies:{name:"allow-client-to-http-servers"  namespace:"net-lab"  kind:"KubernetesNetworkPolicy"}  ingress_policies:{name:"default-deny-ingress"  namespace:"net-lab"  kind:"KubernetesNetworkPolicy"}  default_action:"Deny"}}
+2026-08-05 17:47:29.348 [INFO][84] felix/endpoint_mgr.go 790: Updating per-endpoint chains. id=types.WorkloadEndpointID{OrchestratorId:"k8s", WorkloadId:"net-lab/server-a", EndpointId:"eth0"}
+2026-08-05 17:47:29.349 [INFO][84] felix/endpoint_mgr.go 823: Updating endpoint routes. id=types.WorkloadEndpointID{OrchestratorId:"k8s", WorkloadId:"net-lab/server-a", EndpointId:"eth0"}
+2026-08-05 17:47:29.349 [INFO][84] felix/endpoint_mgr.go 836: Updating QoS bandwidth state if changed id=types.WorkloadEndpointID{OrchestratorId:"k8s", WorkloadId:"net-lab/server-a", EndpointId:"eth0"}
+2026-08-05 17:47:29.357 [INFO][84] felix/endpoint_mgr.go 1589: Applying /proc/sys configuration to interface. ifaceName="cali2f026170013"
+2026-08-05 17:47:29.358 [INFO][84] felix/endpoint_mgr.go 663: Re-evaluated workload endpoint status adminUp=true failed=false known=true operUp=true status="up" workloadEndpointID=types.WorkloadEndpointID{OrchestratorId:"k8s", WorkloadId:"net-lab/server-a", EndpointId:"eth0"}
+2026-08-05 17:47:29.358 [INFO][84] felix/status_combiner.go 62: Storing endpoint status update ipVersion=0x4 status="up" workload=types.WorkloadEndpointID{OrchestratorId:"k8s", WorkloadId:"net-lab/server-a", EndpointId:"eth0"}
+2026-08-05 17:47:29.427 [INFO][84] felix/status_combiner.go 95: Endpoint up for at least one IP version id=types.WorkloadEndpointID{OrchestratorId:"k8s", WorkloadId:"net-lab/server-a", EndpointId:"eth0"} ipVersion=0x4 status="up"
+2026-08-05 17:47:29.427 [INFO][84] felix/status_combiner.go 114: Reporting combined status. id=types.WorkloadEndpointID{OrchestratorId:"k8s", WorkloadId:"net-lab/server-a", EndpointId:"eth0"} status="up"
+2026-08-05 17:48:49.520 [INFO][84] felix/summary.go 100: Summarising 9 dataplane reconciliation loops over 1m20.2s: avg=60ms longest=92ms (resync-calico-arp-v4)
+=== K3s NetworkPolicy controller exclusion ===
+k3d-tesi-e10-calico-vxlan-server-0 15275 root     sh -c ps -ef | grep -E '[k]ube-router' || echo 'no kube-router process'
+k3d-tesi-e10-calico-vxlan-agent-0 17623 root     sh -c ps -ef | grep -E '[k]ube-router' || echo 'no kube-router process'
+k3d-tesi-e10-calico-vxlan-agent-1 16729 root     sh -c ps -ef | grep -E '[k]ube-router' || echo 'no kube-router process'

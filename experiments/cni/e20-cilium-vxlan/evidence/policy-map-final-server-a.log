@@ -1,0 +1,4 @@
+POLICY   DIRECTION   IDENTITY   PORT/PROTO   PROXY PORT   AUTH TYPE   BYTES   PACKETS   PREFIX   COOKIE
+Allow    Ingress     1          ANY          NONE         disabled    -       -         0        0
+Allow    Ingress     21766      8080/TCP     NONE         disabled    1030    13        24       0
+Allow    Egress      0          ANY          NONE         disabled    1986    26        0        0

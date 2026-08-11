@@ -1,0 +1,26 @@
+timestamp=2026-08-09T17:36:22,846000572+02:00
+stage=default-deny manifest=manifests/e02-default-deny-ingress.yaml
+d8b1192b820876024df03de59b6ea6d9a5c93ecafe3044a14bc60c10c23cf906  manifests/e02-default-deny-ingress.yaml
+networkpolicy.networking.k8s.io/default-deny-ingress created
+=== API object(s) ===
+apiVersion: v1
+items:
+- apiVersion: networking.k8s.io/v1
+  kind: NetworkPolicy
+  metadata:
+    annotations:
+      kubectl.kubernetes.io/last-applied-configuration: |
+        {"apiVersion":"networking.k8s.io/v1","kind":"NetworkPolicy","metadata":{"annotations":{},"name":"default-deny-ingress","namespace":"net-lab"},"spec":{"podSelector":{},"policyTypes":["Ingress"]}}
+    creationTimestamp: "2026-08-09T15:36:22Z"
+    generation: 1
+    name: default-deny-ingress
+    namespace: net-lab
+    resourceVersion: "45587"
+    uid: e7811c0b-00e9-430f-adc0-3f30febe1088
+  spec:
+    podSelector: {}
+    policyTypes:
+    - Ingress
+kind: List
+metadata:
+  resourceVersion: ""

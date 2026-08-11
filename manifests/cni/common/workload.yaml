@@ -1,0 +1,166 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: net-lab
+  labels:
+    app.kubernetes.io/part-of: e01-network-baseline
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: client
+  namespace: net-lab
+  labels:
+    app.kubernetes.io/name: network-client
+    app.kubernetes.io/instance: client
+    app.kubernetes.io/part-of: e01-network-baseline
+spec:
+  automountServiceAccountToken: false
+  enableServiceLinks: false
+  nodeSelector:
+    tesi-placement: a
+  restartPolicy: Always
+  containers:
+    - name: client
+      image: docker.io/library/busybox@sha256:1cfa4e2b09e127b9c4ed43578d3f3c18e7d44ea47b9ea98475c0cbe9086525f8
+      imagePullPolicy: IfNotPresent
+      command:
+        - /bin/sh
+        - -c
+      args:
+        - while true; do sleep 3600; done
+      resources:
+        requests:
+          cpu: 5m
+          memory: 8Mi
+        limits:
+          cpu: 100m
+          memory: 32Mi
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: server-a
+  namespace: net-lab
+  labels:
+    app.kubernetes.io/name: http-server
+    app.kubernetes.io/instance: server-a
+    app.kubernetes.io/part-of: e01-network-baseline
+spec:
+  automountServiceAccountToken: false
+  enableServiceLinks: false
+  nodeSelector:
+    tesi-placement: a
+  restartPolicy: Always
+  containers:
+    - name: server
+      image: docker.io/library/busybox@sha256:1cfa4e2b09e127b9c4ed43578d3f3c18e7d44ea47b9ea98475c0cbe9086525f8
+      imagePullPolicy: IfNotPresent
+      command:
+        - /bin/sh
+        - -c
+      args:
+        - |
+          mkdir -p /www
+          printf '%s\n' "$POD_NAME" > /www/index.html
+          exec httpd -f -p 8080 -h /www
+      env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+      ports:
+        - name: http
+          containerPort: 8080
+          protocol: TCP
+      readinessProbe:
+        exec:
+          command:
+            - /bin/sh
+            - -c
+            - test -r /www/index.html
+        initialDelaySeconds: 1
+        periodSeconds: 5
+        timeoutSeconds: 1
+        failureThreshold: 3
+      resources:
+        requests:
+          cpu: 5m
+          memory: 8Mi
+        limits:
+          cpu: 100m
+          memory: 32Mi
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: server-b
+  namespace: net-lab
+  labels:
+    app.kubernetes.io/name: http-server
+    app.kubernetes.io/instance: server-b
+    app.kubernetes.io/part-of: e01-network-baseline
+spec:
+  automountServiceAccountToken: false
+  enableServiceLinks: false
+  nodeSelector:
+    tesi-placement: b
+  restartPolicy: Always
+  containers:
+    - name: server
+      image: docker.io/library/busybox@sha256:1cfa4e2b09e127b9c4ed43578d3f3c18e7d44ea47b9ea98475c0cbe9086525f8
+      imagePullPolicy: IfNotPresent
+      command:
+        - /bin/sh
+        - -c
+      args:
+        - |
+          mkdir -p /www
+          printf '%s\n' "$POD_NAME" > /www/index.html
+          exec httpd -f -p 8080 -h /www
+      env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+      ports:
+        - name: http
+          containerPort: 8080
+          protocol: TCP
+      readinessProbe:
+        exec:
+          command:
+            - /bin/sh
+            - -c
+            - test -r /www/index.html
+        initialDelaySeconds: 1
+        periodSeconds: 5
+        timeoutSeconds: 1
+        failureThreshold: 3
+      resources:
+        requests:
+          cpu: 5m
+          memory: 8Mi
+        limits:
+          cpu: 100m
+          memory: 32Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: servers
+  namespace: net-lab
+  labels:
+    app.kubernetes.io/name: http-server
+    app.kubernetes.io/part-of: e01-network-baseline
+spec:
+  type: ClusterIP
+  sessionAffinity: None
+  internalTrafficPolicy: Cluster
+  selector:
+    app.kubernetes.io/name: http-server
+  ports:
+    - name: http
+      protocol: TCP
+      port: 8080
+      targetPort: http

@@ -1,0 +1,13 @@
+timestamp_end=2026-08-09T16:59:51,590958934+02:00
+capture_exit=0
+flow_subshell_exit=0
+flow_exit=0
+response=server-b
+tcpdump_summary_lines=3
+client_veth_lines=12
+vxlan_interface_lines=12
+eth0_lines=12
+outer_underlay_lines=6
+vni_lines=0
+residual_process_groups=0
+fallback_sigkill_used=no

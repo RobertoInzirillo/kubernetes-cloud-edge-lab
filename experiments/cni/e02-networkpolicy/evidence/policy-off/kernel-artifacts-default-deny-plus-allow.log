@@ -1,0 +1,25 @@
+capture_timestamp=2026-08-04T18:54:43,492532086+02:00 state=after-allow-before-flows
+
+===== NODE k3d-tesi-e02-flannel-netpol-off-server-0 =====
+[IPv4 policy artifacts and counters]
+no_matching_ipv4_policy_artifacts
+[IPv6 policy artifacts and counters]
+no_matching_ipv6_policy_artifacts
+[KUBE ipsets]
+no_KUBE_ipsets
+
+===== NODE k3d-tesi-e02-flannel-netpol-off-agent-0 =====
+[IPv4 policy artifacts and counters]
+no_matching_ipv4_policy_artifacts
+[IPv6 policy artifacts and counters]
+no_matching_ipv6_policy_artifacts
+[KUBE ipsets]
+no_KUBE_ipsets
+
+===== NODE k3d-tesi-e02-flannel-netpol-off-agent-1 =====
+[IPv4 policy artifacts and counters]
+no_matching_ipv4_policy_artifacts
+[IPv6 policy artifacts and counters]
+no_matching_ipv6_policy_artifacts
+[KUBE ipsets]
+no_KUBE_ipsets

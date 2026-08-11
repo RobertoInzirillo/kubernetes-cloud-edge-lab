@@ -1,0 +1,31 @@
+apiVersion: operator.tigera.io/v1
+kind: ImageSet
+metadata:
+  annotations:
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"operator.tigera.io/v1","kind":"ImageSet","metadata":{"annotations":{},"name":"calico-v3.32.1"},"spec":{"images":[{"digest":"sha256:d83e9a284696f90bed0eb2e5faa819f22f27084b21882431fadabb02f682928b","image":"calico/apiserver"},{"digest":"sha256:3ef9bbb3fdb2b3194dff57d7d8496d5e18247afb59606dfc694ab88ed1fa9f86","image":"calico/cni"},{"digest":"sha256:493c4390f2f88dbff1f58a469b9216ae26a883b489716f4a984be0d4bb6cbeae","image":"calico/key-cert-provisioner"},{"digest":"sha256:df00967cbd6d88e1ff3123e1598895845622e2987928b4ebd9d8ac49aefe00c3","image":"calico/kube-controllers"},{"digest":"sha256:c061070a27292f8152ae6a0582078eb9059d1b6ed5e57c2052e5c22534734240","image":"calico/node"},{"digest":"sha256:fdc88157c7df7520e76e0986168ba3171461d2cd1a4ac36ac6f0779e4588fc44","image":"calico/typha"},{"digest":"sha256:bfd9f4dd13152844cbb9fac8ae340dd0856b2d05cd7396fc2d4ed63914eb5be2","image":"calico/pod2daemon-flexvol"},{"digest":"sha256:d1a905800435f0ba99595b885b9d8bb85578c7e8ac10b313d2354b4fd622dc1e","image":"calico/csi"},{"digest":"sha256:b1713e056dac61a76cff71fbe202ef04460e3dd074e94606da1fdaa46d4bf957","image":"calico/node-driver-registrar"}]}}
+  creationTimestamp: "2026-08-05T16:27:41Z"
+  generation: 2
+  name: calico-v3.32.1
+  resourceVersion: "2305"
+  uid: 1c473f7d-5345-4a42-b38d-57bc7faf6f13
+spec:
+  images:
+  - digest: sha256:d83e9a284696f90bed0eb2e5faa819f22f27084b21882431fadabb02f682928b
+    image: calico/apiserver
+  - digest: sha256:3ef9bbb3fdb2b3194dff57d7d8496d5e18247afb59606dfc694ab88ed1fa9f86
+    image: calico/cni
+  - digest: sha256:493c4390f2f88dbff1f58a469b9216ae26a883b489716f4a984be0d4bb6cbeae
+    image: calico/key-cert-provisioner
+  - digest: sha256:df00967cbd6d88e1ff3123e1598895845622e2987928b4ebd9d8ac49aefe00c3
+    image: calico/kube-controllers
+  - digest: sha256:c061070a27292f8152ae6a0582078eb9059d1b6ed5e57c2052e5c22534734240
+    image: calico/node
+  - digest: sha256:fdc88157c7df7520e76e0986168ba3171461d2cd1a4ac36ac6f0779e4588fc44
+    image: calico/typha
+  - digest: sha256:bfd9f4dd13152844cbb9fac8ae340dd0856b2d05cd7396fc2d4ed63914eb5be2
+    image: calico/pod2daemon-flexvol
+  - digest: sha256:d1a905800435f0ba99595b885b9d8bb85578c7e8ac10b313d2354b4fd622dc1e
+    image: calico/csi
+  - digest: sha256:b1713e056dac61a76cff71fbe202ef04460e3dd074e94606da1fdaa46d4bf957
+    image: calico/node-driver-registrar

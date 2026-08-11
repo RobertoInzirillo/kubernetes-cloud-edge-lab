@@ -1,0 +1,62 @@
+timestamp=2026-08-05T19:24:00,898988334+02:00
+CORRECTION: the first reporting filter matched only chain declarations; the original full snapshots were valid and are re-read below without changing cluster state.
+
+=== kube-proxy mode from K3s log ===
+time="2026-08-05T16:23:43Z" level=info msg="Running kube-proxy --cluster-cidr=10.42.0.0/16 --conntrack-max-per-core=0 --conntrack-tcp-timeout-close-wait=0s --conntrack-tcp-timeout-established=0s --healthz-bind-address=127.0.0.1 --hostname-override=k3d-tesi-e10-calico-vxlan-agent-0 --kubeconfig=/var/lib/rancher/k3s/agent/kubeproxy.kubeconfig --proxy-mode=iptables"
+
+=== kube-proxy health on all nodes ===
+k3d-tesi-e10-calico-vxlan-server-0 {"lastUpdated":"2026-08-05T17:24:01.081808311Z","currentTime":"2026-08-05T17:24:01.081716776Z","nodeEligible":true,"healthy":true,"status":{"IPv4":{"lastUpdated":"2026-08-05T17:15:49.451714249Z","healthy":true},"IPv6":{"lastUpdated":"2026-08-05T17:23:43.04835816Z","healthy":true}}}
+k3d-tesi-e10-calico-vxlan-agent-0 {"lastUpdated":"2026-08-05T17:24:01.207290161Z","currentTime":"2026-08-05T17:24:01.207205782Z","nodeEligible":true,"healthy":true,"status":{"IPv4":{"lastUpdated":"2026-08-05T17:15:49.43043515Z","healthy":true},"IPv6":{"lastUpdated":"2026-08-05T17:23:46.117425973Z","healthy":true}}}
+k3d-tesi-e10-calico-vxlan-agent-1 {"lastUpdated":"2026-08-05T17:24:01.324700358Z","currentTime":"2026-08-05T17:24:01.324599497Z","nodeEligible":true,"healthy":true,"status":{"IPv4":{"lastUpdated":"2026-08-05T17:15:49.448293551Z","healthy":true},"IPv6":{"lastUpdated":"2026-08-05T17:23:46.103372329Z","healthy":true}}}
+
+=== effective Calico dataplane fields ===
+linuxDataplane=Iptables
+kubeProxyManagement=Disabled
+bgp=Disabled
+Felix eBPF enabled value:
+
+=== relevant nat rules before ===
+:KUBE-SEP-PIHVHRGJYEGUWQGF - [0:0]
+:KUBE-SEP-VAMX36KNEDRNEHFI - [0:0]
+:KUBE-SVC-52E5QOXW62TEVVLC - [0:0]
+[0:0] -A KUBE-SEP-PIHVHRGJYEGUWQGF -s 10.42.144.131/32 -m comment --comment "net-lab/servers:http" -j KUBE-MARK-MASQ
+[2:120] -A KUBE-SEP-PIHVHRGJYEGUWQGF -p tcp -m comment --comment "net-lab/servers:http" -m tcp -j DNAT --to-destination 10.42.144.131:8080
+[0:0] -A KUBE-SEP-VAMX36KNEDRNEHFI -s 10.42.113.68/32 -m comment --comment "net-lab/servers:http" -j KUBE-MARK-MASQ
+[0:0] -A KUBE-SEP-VAMX36KNEDRNEHFI -p tcp -m comment --comment "net-lab/servers:http" -m tcp -j DNAT --to-destination 10.42.113.68:8080
+[2:120] -A KUBE-SERVICES -d 10.43.68.63/32 -p tcp -m comment --comment "net-lab/servers:http cluster IP" -m tcp --dport 8080 -j KUBE-SVC-52E5QOXW62TEVVLC
+[0:0] -A KUBE-SVC-52E5QOXW62TEVVLC ! -s 10.42.0.0/16 -d 10.43.68.63/32 -p tcp -m comment --comment "net-lab/servers:http cluster IP" -m tcp --dport 8080 -j KUBE-MARK-MASQ
+[0:0] -A KUBE-SVC-52E5QOXW62TEVVLC -m comment --comment "net-lab/servers:http -> 10.42.113.68:8080" -m statistic --mode random --probability 0.50000000000 -j KUBE-SEP-VAMX36KNEDRNEHFI
+[2:120] -A KUBE-SVC-52E5QOXW62TEVVLC -m comment --comment "net-lab/servers:http -> 10.42.144.131:8080" -j KUBE-SEP-PIHVHRGJYEGUWQGF
+
+=== relevant nat rules after two fresh requests ===
+:KUBE-SEP-PIHVHRGJYEGUWQGF - [0:0]
+:KUBE-SEP-VAMX36KNEDRNEHFI - [0:0]
+:KUBE-SVC-52E5QOXW62TEVVLC - [0:0]
+[0:0] -A KUBE-SEP-PIHVHRGJYEGUWQGF -s 10.42.144.131/32 -m comment --comment "net-lab/servers:http" -j KUBE-MARK-MASQ
+[2:120] -A KUBE-SEP-PIHVHRGJYEGUWQGF -p tcp -m comment --comment "net-lab/servers:http" -m tcp -j DNAT --to-destination 10.42.144.131:8080
+[0:0] -A KUBE-SEP-VAMX36KNEDRNEHFI -s 10.42.113.68/32 -m comment --comment "net-lab/servers:http" -j KUBE-MARK-MASQ
+[2:120] -A KUBE-SEP-VAMX36KNEDRNEHFI -p tcp -m comment --comment "net-lab/servers:http" -m tcp -j DNAT --to-destination 10.42.113.68:8080
+[4:240] -A KUBE-SERVICES -d 10.43.68.63/32 -p tcp -m comment --comment "net-lab/servers:http cluster IP" -m tcp --dport 8080 -j KUBE-SVC-52E5QOXW62TEVVLC
+[0:0] -A KUBE-SVC-52E5QOXW62TEVVLC ! -s 10.42.0.0/16 -d 10.43.68.63/32 -p tcp -m comment --comment "net-lab/servers:http cluster IP" -m tcp --dport 8080 -j KUBE-MARK-MASQ
+[2:120] -A KUBE-SVC-52E5QOXW62TEVVLC -m comment --comment "net-lab/servers:http -> 10.42.113.68:8080" -m statistic --mode random --probability 0.50000000000 -j KUBE-SEP-VAMX36KNEDRNEHFI
+[2:120] -A KUBE-SVC-52E5QOXW62TEVVLC -m comment --comment "net-lab/servers:http -> 10.42.144.131:8080" -j KUBE-SEP-PIHVHRGJYEGUWQGF
+
+=== counter delta ===
+--- /dev/fd/63	2026-08-05 19:24:01.716587663 +0200
++++ /dev/fd/62	2026-08-05 19:24:01.716587663 +0200
+@@ -4,8 +4,8 @@
+ [0:0] -A KUBE-SEP-PIHVHRGJYEGUWQGF -s 10.42.144.131/32 -m comment --comment "net-lab/servers:http" -j KUBE-MARK-MASQ
+ [2:120] -A KUBE-SEP-PIHVHRGJYEGUWQGF -p tcp -m comment --comment "net-lab/servers:http" -m tcp -j DNAT --to-destination 10.42.144.131:8080
+ [0:0] -A KUBE-SEP-VAMX36KNEDRNEHFI -s 10.42.113.68/32 -m comment --comment "net-lab/servers:http" -j KUBE-MARK-MASQ
+-[0:0] -A KUBE-SEP-VAMX36KNEDRNEHFI -p tcp -m comment --comment "net-lab/servers:http" -m tcp -j DNAT --to-destination 10.42.113.68:8080
+-[2:120] -A KUBE-SERVICES -d 10.43.68.63/32 -p tcp -m comment --comment "net-lab/servers:http cluster IP" -m tcp --dport 8080 -j KUBE-SVC-52E5QOXW62TEVVLC
++[2:120] -A KUBE-SEP-VAMX36KNEDRNEHFI -p tcp -m comment --comment "net-lab/servers:http" -m tcp -j DNAT --to-destination 10.42.113.68:8080
++[4:240] -A KUBE-SERVICES -d 10.43.68.63/32 -p tcp -m comment --comment "net-lab/servers:http cluster IP" -m tcp --dport 8080 -j KUBE-SVC-52E5QOXW62TEVVLC
+ [0:0] -A KUBE-SVC-52E5QOXW62TEVVLC ! -s 10.42.0.0/16 -d 10.43.68.63/32 -p tcp -m comment --comment "net-lab/servers:http cluster IP" -m tcp --dport 8080 -j KUBE-MARK-MASQ
+-[0:0] -A KUBE-SVC-52E5QOXW62TEVVLC -m comment --comment "net-lab/servers:http -> 10.42.113.68:8080" -m statistic --mode random --probability 0.50000000000 -j KUBE-SEP-VAMX36KNEDRNEHFI
++[2:120] -A KUBE-SVC-52E5QOXW62TEVVLC -m comment --comment "net-lab/servers:http -> 10.42.113.68:8080" -m statistic --mode random --probability 0.50000000000 -j KUBE-SEP-VAMX36KNEDRNEHFI
+ [2:120] -A KUBE-SVC-52E5QOXW62TEVVLC -m comment --comment "net-lab/servers:http -> 10.42.144.131:8080" -j KUBE-SEP-PIHVHRGJYEGUWQGF
+
+Observed requests are recorded in service-kube-proxy-attribution.log: 2/2 HTTP 200 bodies server-a.
+KUBE-SERVICES counter: 2->4 packets; selected local KUBE-SEP DNAT counter: 0->2 packets.
+Counters count packets/traversals, not HTTP requests in general; here the focused DNAT delta is coherent with the two fresh TCP connections.

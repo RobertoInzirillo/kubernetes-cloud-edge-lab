@@ -1,0 +1,137 @@
+timestamp=2026-08-09T17:17:36,203783535+02:00
+context=k3d-tesi-e20-cilium-vxlan
+source_node=k3d-tesi-e20-cilium-vxlan-agent-0
+cilium_pod=cilium-sdlx7
+client_ip=10.42.0.169
+service_ip=10.43.59.99
+service_port=8080
+server_a_ip=10.42.0.76
+server_b_ip=10.42.1.199
+networkpolicy_count=0
+ciliumnetworkpolicy_count=0
+ciliumclusterwidenetworkpolicy_count=0
+=== Service ===
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"v1","kind":"Service","metadata":{"annotations":{},"labels":{"app.kubernetes.io/name":"http-server","app.kubernetes.io/part-of":"e01-network-baseline"},"name":"servers","namespace":"net-lab"},"spec":{"internalTrafficPolicy":"Cluster","ports":[{"name":"http","port":8080,"protocol":"TCP","targetPort":"http"}],"selector":{"app.kubernetes.io/name":"http-server"},"sessionAffinity":"None","type":"ClusterIP"}}
+  creationTimestamp: "2026-08-09T14:16:46Z"
+  labels:
+    app.kubernetes.io/name: http-server
+    app.kubernetes.io/part-of: e01-network-baseline
+  name: servers
+  namespace: net-lab
+  resourceVersion: "40661"
+  uid: 4f1c3d34-776f-47a0-b9da-8e47fb53ef06
+spec:
+  clusterIP: 10.43.59.99
+  clusterIPs:
+  - 10.43.59.99
+  internalTrafficPolicy: Cluster
+  ipFamilies:
+  - IPv4
+  ipFamilyPolicy: SingleStack
+  ports:
+  - name: http
+    port: 8080
+    protocol: TCP
+    targetPort: http
+  selector:
+    app.kubernetes.io/name: http-server
+  sessionAffinity: None
+  type: ClusterIP
+status:
+  loadBalancer: {}
+=== EndpointSlice ===
+apiVersion: v1
+items:
+- addressType: IPv4
+  apiVersion: discovery.k8s.io/v1
+  endpoints:
+  - addresses:
+    - 10.42.0.76
+    conditions:
+      ready: true
+      serving: true
+      terminating: false
+    nodeName: k3d-tesi-e20-cilium-vxlan-agent-0
+    targetRef:
+      kind: Pod
+      name: server-a
+      namespace: net-lab
+      uid: 097aea4a-6682-4ab7-9ce2-7c5aba56ca7b
+  - addresses:
+    - 10.42.1.199
+    conditions:
+      ready: true
+      serving: true
+      terminating: false
+    nodeName: k3d-tesi-e20-cilium-vxlan-agent-1
+    targetRef:
+      kind: Pod
+      name: server-b
+      namespace: net-lab
+      uid: 1e3272d1-175e-4673-8819-b3e6ace2c1af
+  kind: EndpointSlice
+  metadata:
+    annotations:
+      endpoints.kubernetes.io/last-change-trigger-time: "2026-08-09T14:16:54Z"
+    creationTimestamp: "2026-08-09T14:16:46Z"
+    generateName: servers-
+    generation: 5
+    labels:
+      app.kubernetes.io/name: http-server
+      app.kubernetes.io/part-of: e01-network-baseline
+      endpointslice.kubernetes.io/managed-by: endpointslice-controller.k8s.io
+      kubernetes.io/service-name: servers
+    name: servers-l9qjn
+    namespace: net-lab
+    ownerReferences:
+    - apiVersion: v1
+      blockOwnerDeletion: true
+      controller: true
+      kind: Service
+      name: servers
+      uid: 4f1c3d34-776f-47a0-b9da-8e47fb53ef06
+    resourceVersion: "40704"
+    uid: 07c4a5ec-0e67-4e3e-80f3-ecd66f85befa
+  ports:
+  - name: http
+    port: 8080
+    protocol: TCP
+kind: List
+metadata:
+  resourceVersion: ""
+=== Pods ===
+NAME       READY   STATUS    RESTARTS   AGE   IP            NODE                                NOMINATED NODE   READINESS GATES
+client     1/1     Running   0          60m   10.42.0.169   k3d-tesi-e20-cilium-vxlan-agent-0   <none>           <none>
+server-a   1/1     Running   0          60m   10.42.0.76    k3d-tesi-e20-cilium-vxlan-agent-0   <none>           <none>
+server-b   1/1     Running   0          60m   10.42.1.199   k3d-tesi-e20-cilium-vxlan-agent-1   <none>           <none>
+=== kube-proxy mode/config from embedded K3s ===
+K3s non espone un ConfigMap kube-proxy separato in questo cluster.
+["agent"]
+   38 root     /bin/k3s agent
+time="2026-08-07T14:51:09Z" level=info msg="Running kube-proxy --cluster-cidr=10.42.0.0/16 --conntrack-max-per-core=0 --conntrack-tcp-timeout-close-wait=0s --conntrack-tcp-timeout-established=0s --healthz-bind-address=127.0.0.1 --hostname-override=k3d-tesi-e20-cilium-vxlan-agent-0 --kubeconfig=/var/lib/rancher/k3s/agent/kubeproxy.kubeconfig --proxy-mode=iptables"
+I0807 14:51:11.899454      87 server_linux.go:132] "Using iptables Proxier"
+time="2026-08-08T07:32:14Z" level=info msg="Running kube-proxy --cluster-cidr=10.42.0.0/16 --conntrack-max-per-core=0 --conntrack-tcp-timeout-close-wait=0s --conntrack-tcp-timeout-established=0s --healthz-bind-address=127.0.0.1 --hostname-override=k3d-tesi-e20-cilium-vxlan-agent-0 --kubeconfig=/var/lib/rancher/k3s/agent/kubeproxy.kubeconfig --proxy-mode=iptables"
+I0808 07:32:14.966931      40 server_linux.go:132] "Using iptables Proxier"
+time="2026-08-08T23:09:24Z" level=info msg="Running kube-proxy --cluster-cidr=10.42.0.0/16 --conntrack-max-per-core=0 --conntrack-tcp-timeout-close-wait=0s --conntrack-tcp-timeout-established=0s --healthz-bind-address=127.0.0.1 --hostname-override=k3d-tesi-e20-cilium-vxlan-agent-0 --kubeconfig=/var/lib/rancher/k3s/agent/kubeproxy.kubeconfig --proxy-mode=iptables"
+I0808 23:09:25.113409      39 server_linux.go:132] "Using iptables Proxier"
+time="2026-08-09T07:13:44Z" level=info msg="Running kube-proxy --cluster-cidr=10.42.0.0/16 --conntrack-max-per-core=0 --conntrack-tcp-timeout-close-wait=0s --conntrack-tcp-timeout-established=0s --healthz-bind-address=127.0.0.1 --hostname-override=k3d-tesi-e20-cilium-vxlan-agent-0 --kubeconfig=/var/lib/rancher/k3s/agent/kubeproxy.kubeconfig --proxy-mode=iptables"
+I0809 07:13:44.413854      38 server_linux.go:132] "Using iptables Proxier"
+=== Cilium Service-related config ===
+{
+  "bpf-lb-acceleration": "disabled",
+  "bpf-lb-algorithm-annotation": "false",
+  "bpf-lb-external-clusterip": "false",
+  "bpf-lb-map-max": "65536",
+  "bpf-lb-mode-annotation": "false",
+  "bpf-lb-sock": "false",
+  "bpf-lb-source-range-all-types": "false",
+  "dnsproxy-socket-linger-timeout": "10",
+  "enable-xt-socket-fallback": "true",
+  "hubble-socket-path": "/var/run/cilium/hubble.sock",
+  "kube-proxy-replacement": "false"
+}

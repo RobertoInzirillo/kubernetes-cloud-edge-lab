@@ -1,0 +1,20 @@
+tcpdump: verbose output suppressed, use -v[v]... for full protocol decode
+listening on veth588e6b4f, link-type EN10MB (Ethernet), snapshot length 262144 bytes
+2026-08-02 18:34:54.499398 26:0d:33:5f:ee:48 > 2a:18:73:e0:31:21, ethertype IPv4 (0x0800), length 74: 10.42.0.6.37956 > 10.42.0.5.8080: Flags [S], seq 943725321, win 64860, options [mss 1410,sackOK,TS val 3363899184 ecr 0,nop,wscale 10], length 0
+2026-08-02 18:34:54.499462 26:0d:33:5f:ee:48 > 2a:18:73:e0:31:21, ethertype IPv4 (0x0800), length 74: 10.42.0.6.37956 > 10.42.0.5.8080: Flags [S], seq 943725321, win 64860, options [mss 1410,sackOK,TS val 3363899184 ecr 0,nop,wscale 10], length 0
+2026-08-02 18:34:54.499512 2a:18:73:e0:31:21 > 26:0d:33:5f:ee:48, ethertype IPv4 (0x0800), length 74: 10.42.0.5.8080 > 10.42.0.6.37956: Flags [S.], seq 3416936182, ack 943725322, win 64308, options [mss 1410,sackOK,TS val 3102821930 ecr 3363899184,nop,wscale 10], length 0
+2026-08-02 18:34:54.499528 26:0d:33:5f:ee:48 > 2a:18:73:e0:31:21, ethertype IPv4 (0x0800), length 66: 10.42.0.6.37956 > 10.42.0.5.8080: Flags [.], ack 1, win 64, options [nop,nop,TS val 3363899184 ecr 3102821930], length 0
+2026-08-02 18:34:54.499603 26:0d:33:5f:ee:48 > 2a:18:73:e0:31:21, ethertype IPv4 (0x0800), length 143: 10.42.0.6.37956 > 10.42.0.5.8080: Flags [P.], seq 1:78, ack 1, win 64, options [nop,nop,TS val 3363899184 ecr 3102821930], length 77: HTTP: GET / HTTP/1.1
+2026-08-02 18:34:54.499638 2a:18:73:e0:31:21 > 26:0d:33:5f:ee:48, ethertype IPv4 (0x0800), length 66: 10.42.0.5.8080 > 10.42.0.6.37956: Flags [.], ack 78, win 63, options [nop,nop,TS val 3102821931 ecr 3363899184], length 0
+2026-08-02 18:34:54.500044 2a:18:73:e0:31:21 > 26:0d:33:5f:ee:48, ethertype IPv4 (0x0800), length 273: 10.42.0.5.8080 > 10.42.0.6.37956: Flags [P.], seq 1:208, ack 78, win 63, options [nop,nop,TS val 3102821931 ecr 3363899184], length 207: HTTP: HTTP/1.1 200 OK
+2026-08-02 18:34:54.500057 26:0d:33:5f:ee:48 > 2a:18:73:e0:31:21, ethertype IPv4 (0x0800), length 66: 10.42.0.6.37956 > 10.42.0.5.8080: Flags [.], ack 208, win 64, options [nop,nop,TS val 3363899185 ecr 3102821931], length 0
+2026-08-02 18:34:54.500100 2a:18:73:e0:31:21 > 26:0d:33:5f:ee:48, ethertype IPv4 (0x0800), length 75: 10.42.0.5.8080 > 10.42.0.6.37956: Flags [P.], seq 208:217, ack 78, win 63, options [nop,nop,TS val 3102821931 ecr 3363899185], length 9: HTTP
+2026-08-02 18:34:54.500107 26:0d:33:5f:ee:48 > 2a:18:73:e0:31:21, ethertype IPv4 (0x0800), length 66: 10.42.0.6.37956 > 10.42.0.5.8080: Flags [.], ack 217, win 64, options [nop,nop,TS val 3363899185 ecr 3102821931], length 0
+2026-08-02 18:34:54.500136 2a:18:73:e0:31:21 > 26:0d:33:5f:ee:48, ethertype IPv4 (0x0800), length 66: 10.42.0.5.8080 > 10.42.0.6.37956: Flags [F.], seq 217, ack 78, win 63, options [nop,nop,TS val 3102821931 ecr 3363899185], length 0
+2026-08-02 18:34:54.540796 26:0d:33:5f:ee:48 > 2a:18:73:e0:31:21, ethertype IPv4 (0x0800), length 66: 10.42.0.6.37956 > 10.42.0.5.8080: Flags [.], ack 218, win 64, options [nop,nop,TS val 3363899226 ecr 3102821931], length 0
+2026-08-02 18:34:54.556204 26:0d:33:5f:ee:48 > 2a:18:73:e0:31:21, ethertype IPv4 (0x0800), length 66: 10.42.0.6.37956 > 10.42.0.5.8080: Flags [F.], seq 78, ack 218, win 64, options [nop,nop,TS val 3363899241 ecr 3102821931], length 0
+2026-08-02 18:34:54.556305 2a:18:73:e0:31:21 > 26:0d:33:5f:ee:48, ethertype IPv4 (0x0800), length 66: 10.42.0.5.8080 > 10.42.0.6.37956: Flags [.], ack 79, win 63, options [nop,nop,TS val 3102821987 ecr 3363899241], length 0
+
+14 packets captured
+14 packets received by filter
+0 packets dropped by kernel

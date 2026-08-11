@@ -1,0 +1,109 @@
+# E20: Cilium 1.19.6 in VXLAN, data plane eBPF e kube-proxy mantenuto.
+image:
+  repository: quay.io/cilium/cilium
+  tag: v1.19.6
+  digest: sha256:0df5b2750b64c49843aba1d649e9eaf61467cb0645ad3171db6f6962c095ac92
+  useDigest: true
+
+cni:
+  install: true
+  uninstall: false
+  chainingMode: none
+  exclusive: true
+  customConf: false
+
+ipam:
+  mode: cluster-pool
+  operator:
+    clusterPoolIPv4PodCIDRList:
+      - 10.42.0.0/16
+    clusterPoolIPv4MaskSize: 24
+
+ipv4:
+  enabled: true
+ipv6:
+  enabled: false
+enableIPv4Masquerade: true
+enableIPv6Masquerade: false
+defaultLBServiceIPAM: none
+enableLBIPAM: false
+
+routingMode: tunnel
+tunnelProtocol: vxlan
+underlayProtocol: ipv4
+autoDirectNodeRoutes: false
+endpointRoutes:
+  enabled: false
+bpf:
+  root: /sys/fs/bpf
+  autoMount:
+    enabled: true
+  datapathMode: veth
+cgroup:
+  autoMount:
+    enabled: true
+  hostRoot: /run/cilium/cgroupv2
+kubeProxyReplacement: "false"
+socketLB:
+  enabled: false
+bandwidthManager:
+  enabled: false
+localRedirectPolicies:
+  enabled: false
+
+k8sNetworkPolicy:
+  enabled: true
+l7Proxy: false
+envoyConfig:
+  enabled: false
+envoy:
+  enabled: false
+
+hubble:
+  enabled: true
+  listenAddress: ":4244"
+  tls:
+    enabled: true
+    auto:
+      enabled: true
+      method: helm
+  relay:
+    enabled: false
+  ui:
+    enabled: false
+
+operator:
+  enabled: true
+  replicas: 1
+  prometheus:
+    enabled: false
+  image:
+    repository: quay.io/cilium/operator
+    tag: v1.19.6
+    genericDigest: sha256:0db4ca4e06969d8904ee036617795d0e9c3228cf7b8d902ba74fc2bb98d2d665
+    useDigest: true
+
+bgpControlPlane:
+  enabled: false
+encryption:
+  enabled: false
+clustermesh:
+  useAPIServer: false
+  config:
+    enabled: false
+  mcsapi:
+    enabled: false
+ingressController:
+  enabled: false
+gatewayAPI:
+  enabled: false
+  gatewayClass:
+    create: "false"
+l2announcements:
+  enabled: false
+hostFirewall:
+  enabled: false
+nodeinit:
+  enabled: false
+egressGateway:
+  enabled: false

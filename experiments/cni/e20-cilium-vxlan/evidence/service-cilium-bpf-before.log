@@ -1,0 +1,139 @@
+timestamp=2026-08-09T17:17:36,801407431+02:00
+=== service API ===
+{
+  "spec": {
+    "backend-addresses": [
+      {
+        "ip": "10.42.0.76",
+        "nodeName": "k3d-tesi-e20-cilium-vxlan-agent-0",
+        "port": 8080,
+        "preferred": true,
+        "protocol": "TCP",
+        "state": "active",
+        "weight": 100
+      },
+      {
+        "ip": "10.42.1.199",
+        "nodeName": "k3d-tesi-e20-cilium-vxlan-agent-1",
+        "port": 8080,
+        "preferred": true,
+        "protocol": "TCP",
+        "state": "active",
+        "weight": 100
+      }
+    ],
+    "flags": {
+      "extTrafficPolicy": "Cluster",
+      "intTrafficPolicy": "Cluster",
+      "name": "servers",
+      "namespace": "net-lab",
+      "trafficPolicy": "Cluster",
+      "type": "ClusterIP"
+    },
+    "frontend-address": {
+      "ip": "10.43.59.99",
+      "port": 8080,
+      "protocol": "TCP",
+      "scope": "external"
+    },
+    "id": 7
+  },
+  "status": {
+    "realized": {
+      "backend-addresses": [
+        {
+          "ip": "10.42.0.76",
+          "nodeName": "k3d-tesi-e20-cilium-vxlan-agent-0",
+          "port": 8080,
+          "preferred": true,
+          "protocol": "TCP",
+          "state": "active",
+          "weight": 100
+        },
+        {
+          "ip": "10.42.1.199",
+          "nodeName": "k3d-tesi-e20-cilium-vxlan-agent-1",
+          "port": 8080,
+          "preferred": true,
+          "protocol": "TCP",
+          "state": "active",
+          "weight": 100
+        }
+      ],
+      "flags": {
+        "extTrafficPolicy": "Cluster",
+        "intTrafficPolicy": "Cluster",
+        "name": "servers",
+        "namespace": "net-lab",
+        "trafficPolicy": "Cluster",
+        "type": "ClusterIP"
+      },
+      "frontend-address": {
+        "ip": "10.43.59.99",
+        "port": 8080,
+        "protocol": "TCP",
+        "scope": "external"
+      },
+      "id": 7
+    }
+  }
+}
+=== LB frontends ===
+SERVICE ADDRESS             BACKEND ID
+10.43.59.99:8080/TCP (2)    8 0[0] (7) [0x0 0x0]    
+10.43.59.99:8080/TCP (1)    7 0[0] (7) [0x0 0x0]    
+10.43.59.99:8080/TCP (0)    0 2[0] (7) [0x0 0x0]    
+=== LB backends ===
+ID   BACKEND ADDRESS (REVNAT_ID) (SLOT)
+=== LB reverse NAT ===
+ID   BACKEND ADDRESS (REVNAT_ID) (SLOT)
+7    10.43.59.99:8080    
+=== relevant global BPF metrics ===
+{
+  "reason": "Success",
+  "direction": "egress",
+  "packets": 2891,
+  "bytes": 245639,
+  "line": 1377,
+  "file": "bpf_lxc.c"
+}
+{
+  "reason": "Unsupported L3 protocol",
+  "direction": "egress",
+  "packets": 27,
+  "bytes": 2026,
+  "line": 1831,
+  "file": "bpf_lxc.c"
+}
+{
+  "reason": "Success",
+  "direction": "egress",
+  "packets": 13234,
+  "bytes": 970690,
+  "line": 36,
+  "file": "encap.h"
+}
+{
+  "reason": "Success",
+  "direction": "ingress",
+  "packets": 3622,
+  "bytes": 313622,
+  "line": 146,
+  "file": "local_delivery.h"
+}
+{
+  "reason": "Success",
+  "direction": "egress",
+  "packets": 57,
+  "bytes": 5196,
+  "line": 146,
+  "file": "local_delivery.h"
+}
+{
+  "reason": "Success",
+  "direction": "ingress",
+  "packets": 12021,
+  "bytes": 996472,
+  "line": 2311,
+  "file": "bpf_lxc.c"
+}

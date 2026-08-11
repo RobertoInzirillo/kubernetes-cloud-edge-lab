@@ -1,0 +1,12 @@
+comparison_timestamp=2026-08-04T18:58:16,436258983+02:00
+side=policy-on state=baseline exit0=6 exit_nonzero=0 tests=6 failures=0
+side=policy-on state=default-deny exit0=0 exit_nonzero=6 tests=6 failures=0
+side=policy-on state=default-deny-plus-allow exit0=4 exit_nonzero=2 tests=6 failures=0
+side=policy-off state=baseline exit0=6 exit_nonzero=0 tests=6 failures=0
+side=policy-off state=default-deny exit0=6 exit_nonzero=0 tests=6 failures=0
+side=policy-off state=default-deny-plus-allow exit0=6 exit_nonzero=0 tests=6 failures=0
+policy_on_controller_start_nodes=3
+policy_off_controller_start_nodes=0
+policy_on_structural_summary=/tmp/e02-on-20260804T160803Z/snapshot-comparison-summary.log
+policy_off_kernel_deltas_bytes=0,0,0,0
+interpretation=API_objects_are_inert_without_K3s_network_policy_controller_while_Flannel_connectivity_remains_working

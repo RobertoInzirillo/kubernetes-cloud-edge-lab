@@ -1,0 +1,69 @@
+timestamp=2026-08-05T19:21:49,022009685+02:00
+source=client ip=10.42.113.67 veth=cali651ff5ba98e
+destination=server-a ip=10.42.113.68 veth=cali2f026170013
+
+=== route lookup ===
+10.42.113.67 dev cali651ff5ba98e src 172.19.0.3 uid 0 
+    cache 
+10.42.113.68 dev cali2f026170013 src 172.19.0.3 uid 0 
+    cache 
+
+=== veth links ===
+8: cali651ff5ba98e@if2: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1450 qdisc noqueue state UP mode DEFAULT group default 
+    link/ether ee:ee:ee:ee:ee:ee brd ff:ff:ff:ff:ff:ff link-netns cni-094a8ec7-71b8-f0fe-bf3c-3282fd918967 promiscuity 0 allmulti 0 minmtu 68 maxmtu 65535 
+    veth addrgenmode eui64 numtxqueues 1 numrxqueues 1 gso_max_size 65536 gso_max_segs 65535 tso_max_size 524280 tso_max_segs 65535 gro_max_size 65536 gso_ipv4_max_size 65536 gro_ipv4_max_size 65536 
+9: cali2f026170013@if2: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1450 qdisc noqueue state UP mode DEFAULT group default 
+    link/ether ee:ee:ee:ee:ee:ee brd ff:ff:ff:ff:ff:ff link-netns cni-1b791eda-f068-c342-d126-0063e83e6852 promiscuity 0 allmulti 0 minmtu 68 maxmtu 65535 
+    veth addrgenmode eui64 numtxqueues 1 numrxqueues 1 gso_max_size 65536 gso_max_segs 65535 tso_max_size 524280 tso_max_segs 65535 gro_max_size 65536 gso_ipv4_max_size 65536 gro_ipv4_max_size 65536 
+
+=== cni0 absence ===
+Device "cni0" does not exist.
+cni0 absent (expected for this Calico configuration)
+
+=== Calico workload dispatch rules ===
+:cali-fw-cali2f026170013 - [0:0]
+:cali-fw-cali651ff5ba98e - [0:0]
+:cali-tw-cali2f026170013 - [0:0]
+:cali-tw-cali651ff5ba98e - [0:0]
+[8:704] -A cali-from-wl-dispatch -i cali2f026170013 -m comment --comment "cali:WQs_tM6kzs9-Zg5b" -g cali-fw-cali2f026170013
+[32:2143] -A cali-from-wl-dispatch -i cali651ff5ba98e -m comment --comment "cali:napE3vBKQ09qrKvU" -g cali-fw-cali651ff5ba98e
+[8:704] -A cali-fw-cali2f026170013 -m comment --comment "cali:GocHrdDCIe5o-O5c" -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+[0:0] -A cali-fw-cali2f026170013 -m comment --comment "cali:COQrkZ2PEKOdr9as" -m conntrack --ctstate INVALID -j DROP
+[0:0] -A cali-fw-cali2f026170013 -m comment --comment "cali:TXPUlM95w3eZtzUe" -j MARK --set-xmark 0x0/0x30000
+[0:0] -A cali-fw-cali2f026170013 -p udp -m comment --comment "cali:wruQd5ub9z_Xewz1" -m comment --comment "Drop VXLAN encapped packets originating in workloads" -m multiport --dports 4789 -j DROP
+[0:0] -A cali-fw-cali2f026170013 -p 4 -m comment --comment "cali:KxrAI5MAmA7WWyE1" -m comment --comment "Drop IPinIP encapped packets originating in workloads" -j DROP
+[0:0] -A cali-fw-cali2f026170013 -m comment --comment "cali:GIQmG3JuK6ZpAnFo" -j cali-pro-kns.net-lab
+[0:0] -A cali-fw-cali2f026170013 -m comment --comment "cali:IhTP4J6KGGcB9pGV" -m comment --comment "Return if profile accepted" -m mark --mark 0x10000/0x10000 -j RETURN
+[0:0] -A cali-fw-cali2f026170013 -m comment --comment "cali:NberSTp5Sbf2AQPL" -j cali-pro-ksa.net-lab.default
+[0:0] -A cali-fw-cali2f026170013 -m comment --comment "cali:xdfi_h4_4-rSDpl3" -m comment --comment "Return if profile accepted" -m mark --mark 0x10000/0x10000 -j RETURN
+[0:0] -A cali-fw-cali2f026170013 -m comment --comment "cali:ZHbMyNReVinYRwr1" -m comment --comment "Drop if no profiles matched" -j DROP
+[26:1735] -A cali-fw-cali651ff5ba98e -m comment --comment "cali:DF8IsqfMe487D5OQ" -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+[0:0] -A cali-fw-cali651ff5ba98e -m comment --comment "cali:Lo12w5h0RtWpP4Cx" -m conntrack --ctstate INVALID -j DROP
+[6:408] -A cali-fw-cali651ff5ba98e -m comment --comment "cali:V_xTb91rnFJ3tfz2" -j MARK --set-xmark 0x0/0x30000
+[0:0] -A cali-fw-cali651ff5ba98e -p udp -m comment --comment "cali:bIhWoTzpdKZbvbAS" -m comment --comment "Drop VXLAN encapped packets originating in workloads" -m multiport --dports 4789 -j DROP
+[0:0] -A cali-fw-cali651ff5ba98e -p 4 -m comment --comment "cali:G1_cXVLTRch_wwrO" -m comment --comment "Drop IPinIP encapped packets originating in workloads" -j DROP
+[6:408] -A cali-fw-cali651ff5ba98e -m comment --comment "cali:BJ8bHP3tt9bW6w7E" -j cali-pro-kns.net-lab
+[6:408] -A cali-fw-cali651ff5ba98e -m comment --comment "cali:jYHbCT7YqNDPxHmm" -m comment --comment "Return if profile accepted" -m mark --mark 0x10000/0x10000 -j RETURN
+[0:0] -A cali-fw-cali651ff5ba98e -m comment --comment "cali:olvCZ38ZZfiWRO2P" -j cali-pro-ksa.net-lab.default
+[0:0] -A cali-fw-cali651ff5ba98e -m comment --comment "cali:OmL-IjG56ocBcpuh" -m comment --comment "Return if profile accepted" -m mark --mark 0x10000/0x10000 -j RETURN
+[0:0] -A cali-fw-cali651ff5ba98e -m comment --comment "cali:X09Utyhu53gXSrtB" -m comment --comment "Drop if no profiles matched" -j DROP
+[2:144] -A cali-to-wl-dispatch -o cali2f026170013 -m comment --comment "cali:LJxVoY-FskJ8ltl1" -g cali-tw-cali2f026170013
+[20:1776] -A cali-to-wl-dispatch -o cali651ff5ba98e -m comment --comment "cali:YabKbKAz1X77ukR7" -g cali-tw-cali651ff5ba98e
+[0:0] -A cali-tw-cali2f026170013 -m comment --comment "cali:zY9NaFJ_bGYAhT7o" -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+[0:0] -A cali-tw-cali2f026170013 -m comment --comment "cali:uTi_HumkzhCtB-iH" -m conntrack --ctstate INVALID -j DROP
+[2:144] -A cali-tw-cali2f026170013 -m comment --comment "cali:plm7OxRsQcFMVBBE" -j MARK --set-xmark 0x0/0x30000
+[2:144] -A cali-tw-cali2f026170013 -m comment --comment "cali:YWJdLaqJF4Gq9ga4" -j cali-pri-kns.net-lab
+[2:144] -A cali-tw-cali2f026170013 -m comment --comment "cali:KkOCp_-9kyO0136D" -m comment --comment "Return if profile accepted" -m mark --mark 0x10000/0x10000 -j RETURN
+[0:0] -A cali-tw-cali2f026170013 -m comment --comment "cali:pO6tJu5UgGWgVWQS" -j cali-pri-ksa.net-lab.default
+[0:0] -A cali-tw-cali2f026170013 -m comment --comment "cali:x4XWhqcDazuTP6Tf" -m comment --comment "Return if profile accepted" -m mark --mark 0x10000/0x10000 -j RETURN
+[0:0] -A cali-tw-cali2f026170013 -m comment --comment "cali:akBgOibMP3UxvADp" -m comment --comment "Drop if no profiles matched" -j DROP
+[20:1776] -A cali-tw-cali651ff5ba98e -m comment --comment "cali:4wCuFMxj-O1FThjX" -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+[0:0] -A cali-tw-cali651ff5ba98e -m comment --comment "cali:WHKUrWtdhnW1jWe8" -m conntrack --ctstate INVALID -j DROP
+[0:0] -A cali-tw-cali651ff5ba98e -m comment --comment "cali:hI6n6CWWo4rRUm2Y" -j MARK --set-xmark 0x0/0x30000
+[0:0] -A cali-tw-cali651ff5ba98e -m comment --comment "cali:2uBR44O91qkMq_ZZ" -j cali-pri-kns.net-lab
+[0:0] -A cali-tw-cali651ff5ba98e -m comment --comment "cali:oGoJW0DOq5GH4BJ0" -m comment --comment "Return if profile accepted" -m mark --mark 0x10000/0x10000 -j RETURN
+[0:0] -A cali-tw-cali651ff5ba98e -m comment --comment "cali:aYxtKxfovRvXoiZp" -j cali-pri-ksa.net-lab.default
+[0:0] -A cali-tw-cali651ff5ba98e -m comment --comment "cali:3zUNDbAA0RxbDPKs" -m comment --comment "Return if profile accepted" -m mark --mark 0x10000/0x10000 -j RETURN
+[0:0] -A cali-tw-cali651ff5ba98e -m comment --comment "cali:jaPfgpmCLESEbBy-" -m comment --comment "Drop if no profiles matched" -j DROP
+
+=== Calico CNI WorkloadEndpoint records ===

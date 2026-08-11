@@ -1,0 +1,10 @@
+E20 Hubble - flussi policy rappresentativi
+Formato: timestamp, nodo, sorgente, source identity/IP/port, destinazione, destination identity/IP/port, verdict, drop reason, direzione, observation point, summary
+=== consentito senza policy ===
+2026-08-09T15:36:15.628041816Z	k3d-tesi-e20-cilium-vxlan-agent-0	client	21766	10.42.0.169	57022	server-a	1647	10.42.0.76	8080	FORWARDED		EGRESS	TO_ENDPOINT	TCP Flags: SYN
+=== negato dal default deny ===
+2026-08-09T15:36:27.861368603Z	k3d-tesi-e20-cilium-vxlan-agent-0	client	21766	10.42.0.169	53266	server-a	1647	10.42.0.76	8080	DROPPED	POLICY_DENIED	INGRESS		TCP Flags: SYN
+=== consentito dalla allow mirata ===
+2026-08-09T15:36:58.658514108Z	k3d-tesi-e20-cilium-vxlan-agent-0	client	21766	10.42.0.169	55538	server-b	16090	10.42.1.199	8080	FORWARDED		EGRESS	TO_OVERLAY	TCP Flags: SYN
+=== ancora negato dopo la allow ===
+2026-08-09T15:36:59.223629655Z	k3d-tesi-e20-cilium-vxlan-agent-1	server-a	1647	10.42.0.76	40518	server-b	16090	10.42.1.199	8080	DROPPED	POLICY_DENIED	INGRESS		TCP Flags: SYN

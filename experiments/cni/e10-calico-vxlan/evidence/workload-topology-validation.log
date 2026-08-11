@@ -1,0 +1,23 @@
+timestamp=2026-08-05T19:15:50+02:00
+=== labels ===
+NAME                                 STATUS   ROLES           AGE   VERSION        TESI-PLACEMENT
+k3d-tesi-e10-calico-vxlan-agent-0    Ready    <none>          52m   v1.34.9+k3s1   a
+k3d-tesi-e10-calico-vxlan-agent-1    Ready    <none>          52m   v1.34.9+k3s1   b
+k3d-tesi-e10-calico-vxlan-server-0   Ready    control-plane   52m   v1.34.9+k3s1   
+=== pods ===
+NAME       READY   STATUS    RESTARTS   AGE   IP              NODE                                NOMINATED NODE   READINESS GATES
+client     1/1     Running   0          14s   10.42.113.67    k3d-tesi-e10-calico-vxlan-agent-0   <none>           <none>
+server-a   1/1     Running   0          14s   10.42.113.68    k3d-tesi-e10-calico-vxlan-agent-0   <none>           <none>
+server-b   1/1     Running   0          14s   10.42.144.131   k3d-tesi-e10-calico-vxlan-agent-1   <none>           <none>
+=== pod details ===
+client	10.42.113.67	k3d-tesi-e10-calico-vxlan-agent-0	true	0	docker.io/library/busybox@sha256:1cfa4e2b09e127b9c4ed43578d3f3c18e7d44ea47b9ea98475c0cbe9086525f8
+server-a	10.42.113.68	k3d-tesi-e10-calico-vxlan-agent-0	true	0	docker.io/library/busybox@sha256:1cfa4e2b09e127b9c4ed43578d3f3c18e7d44ea47b9ea98475c0cbe9086525f8
+server-b	10.42.144.131	k3d-tesi-e10-calico-vxlan-agent-1	true	0	docker.io/library/busybox@sha256:1cfa4e2b09e127b9c4ed43578d3f3c18e7d44ea47b9ea98475c0cbe9086525f8
+=== service ===
+NAME      TYPE        CLUSTER-IP    EXTERNAL-IP   PORT(S)    AGE   SELECTOR
+servers   ClusterIP   10.43.68.63   <none>        8080/TCP   13s   app.kubernetes.io/name=http-server
+=== endpointslice ===
+NAME            ADDRESSTYPE   PORTS   ENDPOINTS                    AGE
+servers-g4h78   IPv4          8080    10.42.113.68,10.42.144.131   13s
+networkpolicy_count=0
+WORKLOAD_GATE=PASS

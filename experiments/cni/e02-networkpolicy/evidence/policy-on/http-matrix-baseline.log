@@ -1,0 +1,13 @@
+matrix_started=2026-08-04T18:13:50,077348908+02:00
+client_ip=10.42.0.3
+server_a_ip=10.42.0.4
+server_b_ip=10.42.1.3
+timestamp=2026-08-04T18:13:50,079350283+02:00 source=client destination=server-a destination_ip=10.42.0.4 attempt=1 expected=server-a observed=server-a exit_code=0 destination_ready=true destination_restarts=0 result=PASS
+timestamp=2026-08-04T18:13:50,335864234+02:00 source=client destination=server-a destination_ip=10.42.0.4 attempt=2 expected=server-a observed=server-a exit_code=0 destination_ready=true destination_restarts=0 result=PASS
+timestamp=2026-08-04T18:13:50,594555526+02:00 source=client destination=server-b destination_ip=10.42.1.3 attempt=1 expected=server-b observed=server-b exit_code=0 destination_ready=true destination_restarts=0 result=PASS
+timestamp=2026-08-04T18:13:50,898666113+02:00 source=client destination=server-b destination_ip=10.42.1.3 attempt=2 expected=server-b observed=server-b exit_code=0 destination_ready=true destination_restarts=0 result=PASS
+timestamp=2026-08-04T18:13:51,158899668+02:00 source=server-a destination=server-b destination_ip=10.42.1.3 attempt=1 expected=server-b observed=server-b exit_code=0 destination_ready=true destination_restarts=0 result=PASS
+timestamp=2026-08-04T18:13:51,406432821+02:00 source=server-a destination=server-b destination_ip=10.42.1.3 attempt=2 expected=server-b observed=server-b exit_code=0 destination_ready=true destination_restarts=0 result=PASS
+matrix_finished=2026-08-04T18:13:51,660262505+02:00
+tests=6
+failures=0

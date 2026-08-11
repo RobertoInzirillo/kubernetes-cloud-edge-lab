@@ -1,0 +1,408 @@
+timestamp=2026-08-09T16:17:23,544527760+02:00
+=== pods topology/images ===
+NAME       NODE                                POD_IP        PHASE     READY   RESTARTS   SPEC_IMAGE                                                                                          IMAGE_ID
+client     k3d-tesi-e20-cilium-vxlan-agent-0   10.42.0.169   Running   true    0          docker.io/library/busybox@sha256:1cfa4e2b09e127b9c4ed43578d3f3c18e7d44ea47b9ea98475c0cbe9086525f8   docker.io/library/busybox@sha256:1cfa4e2b09e127b9c4ed43578d3f3c18e7d44ea47b9ea98475c0cbe9086525f8
+server-a   k3d-tesi-e20-cilium-vxlan-agent-0   10.42.0.76    Running   true    0          docker.io/library/busybox@sha256:1cfa4e2b09e127b9c4ed43578d3f3c18e7d44ea47b9ea98475c0cbe9086525f8   docker.io/library/busybox@sha256:1cfa4e2b09e127b9c4ed43578d3f3c18e7d44ea47b9ea98475c0cbe9086525f8
+server-b   k3d-tesi-e20-cilium-vxlan-agent-1   10.42.1.199   Running   true    0          docker.io/library/busybox@sha256:1cfa4e2b09e127b9c4ed43578d3f3c18e7d44ea47b9ea98475c0cbe9086525f8   docker.io/library/busybox@sha256:1cfa4e2b09e127b9c4ed43578d3f3c18e7d44ea47b9ea98475c0cbe9086525f8
+=== CiliumEndpoint summary ===
+NAME       IDENTITY   IP            NODE_IP   STATE   POLICY_REV
+client     21766      10.42.0.169   <none>    ready   <none>
+server-a   1647       10.42.0.76    <none>    ready   <none>
+server-b   16090      10.42.1.199   <none>    ready   <none>
+=== CiliumEndpoint authoritative YAML ===
+apiVersion: v1
+items:
+- apiVersion: cilium.io/v2
+  kind: CiliumEndpoint
+  metadata:
+    creationTimestamp: "2026-08-09T14:16:46Z"
+    generation: 1
+    labels:
+      app.kubernetes.io/instance: client
+      app.kubernetes.io/name: network-client
+      app.kubernetes.io/part-of: e01-network-baseline
+    name: client
+    namespace: net-lab
+    ownerReferences:
+    - apiVersion: v1
+      kind: Pod
+      name: client
+      uid: 70c7bbf5-720f-402d-9199-9b0c78832d44
+    resourceVersion: "40667"
+    uid: 7aca8024-bad7-4c5e-8f09-23dced76c263
+  status:
+    encryption: {}
+    external-identifiers:
+      cni-attachment-id: f7f4d1c809c9c8aaa6de03b91d8513cd687ec0021ce190dabd9f4e0ac0032f02:eth0
+      container-id: f7f4d1c809c9c8aaa6de03b91d8513cd687ec0021ce190dabd9f4e0ac0032f02
+      k8s-namespace: net-lab
+      k8s-pod-name: client
+      pod-name: net-lab/client
+    id: 393
+    identity:
+      id: 21766
+      labels:
+      - k8s:app.kubernetes.io/instance=client
+      - k8s:app.kubernetes.io/name=network-client
+      - k8s:app.kubernetes.io/part-of=e01-network-baseline
+      - k8s:io.cilium.k8s.namespace.labels.app.kubernetes.io/part-of=e01-network-baseline
+      - k8s:io.cilium.k8s.namespace.labels.kubernetes.io/metadata.name=net-lab
+      - k8s:io.cilium.k8s.policy.cluster=default
+      - k8s:io.cilium.k8s.policy.serviceaccount=default
+      - k8s:io.kubernetes.pod.namespace=net-lab
+    networking:
+      addressing:
+      - ipv4: 10.42.0.169
+      node: 172.19.0.4
+    service-account: default
+    state: ready
+- apiVersion: cilium.io/v2
+  kind: CiliumEndpoint
+  metadata:
+    creationTimestamp: "2026-08-09T14:16:46Z"
+    generation: 1
+    labels:
+      app.kubernetes.io/instance: server-a
+      app.kubernetes.io/name: http-server
+      app.kubernetes.io/part-of: e01-network-baseline
+    name: server-a
+    namespace: net-lab
+    ownerReferences:
+    - apiVersion: v1
+      kind: Pod
+      name: server-a
+      uid: 097aea4a-6682-4ab7-9ce2-7c5aba56ca7b
+    resourceVersion: "40669"
+    uid: f6d4b3f6-0acc-4743-a739-0b87418fd675
+  status:
+    encryption: {}
+    external-identifiers:
+      cni-attachment-id: b9d587ea07cc2c1c4a82c7fcf604a06e78c6ef19b182018dfb2b835fb174f6e9:eth0
+      container-id: b9d587ea07cc2c1c4a82c7fcf604a06e78c6ef19b182018dfb2b835fb174f6e9
+      k8s-namespace: net-lab
+      k8s-pod-name: server-a
+      pod-name: net-lab/server-a
+    id: 472
+    identity:
+      id: 1647
+      labels:
+      - k8s:app.kubernetes.io/instance=server-a
+      - k8s:app.kubernetes.io/name=http-server
+      - k8s:app.kubernetes.io/part-of=e01-network-baseline
+      - k8s:io.cilium.k8s.namespace.labels.app.kubernetes.io/part-of=e01-network-baseline
+      - k8s:io.cilium.k8s.namespace.labels.kubernetes.io/metadata.name=net-lab
+      - k8s:io.cilium.k8s.policy.cluster=default
+      - k8s:io.cilium.k8s.policy.serviceaccount=default
+      - k8s:io.kubernetes.pod.namespace=net-lab
+    named-ports:
+    - name: http
+      port: 8080
+      protocol: TCP
+    networking:
+      addressing:
+      - ipv4: 10.42.0.76
+      node: 172.19.0.4
+    service-account: default
+    state: ready
+- apiVersion: cilium.io/v2
+  kind: CiliumEndpoint
+  metadata:
+    creationTimestamp: "2026-08-09T14:16:46Z"
+    generation: 1
+    labels:
+      app.kubernetes.io/instance: server-b
+      app.kubernetes.io/name: http-server
+      app.kubernetes.io/part-of: e01-network-baseline
+    name: server-b
+    namespace: net-lab
+    ownerReferences:
+    - apiVersion: v1
+      kind: Pod
+      name: server-b
+      uid: 1e3272d1-175e-4673-8819-b3e6ace2c1af
+    resourceVersion: "40671"
+    uid: 57d97331-2b36-4bce-b4c3-269921972811
+  status:
+    encryption: {}
+    external-identifiers:
+      cni-attachment-id: 262e9b265b692d7d6c4b02c64b7131478b4165ca1c647b88229caeb5b1c9c5e5:eth0
+      container-id: 262e9b265b692d7d6c4b02c64b7131478b4165ca1c647b88229caeb5b1c9c5e5
+      k8s-namespace: net-lab
+      k8s-pod-name: server-b
+      pod-name: net-lab/server-b
+    id: 2389
+    identity:
+      id: 16090
+      labels:
+      - k8s:app.kubernetes.io/instance=server-b
+      - k8s:app.kubernetes.io/name=http-server
+      - k8s:app.kubernetes.io/part-of=e01-network-baseline
+      - k8s:io.cilium.k8s.namespace.labels.app.kubernetes.io/part-of=e01-network-baseline
+      - k8s:io.cilium.k8s.namespace.labels.kubernetes.io/metadata.name=net-lab
+      - k8s:io.cilium.k8s.policy.cluster=default
+      - k8s:io.cilium.k8s.policy.serviceaccount=default
+      - k8s:io.kubernetes.pod.namespace=net-lab
+    named-ports:
+    - name: http
+      port: 8080
+      protocol: TCP
+    networking:
+      addressing:
+      - ipv4: 10.42.1.199
+      node: 172.19.0.2
+    service-account: default
+    state: ready
+kind: List
+metadata:
+  resourceVersion: ""
+=== CiliumNode/IPAM ===
+NAME                                 PODCIDRS       ALLOCATED   FREE     NODE_IP
+k3d-tesi-e20-cilium-vxlan-agent-0    10.42.0.0/24   <none>      <none>   172.19.0.4
+k3d-tesi-e20-cilium-vxlan-agent-1    10.42.1.0/24   <none>      <none>   172.19.0.2
+k3d-tesi-e20-cilium-vxlan-server-0   10.42.2.0/24   <none>      <none>   172.19.0.2
+apiVersion: v1
+items:
+- apiVersion: cilium.io/v2
+  kind: CiliumNode
+  metadata:
+    creationTimestamp: "2026-08-07T14:54:53Z"
+    generation: 6
+    labels:
+      beta.kubernetes.io/arch: amd64
+      beta.kubernetes.io/instance-type: k3s
+      beta.kubernetes.io/os: linux
+      kubernetes.io/arch: amd64
+      kubernetes.io/hostname: k3d-tesi-e20-cilium-vxlan-agent-0
+      kubernetes.io/os: linux
+      node.kubernetes.io/instance-type: k3s
+      tesi-placement: a
+    name: k3d-tesi-e20-cilium-vxlan-agent-0
+    ownerReferences:
+    - apiVersion: v1
+      kind: Node
+      name: k3d-tesi-e20-cilium-vxlan-agent-0
+      uid: 7d3150da-f29e-46be-893e-32cf3206cfa8
+    resourceVersion: "40642"
+    uid: 63f7d61c-08b4-43b9-b37b-44a0911d84fc
+  spec:
+    addresses:
+    - ip: 172.19.0.4
+      type: InternalIP
+    - ip: 10.42.0.119
+      type: CiliumInternalIP
+    alibaba-cloud: {}
+    azure: {}
+    bootid: d419b04e-3e61-43ce-8547-41e1f92a831d
+    encryption: {}
+    eni: {}
+    health:
+      ipv4: 10.42.0.161
+    ingress: {}
+    ipam:
+      podCIDRs:
+      - 10.42.0.0/24
+      pools: {}
+  status:
+    alibaba-cloud: {}
+    azure: {}
+    eni: {}
+    ipam:
+      operator-status: {}
+- apiVersion: cilium.io/v2
+  kind: CiliumNode
+  metadata:
+    creationTimestamp: "2026-08-07T14:54:58Z"
+    generation: 6
+    labels:
+      beta.kubernetes.io/arch: amd64
+      beta.kubernetes.io/instance-type: k3s
+      beta.kubernetes.io/os: linux
+      kubernetes.io/arch: amd64
+      kubernetes.io/hostname: k3d-tesi-e20-cilium-vxlan-agent-1
+      kubernetes.io/os: linux
+      node.kubernetes.io/instance-type: k3s
+      tesi-placement: b
+    name: k3d-tesi-e20-cilium-vxlan-agent-1
+    ownerReferences:
+    - apiVersion: v1
+      kind: Node
+      name: k3d-tesi-e20-cilium-vxlan-agent-1
+      uid: fc60db51-371d-4841-8d03-6ef1998748bc
+    resourceVersion: "40644"
+    uid: 2ce3f207-32a4-4e58-8e27-2f87a1f872c7
+  spec:
+    addresses:
+    - ip: 172.19.0.2
+      type: InternalIP
+    - ip: 10.42.1.188
+      type: CiliumInternalIP
+    alibaba-cloud: {}
+    azure: {}
+    bootid: d419b04e-3e61-43ce-8547-41e1f92a831d
+    encryption: {}
+    eni: {}
+    health:
+      ipv4: 10.42.1.74
+    ingress: {}
+    ipam:
+      podCIDRs:
+      - 10.42.1.0/24
+      pools: {}
+  status:
+    alibaba-cloud: {}
+    azure: {}
+    eni: {}
+    ipam:
+      operator-status: {}
+- apiVersion: cilium.io/v2
+  kind: CiliumNode
+  metadata:
+    creationTimestamp: "2026-08-07T14:55:00Z"
+    generation: 6
+    labels:
+      beta.kubernetes.io/arch: amd64
+      beta.kubernetes.io/instance-type: k3s
+      beta.kubernetes.io/os: linux
+      kubernetes.io/arch: amd64
+      kubernetes.io/hostname: k3d-tesi-e20-cilium-vxlan-server-0
+      kubernetes.io/os: linux
+      node-role.kubernetes.io/control-plane: "true"
+      node.kubernetes.io/instance-type: k3s
+    name: k3d-tesi-e20-cilium-vxlan-server-0
+    ownerReferences:
+    - apiVersion: v1
+      kind: Node
+      name: k3d-tesi-e20-cilium-vxlan-server-0
+      uid: cecec2bc-551a-418b-8bce-d888c25a44da
+    resourceVersion: "14846"
+    uid: 6044ac19-40a8-4bf0-8659-bce25ddfc099
+  spec:
+    addresses:
+    - ip: 172.19.0.2
+      type: InternalIP
+    - ip: 10.42.2.197
+      type: CiliumInternalIP
+    alibaba-cloud: {}
+    azure: {}
+    bootid: d419b04e-3e61-43ce-8547-41e1f92a831d
+    encryption: {}
+    eni: {}
+    health:
+      ipv4: 10.42.2.13
+    ingress: {}
+    ipam:
+      podCIDRs:
+      - 10.42.2.0/24
+      pools: {}
+  status:
+    alibaba-cloud: {}
+    azure: {}
+    eni: {}
+    ipam:
+      operator-status: {}
+kind: List
+metadata:
+  resourceVersion: ""
+=== Service and EndpointSlice ===
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"v1","kind":"Service","metadata":{"annotations":{},"labels":{"app.kubernetes.io/name":"http-server","app.kubernetes.io/part-of":"e01-network-baseline"},"name":"servers","namespace":"net-lab"},"spec":{"internalTrafficPolicy":"Cluster","ports":[{"name":"http","port":8080,"protocol":"TCP","targetPort":"http"}],"selector":{"app.kubernetes.io/name":"http-server"},"sessionAffinity":"None","type":"ClusterIP"}}
+  creationTimestamp: "2026-08-09T14:16:46Z"
+  labels:
+    app.kubernetes.io/name: http-server
+    app.kubernetes.io/part-of: e01-network-baseline
+  name: servers
+  namespace: net-lab
+  resourceVersion: "40661"
+  uid: 4f1c3d34-776f-47a0-b9da-8e47fb53ef06
+spec:
+  clusterIP: 10.43.59.99
+  clusterIPs:
+  - 10.43.59.99
+  internalTrafficPolicy: Cluster
+  ipFamilies:
+  - IPv4
+  ipFamilyPolicy: SingleStack
+  ports:
+  - name: http
+    port: 8080
+    protocol: TCP
+    targetPort: http
+  selector:
+    app.kubernetes.io/name: http-server
+  sessionAffinity: None
+  type: ClusterIP
+status:
+  loadBalancer: {}
+apiVersion: v1
+items:
+- addressType: IPv4
+  apiVersion: discovery.k8s.io/v1
+  endpoints:
+  - addresses:
+    - 10.42.0.76
+    conditions:
+      ready: true
+      serving: true
+      terminating: false
+    nodeName: k3d-tesi-e20-cilium-vxlan-agent-0
+    targetRef:
+      kind: Pod
+      name: server-a
+      namespace: net-lab
+      uid: 097aea4a-6682-4ab7-9ce2-7c5aba56ca7b
+  - addresses:
+    - 10.42.1.199
+    conditions:
+      ready: true
+      serving: true
+      terminating: false
+    nodeName: k3d-tesi-e20-cilium-vxlan-agent-1
+    targetRef:
+      kind: Pod
+      name: server-b
+      namespace: net-lab
+      uid: 1e3272d1-175e-4673-8819-b3e6ace2c1af
+  kind: EndpointSlice
+  metadata:
+    annotations:
+      endpoints.kubernetes.io/last-change-trigger-time: "2026-08-09T14:16:54Z"
+    creationTimestamp: "2026-08-09T14:16:46Z"
+    generateName: servers-
+    generation: 5
+    labels:
+      app.kubernetes.io/name: http-server
+      app.kubernetes.io/part-of: e01-network-baseline
+      endpointslice.kubernetes.io/managed-by: endpointslice-controller.k8s.io
+      kubernetes.io/service-name: servers
+    name: servers-l9qjn
+    namespace: net-lab
+    ownerReferences:
+    - apiVersion: v1
+      blockOwnerDeletion: true
+      controller: true
+      kind: Service
+      name: servers
+      uid: 4f1c3d34-776f-47a0-b9da-8e47fb53ef06
+    resourceVersion: "40704"
+    uid: 07c4a5ec-0e67-4e3e-80f3-ecd66f85befa
+  ports:
+  - name: http
+    port: 8080
+    protocol: TCP
+kind: List
+metadata:
+  resourceVersion: ""
+=== workload policies and stability ===
+NAME                                 STATUS   ROLES           AGE   VERSION
+k3d-tesi-e20-cilium-vxlan-agent-0    Ready    <none>          47h   v1.34.9+k3s1
+k3d-tesi-e20-cilium-vxlan-agent-1    Ready    <none>          47h   v1.34.9+k3s1
+k3d-tesi-e20-cilium-vxlan-server-0   Ready    control-plane   47h   v1.34.9+k3s1
+NAME     DESIRED   CURRENT   READY   UP-TO-DATE   AVAILABLE   NODE SELECTOR            AGE
+cilium   3         3         3       3            3           kubernetes.io/os=linux   47h
+NAME              READY   UP-TO-DATE   AVAILABLE   AGE
+cilium-operator   1/1     1            1           47h
+topology_ipam_gate=PASS

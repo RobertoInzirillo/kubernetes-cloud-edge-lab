@@ -1,0 +1,8 @@
+off_summary_timestamp=2026-08-04T18:58:16,297149719+02:00
+state=baseline api_policies=0 tests=6 failures=0 allowed_exit0=6 controller_starts=0 ipv4_policy_artifacts=0 ipv6_policy_artifacts=0 kube_ipsets=0
+state=default-deny api_policies=1 tests=6 failures=0 allowed_exit0=6 controller_starts=0 ipv4_policy_artifacts=0 ipv6_policy_artifacts=0 kube_ipsets=0
+state=default-deny-plus-allow api_policies=2 tests=6 failures=0 allowed_exit0=6 controller_starts=0 ipv4_policy_artifacts=0 ipv6_policy_artifacts=0 kube_ipsets=0
+kernel_delta_baseline_to_default_before_bytes=0
+kernel_delta_baseline_to_default_after_bytes=0
+kernel_delta_baseline_to_allow_before_bytes=0
+kernel_delta_baseline_to_allow_after_bytes=0

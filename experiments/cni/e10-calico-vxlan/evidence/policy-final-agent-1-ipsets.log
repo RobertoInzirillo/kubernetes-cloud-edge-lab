@@ -1,0 +1,14 @@
+timestamp=2026-08-05T19:49:05,118090894+02:00 state=final-corrected-filter node=k3d-tesi-e10-calico-vxlan-agent-1
+=== Calico ipset definitions and memberships for experiment Pod IPs ===
+create cali40this-host hash:ip family inet hashsize 1024 maxelem 1048576
+create cali40network-ip-pools hash:net family inet hashsize 1024 maxelem 1048576 bucketsize 12 initval 0x06bc7bc6
+create cali40masq-ipam-pools hash:net family inet hashsize 1024 maxelem 1048576 bucketsize 12 initval 0x0ae592d4
+create cali40all-vxlan-net hash:net family inet hashsize 1024 maxelem 1048576 bucketsize 12 initval 0x7457bac8
+create cali40dscp-src-net hash:net family inet hashsize 1024 maxelem 1048576 bucketsize 12 initval 0x455bfa35
+create cali40svc:gQrIAo_BHPov3ak3rMnN3 hash:ip,port family inet hashsize 1024 maxelem 1048576 bucketsize 12 initval 0x455bfa35
+create cali40s:IkX8sGssZSJYP2i1GgcRP5d hash:net family inet hashsize 1024 maxelem 1048576 bucketsize 12 initval 0xbe5bf5a8
+create cali40s:PewI7ShiyAc_6k9DMFYgiBk hash:net family inet hashsize 1024 maxelem 1048576 bucketsize 12 initval 0x28ad6e78
+create cali40s:9aQdxvhEnSq25dJCrDKFDmu hash:net family inet hashsize 1024 maxelem 1048576 bucketsize 12 initval 0xd103f2c2
+create cali40s:fN838yxsjJ8LW-ipaBSvvul hash:net family inet hashsize 1024 maxelem 1048576 bucketsize 12 initval 0xbdfd5d39
+create cali40s:Rg3IfxXscbcLY3pBS4WamP6 hash:net family inet hashsize 1024 maxelem 1048576 bucketsize 12 initval 0xe46685fe
+add cali40s:Rg3IfxXscbcLY3pBS4WamP6 10.42.113.67

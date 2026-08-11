@@ -1,0 +1,133 @@
+timestamp_start=2026-08-07T16:53:17,333795601+02:00
+chart=/tmp/e20-20260807T144915Z/cilium-1.19.6.tgz
+21c43cf53841f9ab0375047d95aa4c64051ea52bbd2c679416e6408f5f1c9179  /tmp/e20-20260807T144915Z/cilium-1.19.6.tgz
+4867e258b26e62a82da34e580a95cb0b92defa80664825bafd3a35ec2b6a9de2  manifests/e20-cilium-values.yaml
+command=helm install cilium <chart> --kube-context k3d-tesi-e20-cilium-vxlan --namespace kube-system --values manifests/e20-cilium-values.yaml --wait --timeout 10m
+NAME: cilium
+LAST DEPLOYED: Fri Aug  7 16:53:18 2026
+NAMESPACE: kube-system
+STATUS: deployed
+REVISION: 1
+TEST SUITE: None
+NOTES:
+You have successfully installed Cilium with Hubble.
+
+Your release version is 1.19.6.
+
+For any further help, visit https://docs.cilium.io/en/v1.19/gettinghelp
+timestamp_end=2026-08-07T16:54:58,239453409+02:00
+helm_install_exit=0
+NAME: cilium
+LAST DEPLOYED: Fri Aug  7 16:53:18 2026
+NAMESPACE: kube-system
+STATUS: deployed
+REVISION: 1
+TEST SUITE: None
+NOTES:
+You have successfully installed Cilium with Hubble.
+
+Your release version is 1.19.6.
+
+For any further help, visit https://docs.cilium.io/en/v1.19/gettinghelp
+=== effective user-supplied values ===
+USER-SUPPLIED VALUES:
+autoDirectNodeRoutes: false
+bandwidthManager:
+  enabled: false
+bgpControlPlane:
+  enabled: false
+bpf:
+  autoMount:
+    enabled: true
+  datapathMode: veth
+  root: /sys/fs/bpf
+cgroup:
+  autoMount:
+    enabled: true
+  hostRoot: /run/cilium/cgroupv2
+clustermesh:
+  config:
+    enabled: false
+  mcsapi:
+    enabled: false
+  useAPIServer: false
+cni:
+  chainingMode: none
+  customConf: false
+  exclusive: true
+  install: true
+  uninstall: false
+defaultLBServiceIPAM: none
+egressGateway:
+  enabled: false
+enableIPv4Masquerade: true
+enableIPv6Masquerade: false
+enableLBIPAM: false
+encryption:
+  enabled: false
+endpointRoutes:
+  enabled: false
+envoy:
+  enabled: false
+envoyConfig:
+  enabled: false
+gatewayAPI:
+  enabled: false
+  gatewayClass:
+    create: "false"
+hostFirewall:
+  enabled: false
+hubble:
+  enabled: true
+  listenAddress: :4244
+  relay:
+    enabled: false
+  tls:
+    auto:
+      enabled: true
+      method: helm
+    enabled: true
+  ui:
+    enabled: false
+image:
+  digest: sha256:0df5b2750b64c49843aba1d649e9eaf61467cb0645ad3171db6f6962c095ac92
+  repository: quay.io/cilium/cilium
+  tag: v1.19.6
+  useDigest: true
+ingressController:
+  enabled: false
+ipam:
+  mode: cluster-pool
+  operator:
+    clusterPoolIPv4MaskSize: 24
+    clusterPoolIPv4PodCIDRList:
+    - 10.42.0.0/16
+ipv4:
+  enabled: true
+ipv6:
+  enabled: false
+k8sNetworkPolicy:
+  enabled: true
+kubeProxyReplacement: "false"
+l2announcements:
+  enabled: false
+l7Proxy: false
+localRedirectPolicies:
+  enabled: false
+nodeinit:
+  enabled: false
+operator:
+  enabled: true
+  image:
+    genericDigest: sha256:0db4ca4e06969d8904ee036617795d0e9c3228cf7b8d902ba74fc2bb98d2d665
+    repository: quay.io/cilium/operator
+    tag: v1.19.6
+    useDigest: true
+  prometheus:
+    enabled: false
+  replicas: 1
+routingMode: tunnel
+socketLB:
+  enabled: false
+tunnelProtocol: vxlan
+underlayProtocol: ipv4

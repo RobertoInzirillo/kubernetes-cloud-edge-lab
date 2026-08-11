@@ -1,0 +1,7 @@
+timestamp=2026-08-05T19:40:08,093853501+02:00
+source=client
+destination=server-b
+source_ip=10.42.113.67
+destination_ip=10.42.144.131
+response=server-b
+flow_exit=0

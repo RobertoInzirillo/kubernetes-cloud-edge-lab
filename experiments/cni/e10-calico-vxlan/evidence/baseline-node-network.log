@@ -1,0 +1,374 @@
+=== k3d-tesi-e10-calico-vxlan-server-0 ===
+--- args processo nodo ---
+PID   USER     COMMAND
+    1 root     /sbin/docker-init -- /bin/k3d-entrypoint.sh server --disable=traefik --flannel-backend=none --disable-network-policy --cluster-cidr=10.42.0.0/16 --service-cidr=10.43.0.0/16 --tls-san 127.0.0.1 --tls-san k3d-tesi-e10-calico-vxlan-serverlb
+    7 root     {k3d-entrypoint.} /bin/sh /bin/k3d-entrypoint.sh server --disable=traefik --flannel-backend=none --disable-network-policy --cluster-cidr=10.42.0.0/16 --service-cidr=10.43.0.0/16 --tls-san 127.0.0.1 --tls-san k3d-tesi-e10-calico-vxlan-serverlb
+   87 root     /bin/k3s server
+--- CNI ---
+total 8
+-rw------- 1 root root  734 Aug  5 16:31 10-calico.conflist
+-rw------- 1 root root 2093 Aug  5 16:31 calico-kubeconfig
+{
+			  "name": "k8s-pod-network",
+			  "cniVersion": "0.3.1",
+			  "plugins": [{"calico_api_group":"","container_settings":{"allow_ip_forwarding":true},"datastore_type":"kubernetes","endpoint_status_dir":"/var/run/calico/endpoint-status","ipam":{"assign_ipv4":"true","assign_ipv6":"false","type":"calico-ipam"},"kubernetes":{"k8s_api_root":"https://10.43.0.1:443","kubeconfig":"/etc/cni/net.d/calico-kubeconfig"},"log_file_max_age":30,"log_file_max_count":10,"log_file_max_size":100,"log_file_path":"/var/log/calico/cni/cni.log","log_level":"Info","mtu":0,"nodename_file_optional":false,"policy":{"type":"k8s"},"policy_setup_timeout_seconds":0,"type":"calico"},{"capabilities":{"portMappings":true},"snat":true,"type":"portmap"}]
+			}
+--- vxlan.calico ---
+5: vxlan.calico: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1450 qdisc noqueue state UNKNOWN mode DEFAULT group default qlen 1000
+    link/ether 66:3a:8a:eb:f6:1f brd ff:ff:ff:ff:ff:ff promiscuity 0 allmulti 0 minmtu 68 maxmtu 65535 
+    vxlan id 4096 local 172.19.0.2 dev eth0 srcport 0 0 dstport 4789 ttl auto ageing 300 reserved_bits 0xf7ffffff000000ff nolearning addrgenmode eui64 numtxqueues 1 numrxqueues 1 gso_max_size 65536 gso_max_segs 65535 tso_max_size 524280 tso_max_segs 65535 gro_max_size 65536 gso_ipv4_max_size 65536 gro_ipv4_max_size 65536 
+--- routes ---
+default via 172.19.0.1 dev eth0 
+10.42.113.64/26 via 10.42.113.64 dev vxlan.calico onlink mtu 1450 
+10.42.144.128/26 via 10.42.144.128 dev vxlan.calico onlink mtu 1450 
+blackhole 10.42.219.192/26 proto 80 
+10.42.219.193 dev cali4a215bf806a scope link metric 1024 
+10.42.219.194 dev calibbbd32157ff scope link metric 1024 
+10.42.219.195 dev cali3fa4dba20e4 scope link metric 1024 
+10.42.219.196 dev calia7f467f8ae0 scope link metric 1024 
+10.42.219.197 dev calibbf5fc97afe scope link metric 1024 
+172.19.0.0/16 dev eth0 proto kernel scope link src 172.19.0.2 
+--- flannel.1 expected absent ---
+Device "flannel.1" does not exist.
+flannel.1 absent
+--- kube-proxy health ---
+kube-proxy healthz=ok
+--- filtered iptables chains ---
+:cali-POSTROUTING - [0:0]
+:cali-PREROUTING - [0:0]
+:cali-egress-dscp - [0:0]
+:cali-from-host-endpoint - [0:0]
+:cali-to-host-endpoint - [0:0]
+-A cali-POSTROUTING -m comment --comment "cali:rjggb5FqJG-Y25Bt" -m comment --comment "set dscp for traffic leaving cluster." -m set --match-set cali40dscp-src-net src -m set ! --match-set cali40network-ip-pools dst -m set ! --match-set cali40this-host dst -j cali-egress-dscp
+-A cali-POSTROUTING -m comment --comment "cali:jjeDINEyBNIZOyCC" -m mark --mark 0x10000/0x10000 -j RETURN
+-A cali-POSTROUTING -m comment --comment "cali:zNC99P5aQEt6jv4X" -j MARK --set-xmark 0x0/0x1b0000
+-A cali-POSTROUTING -m comment --comment "cali:Zq8WVZgLnBNyn-Ed" -m conntrack --ctstate DNAT -j cali-to-host-endpoint
+-A cali-POSTROUTING -m comment --comment "cali:x8FyevjrLjl7aiMw" -m comment --comment "Host endpoint policy accepted packet." -m mark --mark 0x10000/0x10000 -j RETURN
+-A cali-PREROUTING -m comment --comment "cali:6BJqBjBC7crtA-7-" -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+-A cali-PREROUTING -m comment --comment "cali:KX7AGNd6rMcDUai6" -m mark --mark 0x10000/0x10000 -j ACCEPT
+-A cali-PREROUTING -m comment --comment "cali:wNH7KsA3ILKJBsY9" -j cali-from-host-endpoint
+-A cali-PREROUTING -m comment --comment "cali:Cg96MgVuoPm7UMRo" -m comment --comment "Host endpoint policy accepted packet." -m mark --mark 0x10000/0x10000 -j ACCEPT
+:cali-OUTPUT - [0:0]
+:cali-PREROUTING - [0:0]
+:cali-from-host-endpoint - [0:0]
+:cali-rpf-skip - [0:0]
+:cali-to-host-endpoint - [0:0]
+-A cali-OUTPUT -m comment --comment "cali:clI8WObfCl4yhr60" -j MARK --set-xmark 0x0/0x1b0000
+-A cali-OUTPUT -m comment --comment "cali:ZbkN6P8OdRcBRPpU" -j cali-to-host-endpoint
+-A cali-OUTPUT -p udp -m comment --comment "cali:ry5_UEpt1OaPPCxO" -m udp --dport 4789 -j NOTRACK
+-A cali-OUTPUT -m comment --comment "cali:MGhICIksKDnYMIkW" -m mark --mark 0x10000/0x10000 -j ACCEPT
+-A cali-PREROUTING -m comment --comment "cali:DQ6LK2guiBRMyrLK" -j MARK --set-xmark 0x0/0x1b0000
+-A cali-PREROUTING -p udp -m comment --comment "cali:sIsu2aAqNN6K3YYn" -m udp --dport 4789 -j NOTRACK
+-A cali-PREROUTING -i cali+ -m comment --comment "cali:W0qKAga6QivxLxL1" -j MARK --set-xmark 0x80000/0x80000
+-A cali-PREROUTING -m comment --comment "cali:QOYCZUivPyJL6Dp1" -m mark --mark 0x80000/0x80000 -j cali-rpf-skip
+-A cali-PREROUTING -m comment --comment "cali:uvipz_NmQPrGYnTB" -m mark --mark 0x80000/0x80000 -m rpfilter --validmark --invert -j DROP
+-A cali-PREROUTING -m comment --comment "cali:pj4jqF0K2OCNLmzX" -m mark --mark 0x0/0x80000 -j cali-from-host-endpoint
+-A cali-PREROUTING -m comment --comment "cali:Jefg6QI5khJcHnVl" -m mark --mark 0x10000/0x10000 -j ACCEPT
+:cali-FORWARD - [0:0]
+:cali-INPUT - [0:0]
+:cali-OUTPUT - [0:0]
+:cali-cidr-block - [0:0]
+:cali-from-hep-forward - [0:0]
+:cali-from-host-endpoint - [0:0]
+:cali-from-wl-dispatch - [0:0]
+:cali-from-wl-dispatch-b - [0:0]
+:cali-fw-cali3fa4dba20e4 - [0:0]
+:cali-fw-cali4a215bf806a - [0:0]
+:cali-fw-calia7f467f8ae0 - [0:0]
+:cali-fw-calibbbd32157ff - [0:0]
+:cali-fw-calibbf5fc97afe - [0:0]
+:cali-pi-_0dPptdegtTXt1D_kwEh - [0:0]
+:cali-pi-_Xva1T30fW7zmWCwcs_z - [0:0]
+:cali-pi-_af13Cx1UAUjxVJcwe4J - [0:0]
+:cali-po-_0dPptdegtTXt1D_kwEh - [0:0]
+:cali-po-_Xva1T30fW7zmWCwcs_z - [0:0]
+:cali-po-_af13Cx1UAUjxVJcwe4J - [0:0]
+:cali-pri-_CVSZITRyIpEmH8AB6H - [0:0]
+:cali-pri-_HayIXLB85hzHkIhWER - [0:0]
+:cali-pri-_nzzjLvInId1gPHmQz_ - [0:0]
+:cali-pri-_u2Tn2rSoAPffvE7JO6 - [0:0]
+:cali-pri-_ymJUz7yzI6NOKJhG2- - [0:0]
+:cali-pri-kns.calico-system - [0:0]
+:cali-pri-kns.kube-system - [0:0]
+:cali-pro-_CVSZITRyIpEmH8AB6H - [0:0]
+:cali-pro-_HayIXLB85hzHkIhWER - [0:0]
+:cali-pro-_nzzjLvInId1gPHmQz_ - [0:0]
+:cali-pro-_u2Tn2rSoAPffvE7JO6 - [0:0]
+:cali-pro-_ymJUz7yzI6NOKJhG2- - [0:0]
+:cali-pro-kns.calico-system - [0:0]
+:cali-pro-kns.kube-system - [0:0]
+:cali-to-hep-forward - [0:0]
+:cali-to-host-endpoint - [0:0]
+:cali-to-wl-dispatch - [0:0]
+:cali-to-wl-dispatch-b - [0:0]
+:cali-tw-cali3fa4dba20e4 - [0:0]
+:cali-tw-cali4a215bf806a - [0:0]
+:cali-tw-calia7f467f8ae0 - [0:0]
+:cali-tw-calibbbd32157ff - [0:0]
+:cali-tw-calibbf5fc97afe - [0:0]
+:cali-wl-to-host - [0:0]
+-A cali-FORWARD -m comment --comment "cali:W_vvds1Nw3n9QE2f" -j MARK --set-xmark 0x0/0x1a0000
+-A cali-FORWARD -m comment --comment "cali:ZfgmjuiLaA8Pg0kp" -m mark --mark 0x0/0x10000 -j cali-from-hep-forward
+-A cali-FORWARD -i cali+ -m comment --comment "cali:tAzwBLPaV-j53OOZ" -j cali-from-wl-dispatch
+-A cali-FORWARD -o cali+ -m comment --comment "cali:4Z0Pf0byo05NFe-P" -j cali-to-wl-dispatch
+-A cali-FORWARD -m comment --comment "cali:hQ7Oc16wmUtLuneJ" -j cali-to-hep-forward
+-A cali-FORWARD -m comment --comment "cali:rnKNH2WxGcRQcIlD" -j cali-cidr-block
+-A cali-INPUT -p udp -m comment --comment "cali:J76FwxInZIsk7uKY" -m comment --comment "Allow IPv4 VXLAN packets from allowed hosts" -m multiport --dports 4789 -m set --match-set cali40all-vxlan-net src -m addrtype --dst-type LOCAL -j ACCEPT
+--- filtered ipsets ---
+cali40this-host
+cali40network-ip-pools
+cali40masq-ipam-pools
+cali40all-vxlan-net
+cali40dscp-src-net
+cali40s:TwmnNm2SvbA0RjractJEY1S
+cali40s:IkX8sGssZSJYP2i1GgcRP5d
+cali40s:a7nDJdWBdGNoRvtNxts5Q6V
+cali40s:JTjFM5yrI7xYfYk_R4mpGBf
+=== k3d-tesi-e10-calico-vxlan-agent-0 ===
+--- args processo nodo ---
+PID   USER     COMMAND
+    1 root     /sbin/docker-init -- /bin/k3d-entrypoint.sh agent
+    7 root     {k3d-entrypoint.} /bin/sh /bin/k3d-entrypoint.sh agent
+   87 root     /bin/k3s agent
+--- CNI ---
+total 8
+-rw------- 1 root root  734 Aug  5 16:31 10-calico.conflist
+-rw------- 1 root root 2093 Aug  5 16:31 calico-kubeconfig
+{
+			  "name": "k8s-pod-network",
+			  "cniVersion": "0.3.1",
+			  "plugins": [{"calico_api_group":"","container_settings":{"allow_ip_forwarding":true},"datastore_type":"kubernetes","endpoint_status_dir":"/var/run/calico/endpoint-status","ipam":{"assign_ipv4":"true","assign_ipv6":"false","type":"calico-ipam"},"kubernetes":{"k8s_api_root":"https://10.43.0.1:443","kubeconfig":"/etc/cni/net.d/calico-kubeconfig"},"log_file_max_age":30,"log_file_max_count":10,"log_file_max_size":100,"log_file_path":"/var/log/calico/cni/cni.log","log_level":"Info","mtu":0,"nodename_file_optional":false,"policy":{"type":"k8s"},"policy_setup_timeout_seconds":0,"type":"calico"},{"capabilities":{"portMappings":true},"snat":true,"type":"portmap"}]
+			}
+--- vxlan.calico ---
+4: vxlan.calico: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1450 qdisc noqueue state UNKNOWN mode DEFAULT group default qlen 1000
+    link/ether 66:65:3a:1d:a2:77 brd ff:ff:ff:ff:ff:ff promiscuity 0 allmulti 0 minmtu 68 maxmtu 65535 
+    vxlan id 4096 local 172.19.0.3 dev eth0 srcport 0 0 dstport 4789 ttl auto ageing 300 reserved_bits 0xf7ffffff000000ff nolearning addrgenmode eui64 numtxqueues 1 numrxqueues 1 gso_max_size 65536 gso_max_segs 65535 tso_max_size 524280 tso_max_segs 65535 gro_max_size 65536 gso_ipv4_max_size 65536 gro_ipv4_max_size 65536 
+--- routes ---
+default via 172.19.0.1 dev eth0 
+blackhole 10.42.113.64/26 proto 80 
+10.42.113.65 dev cali88e0f7680da scope link metric 1024 
+10.42.113.66 dev cali0b35f5e0bfa scope link metric 1024 
+10.42.144.128/26 via 10.42.144.128 dev vxlan.calico onlink mtu 1450 
+10.42.219.192/26 via 10.42.219.192 dev vxlan.calico onlink mtu 1450 
+172.19.0.0/16 dev eth0 proto kernel scope link src 172.19.0.3 
+--- flannel.1 expected absent ---
+Device "flannel.1" does not exist.
+flannel.1 absent
+--- kube-proxy health ---
+kube-proxy healthz=ok
+--- filtered iptables chains ---
+:cali-POSTROUTING - [0:0]
+:cali-PREROUTING - [0:0]
+:cali-egress-dscp - [0:0]
+:cali-from-host-endpoint - [0:0]
+:cali-to-host-endpoint - [0:0]
+-A cali-POSTROUTING -m comment --comment "cali:rjggb5FqJG-Y25Bt" -m comment --comment "set dscp for traffic leaving cluster." -m set --match-set cali40dscp-src-net src -m set ! --match-set cali40network-ip-pools dst -m set ! --match-set cali40this-host dst -j cali-egress-dscp
+-A cali-POSTROUTING -m comment --comment "cali:jjeDINEyBNIZOyCC" -m mark --mark 0x10000/0x10000 -j RETURN
+-A cali-POSTROUTING -m comment --comment "cali:zNC99P5aQEt6jv4X" -j MARK --set-xmark 0x0/0x1b0000
+-A cali-POSTROUTING -m comment --comment "cali:Zq8WVZgLnBNyn-Ed" -m conntrack --ctstate DNAT -j cali-to-host-endpoint
+-A cali-POSTROUTING -m comment --comment "cali:x8FyevjrLjl7aiMw" -m comment --comment "Host endpoint policy accepted packet." -m mark --mark 0x10000/0x10000 -j RETURN
+-A cali-PREROUTING -m comment --comment "cali:6BJqBjBC7crtA-7-" -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+-A cali-PREROUTING -m comment --comment "cali:KX7AGNd6rMcDUai6" -m mark --mark 0x10000/0x10000 -j ACCEPT
+-A cali-PREROUTING -m comment --comment "cali:wNH7KsA3ILKJBsY9" -j cali-from-host-endpoint
+-A cali-PREROUTING -m comment --comment "cali:Cg96MgVuoPm7UMRo" -m comment --comment "Host endpoint policy accepted packet." -m mark --mark 0x10000/0x10000 -j ACCEPT
+:cali-OUTPUT - [0:0]
+:cali-PREROUTING - [0:0]
+:cali-from-host-endpoint - [0:0]
+:cali-rpf-skip - [0:0]
+:cali-to-host-endpoint - [0:0]
+-A cali-OUTPUT -m comment --comment "cali:clI8WObfCl4yhr60" -j MARK --set-xmark 0x0/0x1b0000
+-A cali-OUTPUT -m comment --comment "cali:ZbkN6P8OdRcBRPpU" -j cali-to-host-endpoint
+-A cali-OUTPUT -p udp -m comment --comment "cali:ry5_UEpt1OaPPCxO" -m udp --dport 4789 -j NOTRACK
+-A cali-OUTPUT -m comment --comment "cali:MGhICIksKDnYMIkW" -m mark --mark 0x10000/0x10000 -j ACCEPT
+-A cali-PREROUTING -m comment --comment "cali:DQ6LK2guiBRMyrLK" -j MARK --set-xmark 0x0/0x1b0000
+-A cali-PREROUTING -p udp -m comment --comment "cali:sIsu2aAqNN6K3YYn" -m udp --dport 4789 -j NOTRACK
+-A cali-PREROUTING -i cali+ -m comment --comment "cali:W0qKAga6QivxLxL1" -j MARK --set-xmark 0x80000/0x80000
+-A cali-PREROUTING -m comment --comment "cali:QOYCZUivPyJL6Dp1" -m mark --mark 0x80000/0x80000 -j cali-rpf-skip
+-A cali-PREROUTING -m comment --comment "cali:uvipz_NmQPrGYnTB" -m mark --mark 0x80000/0x80000 -m rpfilter --validmark --invert -j DROP
+-A cali-PREROUTING -m comment --comment "cali:pj4jqF0K2OCNLmzX" -m mark --mark 0x0/0x80000 -j cali-from-host-endpoint
+-A cali-PREROUTING -m comment --comment "cali:Jefg6QI5khJcHnVl" -m mark --mark 0x10000/0x10000 -j ACCEPT
+:cali-FORWARD - [0:0]
+:cali-INPUT - [0:0]
+:cali-OUTPUT - [0:0]
+:cali-cidr-block - [0:0]
+:cali-from-hep-forward - [0:0]
+:cali-from-host-endpoint - [0:0]
+:cali-from-wl-dispatch - [0:0]
+:cali-fw-cali0b35f5e0bfa - [0:0]
+:cali-fw-cali88e0f7680da - [0:0]
+:cali-pi-_0dPptdegtTXt1D_kwEh - [0:0]
+:cali-pi-_vdnIkxgfh8_Emv59EWL - [0:0]
+:cali-po-_0dPptdegtTXt1D_kwEh - [0:0]
+:cali-po-_vdnIkxgfh8_Emv59EWL - [0:0]
+:cali-pri-_nGWqPw-iaIRRUz-wyj - [0:0]
+:cali-pri-_ymJUz7yzI6NOKJhG2- - [0:0]
+:cali-pri-kns.calico-system - [0:0]
+:cali-pro-_nGWqPw-iaIRRUz-wyj - [0:0]
+:cali-pro-_ymJUz7yzI6NOKJhG2- - [0:0]
+:cali-pro-kns.calico-system - [0:0]
+:cali-to-hep-forward - [0:0]
+:cali-to-host-endpoint - [0:0]
+:cali-to-wl-dispatch - [0:0]
+:cali-tw-cali0b35f5e0bfa - [0:0]
+:cali-tw-cali88e0f7680da - [0:0]
+:cali-wl-to-host - [0:0]
+-A cali-FORWARD -m comment --comment "cali:W_vvds1Nw3n9QE2f" -j MARK --set-xmark 0x0/0x1a0000
+-A cali-FORWARD -m comment --comment "cali:ZfgmjuiLaA8Pg0kp" -m mark --mark 0x0/0x10000 -j cali-from-hep-forward
+-A cali-FORWARD -i cali+ -m comment --comment "cali:tAzwBLPaV-j53OOZ" -j cali-from-wl-dispatch
+-A cali-FORWARD -o cali+ -m comment --comment "cali:4Z0Pf0byo05NFe-P" -j cali-to-wl-dispatch
+-A cali-FORWARD -m comment --comment "cali:hQ7Oc16wmUtLuneJ" -j cali-to-hep-forward
+-A cali-FORWARD -m comment --comment "cali:rnKNH2WxGcRQcIlD" -j cali-cidr-block
+-A cali-INPUT -p udp -m comment --comment "cali:J76FwxInZIsk7uKY" -m comment --comment "Allow IPv4 VXLAN packets from allowed hosts" -m multiport --dports 4789 -m set --match-set cali40all-vxlan-net src -m addrtype --dst-type LOCAL -j ACCEPT
+-A cali-INPUT -p udp -m comment --comment "cali:EDCNTTxYfggApx8C" -m comment --comment "Drop IPv4 VXLAN packets from non-allowed hosts" -m multiport --dports 4789 -m addrtype --dst-type LOCAL -j DROP
+-A cali-INPUT -i cali+ -m comment --comment "cali:H03xYXARh4e8pwd4" -g cali-wl-to-host
+-A cali-INPUT -m comment --comment "cali:MN6K3isIWBigb1Va" -m mark --mark 0x10000/0x10000 -j ACCEPT
+-A cali-INPUT -m comment --comment "cali:aKDQAoV0P_FFAIwV" -j MARK --set-xmark 0x0/0x1b0000
+-A cali-INPUT -m comment --comment "cali:vIx3xkWzuvLW9fr4" -j cali-from-host-endpoint
+-A cali-INPUT -m comment --comment "cali:5W9XghKma9wuz47x" -m comment --comment "Host endpoint policy accepted packet." -m mark --mark 0x10000/0x10000 -j ACCEPT
+-A cali-OUTPUT -m comment --comment "cali:Mq1_rAdXXH3YkrzW" -m mark --mark 0x10000/0x10000 -j ACCEPT
+-A cali-OUTPUT -o cali+ -m comment --comment "cali:69FkRTJDvD5Vu6Vl" -j RETURN
+-A cali-OUTPUT -p udp -m comment --comment "cali:-QZG79DohFjalQBb" -m comment --comment "Allow IPv4 VXLAN packets to other allowed hosts" -m multiport --dports 4789 -m addrtype --src-type LOCAL -m set --match-set cali40all-vxlan-net dst -j ACCEPT
+-A cali-OUTPUT -m comment --comment "cali:6T0hFtymUtXMOfEV" -j MARK --set-xmark 0x0/0x1b0000
+-A cali-OUTPUT -m comment --comment "cali:IpTGXsDHURPUaLjJ" -m conntrack ! --ctstate DNAT -j cali-to-host-endpoint
+-A cali-OUTPUT -m comment --comment "cali:wgnULo2gucg1umsA" -m comment --comment "Host endpoint policy accepted packet." -m mark --mark 0x10000/0x10000 -j ACCEPT
+-A cali-from-wl-dispatch -i cali0b35f5e0bfa -m comment --comment "cali:cdXrs_a2RKEAZYED" -g cali-fw-cali0b35f5e0bfa
+-A cali-from-wl-dispatch -i cali88e0f7680da -m comment --comment "cali:9hIom9NI6G_UplmB" -g cali-fw-cali88e0f7680da
+-A cali-from-wl-dispatch -m comment --comment "cali:idAx0d8YnlIzkCHt" -m comment --comment "Unknown interface" -j DROP
+-A cali-fw-cali0b35f5e0bfa -m comment --comment "cali:exImeNgztPU1T0al" -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+-A cali-fw-cali0b35f5e0bfa -m comment --comment "cali:S0s0GwkmYMiRetqB" -m conntrack --ctstate INVALID -j DROP
+-A cali-fw-cali0b35f5e0bfa -m comment --comment "cali:badvR1uAw4Py2WBg" -j MARK --set-xmark 0x0/0x30000
+--- filtered ipsets ---
+cali40masq-ipam-pools
+cali40this-host
+cali40network-ip-pools
+cali40all-vxlan-net
+cali40dscp-src-net
+cali40s:IkX8sGssZSJYP2i1GgcRP5d
+cali40svc:gQrIAo_BHPov3ak3rMnN3
+cali40s:fN838yxsjJ8LW-ipaBSvvul
+cali40s:PewI7ShiyAc_6k9DMFYgiBk
+cali40s:9aQdxvhEnSq25dJCrDKFDmu
+=== k3d-tesi-e10-calico-vxlan-agent-1 ===
+--- args processo nodo ---
+PID   USER     COMMAND
+    1 root     /sbin/docker-init -- /bin/k3d-entrypoint.sh agent
+    7 root     {k3d-entrypoint.} /bin/sh /bin/k3d-entrypoint.sh agent
+   87 root     /bin/k3s agent
+--- CNI ---
+total 8
+-rw------- 1 root root  734 Aug  5 16:31 10-calico.conflist
+-rw------- 1 root root 2093 Aug  5 16:31 calico-kubeconfig
+{
+			  "name": "k8s-pod-network",
+			  "cniVersion": "0.3.1",
+			  "plugins": [{"calico_api_group":"","container_settings":{"allow_ip_forwarding":true},"datastore_type":"kubernetes","endpoint_status_dir":"/var/run/calico/endpoint-status","ipam":{"assign_ipv4":"true","assign_ipv6":"false","type":"calico-ipam"},"kubernetes":{"k8s_api_root":"https://10.43.0.1:443","kubeconfig":"/etc/cni/net.d/calico-kubeconfig"},"log_file_max_age":30,"log_file_max_count":10,"log_file_max_size":100,"log_file_path":"/var/log/calico/cni/cni.log","log_level":"Info","mtu":0,"nodename_file_optional":false,"policy":{"type":"k8s"},"policy_setup_timeout_seconds":0,"type":"calico"},{"capabilities":{"portMappings":true},"snat":true,"type":"portmap"}]
+			}
+--- vxlan.calico ---
+4: vxlan.calico: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1450 qdisc noqueue state UNKNOWN mode DEFAULT group default qlen 1000
+    link/ether 66:3b:92:06:6b:3d brd ff:ff:ff:ff:ff:ff promiscuity 0 allmulti 0 minmtu 68 maxmtu 65535 
+    vxlan id 4096 local 172.19.0.4 dev eth0 srcport 0 0 dstport 4789 ttl auto ageing 300 reserved_bits 0xf7ffffff000000ff nolearning addrgenmode eui64 numtxqueues 1 numrxqueues 1 gso_max_size 65536 gso_max_segs 65535 tso_max_size 524280 tso_max_segs 65535 gro_max_size 65536 gso_ipv4_max_size 65536 gro_ipv4_max_size 65536 
+--- routes ---
+default via 172.19.0.1 dev eth0 
+10.42.113.64/26 via 10.42.113.64 dev vxlan.calico onlink mtu 1450 
+blackhole 10.42.144.128/26 proto 80 
+10.42.144.129 dev calid706a774681 scope link metric 1024 
+10.42.144.130 dev calidcca500992d scope link metric 1024 
+10.42.219.192/26 via 10.42.219.192 dev vxlan.calico onlink mtu 1450 
+172.19.0.0/16 dev eth0 proto kernel scope link src 172.19.0.4 
+--- flannel.1 expected absent ---
+Device "flannel.1" does not exist.
+flannel.1 absent
+--- kube-proxy health ---
+kube-proxy healthz=ok
+--- filtered iptables chains ---
+:cali-POSTROUTING - [0:0]
+:cali-PREROUTING - [0:0]
+:cali-egress-dscp - [0:0]
+:cali-from-host-endpoint - [0:0]
+:cali-to-host-endpoint - [0:0]
+-A cali-POSTROUTING -m comment --comment "cali:rjggb5FqJG-Y25Bt" -m comment --comment "set dscp for traffic leaving cluster." -m set --match-set cali40dscp-src-net src -m set ! --match-set cali40network-ip-pools dst -m set ! --match-set cali40this-host dst -j cali-egress-dscp
+-A cali-POSTROUTING -m comment --comment "cali:jjeDINEyBNIZOyCC" -m mark --mark 0x10000/0x10000 -j RETURN
+-A cali-POSTROUTING -m comment --comment "cali:zNC99P5aQEt6jv4X" -j MARK --set-xmark 0x0/0x1b0000
+-A cali-POSTROUTING -m comment --comment "cali:Zq8WVZgLnBNyn-Ed" -m conntrack --ctstate DNAT -j cali-to-host-endpoint
+-A cali-POSTROUTING -m comment --comment "cali:x8FyevjrLjl7aiMw" -m comment --comment "Host endpoint policy accepted packet." -m mark --mark 0x10000/0x10000 -j RETURN
+-A cali-PREROUTING -m comment --comment "cali:6BJqBjBC7crtA-7-" -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+-A cali-PREROUTING -m comment --comment "cali:KX7AGNd6rMcDUai6" -m mark --mark 0x10000/0x10000 -j ACCEPT
+-A cali-PREROUTING -m comment --comment "cali:wNH7KsA3ILKJBsY9" -j cali-from-host-endpoint
+-A cali-PREROUTING -m comment --comment "cali:Cg96MgVuoPm7UMRo" -m comment --comment "Host endpoint policy accepted packet." -m mark --mark 0x10000/0x10000 -j ACCEPT
+:cali-OUTPUT - [0:0]
+:cali-PREROUTING - [0:0]
+:cali-from-host-endpoint - [0:0]
+:cali-rpf-skip - [0:0]
+:cali-to-host-endpoint - [0:0]
+-A cali-OUTPUT -m comment --comment "cali:clI8WObfCl4yhr60" -j MARK --set-xmark 0x0/0x1b0000
+-A cali-OUTPUT -m comment --comment "cali:ZbkN6P8OdRcBRPpU" -j cali-to-host-endpoint
+-A cali-OUTPUT -p udp -m comment --comment "cali:ry5_UEpt1OaPPCxO" -m udp --dport 4789 -j NOTRACK
+-A cali-OUTPUT -m comment --comment "cali:MGhICIksKDnYMIkW" -m mark --mark 0x10000/0x10000 -j ACCEPT
+-A cali-PREROUTING -m comment --comment "cali:DQ6LK2guiBRMyrLK" -j MARK --set-xmark 0x0/0x1b0000
+-A cali-PREROUTING -p udp -m comment --comment "cali:sIsu2aAqNN6K3YYn" -m udp --dport 4789 -j NOTRACK
+-A cali-PREROUTING -i cali+ -m comment --comment "cali:W0qKAga6QivxLxL1" -j MARK --set-xmark 0x80000/0x80000
+-A cali-PREROUTING -m comment --comment "cali:QOYCZUivPyJL6Dp1" -m mark --mark 0x80000/0x80000 -j cali-rpf-skip
+-A cali-PREROUTING -m comment --comment "cali:uvipz_NmQPrGYnTB" -m mark --mark 0x80000/0x80000 -m rpfilter --validmark --invert -j DROP
+-A cali-PREROUTING -m comment --comment "cali:pj4jqF0K2OCNLmzX" -m mark --mark 0x0/0x80000 -j cali-from-host-endpoint
+-A cali-PREROUTING -m comment --comment "cali:Jefg6QI5khJcHnVl" -m mark --mark 0x10000/0x10000 -j ACCEPT
+:cali-FORWARD - [0:0]
+:cali-INPUT - [0:0]
+:cali-OUTPUT - [0:0]
+:cali-cidr-block - [0:0]
+:cali-from-hep-forward - [0:0]
+:cali-from-host-endpoint - [0:0]
+:cali-from-wl-dispatch - [0:0]
+:cali-fw-calid706a774681 - [0:0]
+:cali-fw-calidcca500992d - [0:0]
+:cali-pi-_0dPptdegtTXt1D_kwEh - [0:0]
+:cali-pi-_vdnIkxgfh8_Emv59EWL - [0:0]
+:cali-po-_0dPptdegtTXt1D_kwEh - [0:0]
+:cali-po-_vdnIkxgfh8_Emv59EWL - [0:0]
+:cali-pri-_nGWqPw-iaIRRUz-wyj - [0:0]
+:cali-pri-_ymJUz7yzI6NOKJhG2- - [0:0]
+:cali-pri-kns.calico-system - [0:0]
+:cali-pro-_nGWqPw-iaIRRUz-wyj - [0:0]
+:cali-pro-_ymJUz7yzI6NOKJhG2- - [0:0]
+:cali-pro-kns.calico-system - [0:0]
+:cali-to-hep-forward - [0:0]
+:cali-to-host-endpoint - [0:0]
+:cali-to-wl-dispatch - [0:0]
+:cali-tw-calid706a774681 - [0:0]
+:cali-tw-calidcca500992d - [0:0]
+:cali-wl-to-host - [0:0]
+-A cali-FORWARD -m comment --comment "cali:W_vvds1Nw3n9QE2f" -j MARK --set-xmark 0x0/0x1a0000
+-A cali-FORWARD -m comment --comment "cali:ZfgmjuiLaA8Pg0kp" -m mark --mark 0x0/0x10000 -j cali-from-hep-forward
+-A cali-FORWARD -i cali+ -m comment --comment "cali:tAzwBLPaV-j53OOZ" -j cali-from-wl-dispatch
+-A cali-FORWARD -o cali+ -m comment --comment "cali:4Z0Pf0byo05NFe-P" -j cali-to-wl-dispatch
+-A cali-FORWARD -m comment --comment "cali:hQ7Oc16wmUtLuneJ" -j cali-to-hep-forward
+-A cali-FORWARD -m comment --comment "cali:rnKNH2WxGcRQcIlD" -j cali-cidr-block
+-A cali-INPUT -p udp -m comment --comment "cali:J76FwxInZIsk7uKY" -m comment --comment "Allow IPv4 VXLAN packets from allowed hosts" -m multiport --dports 4789 -m set --match-set cali40all-vxlan-net src -m addrtype --dst-type LOCAL -j ACCEPT
+-A cali-INPUT -p udp -m comment --comment "cali:EDCNTTxYfggApx8C" -m comment --comment "Drop IPv4 VXLAN packets from non-allowed hosts" -m multiport --dports 4789 -m addrtype --dst-type LOCAL -j DROP
+-A cali-INPUT -i cali+ -m comment --comment "cali:H03xYXARh4e8pwd4" -g cali-wl-to-host
+-A cali-INPUT -m comment --comment "cali:MN6K3isIWBigb1Va" -m mark --mark 0x10000/0x10000 -j ACCEPT
+-A cali-INPUT -m comment --comment "cali:aKDQAoV0P_FFAIwV" -j MARK --set-xmark 0x0/0x1b0000
+-A cali-INPUT -m comment --comment "cali:vIx3xkWzuvLW9fr4" -j cali-from-host-endpoint
+-A cali-INPUT -m comment --comment "cali:5W9XghKma9wuz47x" -m comment --comment "Host endpoint policy accepted packet." -m mark --mark 0x10000/0x10000 -j ACCEPT
+-A cali-OUTPUT -m comment --comment "cali:Mq1_rAdXXH3YkrzW" -m mark --mark 0x10000/0x10000 -j ACCEPT
+-A cali-OUTPUT -o cali+ -m comment --comment "cali:69FkRTJDvD5Vu6Vl" -j RETURN
+-A cali-OUTPUT -p udp -m comment --comment "cali:-QZG79DohFjalQBb" -m comment --comment "Allow IPv4 VXLAN packets to other allowed hosts" -m multiport --dports 4789 -m addrtype --src-type LOCAL -m set --match-set cali40all-vxlan-net dst -j ACCEPT
+-A cali-OUTPUT -m comment --comment "cali:6T0hFtymUtXMOfEV" -j MARK --set-xmark 0x0/0x1b0000
+-A cali-OUTPUT -m comment --comment "cali:IpTGXsDHURPUaLjJ" -m conntrack ! --ctstate DNAT -j cali-to-host-endpoint
+-A cali-OUTPUT -m comment --comment "cali:wgnULo2gucg1umsA" -m comment --comment "Host endpoint policy accepted packet." -m mark --mark 0x10000/0x10000 -j ACCEPT
+-A cali-from-wl-dispatch -i calid706a774681 -m comment --comment "cali:pZ9tjfREFdtWAhlh" -g cali-fw-calid706a774681
+-A cali-from-wl-dispatch -i calidcca500992d -m comment --comment "cali:UyqBym7_nrFADkUY" -g cali-fw-calidcca500992d
+-A cali-from-wl-dispatch -m comment --comment "cali:SoGBUmxZAgckuVto" -m comment --comment "Unknown interface" -j DROP
+-A cali-fw-calid706a774681 -m comment --comment "cali:qzZ5NdZJyX9pStQ9" -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+-A cali-fw-calid706a774681 -m comment --comment "cali:FiAAON6W4LQREtck" -m conntrack --ctstate INVALID -j DROP
+-A cali-fw-calid706a774681 -m comment --comment "cali:12Db87Q_hwQRNpw2" -j MARK --set-xmark 0x0/0x30000
+--- filtered ipsets ---
+cali40this-host
+cali40network-ip-pools
+cali40masq-ipam-pools
+cali40all-vxlan-net
+cali40dscp-src-net
+cali40svc:gQrIAo_BHPov3ak3rMnN3
+cali40s:IkX8sGssZSJYP2i1GgcRP5d
+cali40s:PewI7ShiyAc_6k9DMFYgiBk
+cali40s:9aQdxvhEnSq25dJCrDKFDmu
+cali40s:fN838yxsjJ8LW-ipaBSvvul

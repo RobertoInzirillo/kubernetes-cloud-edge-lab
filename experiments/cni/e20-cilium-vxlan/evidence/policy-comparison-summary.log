@@ -1,0 +1,25 @@
+E20 Cilium NetworkPolicy - confronto osservato
+Data: 2026-08-09
+Contesto: k3d-tesi-e20-cilium-vxlan
+Pod e identita: client=10.42.0.169/21766; server-a=10.42.0.76/1647; server-b=10.42.1.199/16090
+
+Matrice HTTP diretta ai Pod IP, due tentativi per flusso:
+- baseline: 6 consentiti, 0 negati, 0 divergenze
+- default-deny-ingress: 0 consentiti, 6 negati, exit code 1 e timeout, destinazioni Ready senza restart
+- default-deny + allow-client-to-http-servers: 4 consentiti e 2 negati; client verso entrambi i server consentito, server-a verso server-b negato
+
+Attribuzione:
+- zero CiliumNetworkPolicy e CiliumClusterwideNetworkPolicy; sono state applicate soltanto le due Kubernetes NetworkPolicy riusate da E02;
+- revisioni policy realizzate sui server: 1 senza policy, 2 dopo default deny, 3 dopo allow; spec e realized coincidevano;
+- enforcement ingress abilitato sui server dopo default deny;
+- dopo l'allow, le policy map eBPF di entrambi i server contenevano Allow Ingress identity 21766 8080/TCP;
+- contatori delle entry allow finali: server-a 1030 byte/13 pacchetti; server-b 1098 byte/14 pacchetti;
+- metrica BPF Policy denied ingress: agent-0 0->6 pacchetti dopo default deny e invariata dopo allow; agent-1 0->12 dopo default deny e 12->18 dopo i due flussi ancora negati;
+- Hubble ha osservato FORWARDED per i flussi ammessi e DROPPED/POLICY_DENIED/INGRESS per quelli negati.
+
+Motori alternativi:
+- il server K3s aveva --disable-network-policy e --flannel-backend=none;
+- non erano istanziate immagini o workload Calico/Tigera/Felix;
+- kube-proxy incorporato in K3s era sano, ma non e il motore di NetworkPolicy.
+
+Esito: matrici e stato programmato/attraversato sono coerenti con enforcement delle Kubernetes NetworkPolicy nel datapath eBPF Cilium.

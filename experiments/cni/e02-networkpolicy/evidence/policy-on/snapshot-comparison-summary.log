@@ -1,0 +1,9 @@
+state=baseline node=k3d-tesi-e02-flannel-netpol-on-agent-0 nwplcy_chains=2 policy_specific_chains=0 pod_fw_chains=3 router_chains=3 policy_ipsets=0 policy_ipset_members=0
+state=baseline node=k3d-tesi-e02-flannel-netpol-on-agent-1 nwplcy_chains=2 policy_specific_chains=0 pod_fw_chains=2 router_chains=3 policy_ipsets=0 policy_ipset_members=0
+state=baseline node=k3d-tesi-e02-flannel-netpol-on-server-0 nwplcy_chains=2 policy_specific_chains=0 pod_fw_chains=1 router_chains=3 policy_ipsets=0 policy_ipset_members=0
+state=default-deny node=k3d-tesi-e02-flannel-netpol-on-agent-0 nwplcy_chains=3 policy_specific_chains=1 pod_fw_chains=3 router_chains=3 policy_ipsets=1 policy_ipset_members=3
+state=default-deny node=k3d-tesi-e02-flannel-netpol-on-agent-1 nwplcy_chains=3 policy_specific_chains=1 pod_fw_chains=2 router_chains=3 policy_ipsets=1 policy_ipset_members=3
+state=default-deny node=k3d-tesi-e02-flannel-netpol-on-server-0 nwplcy_chains=3 policy_specific_chains=1 pod_fw_chains=1 router_chains=3 policy_ipsets=1 policy_ipset_members=3
+state=deny-plus-allow node=k3d-tesi-e02-flannel-netpol-on-agent-0 nwplcy_chains=4 policy_specific_chains=2 pod_fw_chains=3 router_chains=3 policy_ipsets=3 policy_ipset_members=6
+state=deny-plus-allow node=k3d-tesi-e02-flannel-netpol-on-agent-1 nwplcy_chains=4 policy_specific_chains=2 pod_fw_chains=2 router_chains=3 policy_ipsets=3 policy_ipset_members=6
+state=deny-plus-allow node=k3d-tesi-e02-flannel-netpol-on-server-0 nwplcy_chains=4 policy_specific_chains=2 pod_fw_chains=1 router_chains=3 policy_ipsets=3 policy_ipset_members=6

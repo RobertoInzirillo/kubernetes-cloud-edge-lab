@@ -1,0 +1,3 @@
+stage=default-deny reconcile=PASS attempt=1 count=1
+server-a old=1 revision=2 spec=2 realized=2 enabled=ingress
+server-b old=1 revision=2 spec=2 realized=2 enabled=ingress

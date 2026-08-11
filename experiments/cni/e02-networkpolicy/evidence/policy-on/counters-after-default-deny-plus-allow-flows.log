@@ -1,0 +1,76 @@
+counter_timestamp=2026-08-04T18:27:03,788984105+02:00
+state=after-default-deny-plus-allow-flows
+
+===== NODE k3d-tesi-e02-flannel-netpol-on-server-0 =====
+[0:0] -A KUBE-NWPLCY-47UY3FBZHJ5ZODZX -m comment --comment "rule to log dropped traffic" -m limit --limit 10/min --limit-burst 10 -m mark ! --mark 0x10000/0x10000 -j NFLOG --nflog-prefix "DROP by policy net-lab/default-deny-ingress" --nflog-group 100
+[0:0] -A KUBE-NWPLCY-GJDUNLH2T7H2LGWQ -p tcp -m comment --comment "rule to ACCEPT traffic from source pods to dest pods selected by policy name allow-client-to-http-servers namespace net-lab" -m set --match-set KUBE-SRC-ECYRTATM4APZBIFC src -m set --match-set KUBE-DST-VXFHLUDFBCFXQ4QX dst -m tcp --dport 8080 -j MARK --set-xmark 0x10000/0x10000
+[0:0] -A KUBE-NWPLCY-GJDUNLH2T7H2LGWQ -p tcp -m comment --comment "rule to ACCEPT traffic from source pods to dest pods selected by policy name allow-client-to-http-servers namespace net-lab" -m set --match-set KUBE-SRC-ECYRTATM4APZBIFC src -m set --match-set KUBE-DST-VXFHLUDFBCFXQ4QX dst -m tcp --dport 8080 -m mark --mark 0x10000/0x10000 -j RETURN
+[0:0] -A KUBE-NWPLCY-GJDUNLH2T7H2LGWQ -m comment --comment "rule to log dropped traffic" -m limit --limit 10/min --limit-burst 10 -m mark ! --mark 0x10000/0x10000 -j NFLOG --nflog-prefix "DROP by policy net-lab/allow-client-to-http-servers" --nflog-group 100
+[0:0] -A KUBE-SEP-FIG74G4IG3ZIZKXH -s 10.42.0.4/32 -m comment --comment "net-lab/servers:http" -j KUBE-MARK-MASQ
+[0:0] -A KUBE-SEP-FIG74G4IG3ZIZKXH -p tcp -m comment --comment "net-lab/servers:http" -m tcp -j DNAT --to-destination 10.42.0.4:8080
+[0:0] -A KUBE-SEP-PDYZNI7GWYRWBYHI -s 10.42.1.3/32 -m comment --comment "net-lab/servers:http" -j KUBE-MARK-MASQ
+[0:0] -A KUBE-SEP-PDYZNI7GWYRWBYHI -p tcp -m comment --comment "net-lab/servers:http" -m tcp -j DNAT --to-destination 10.42.1.3:8080
+[0:0] -A KUBE-SVC-52E5QOXW62TEVVLC -m comment --comment "net-lab/servers:http -> 10.42.0.4:8080" -m statistic --mode random --probability 0.50000000000 -j KUBE-SEP-FIG74G4IG3ZIZKXH
+[0:0] -A KUBE-SVC-52E5QOXW62TEVVLC -m comment --comment "net-lab/servers:http -> 10.42.1.3:8080" -j KUBE-SEP-PDYZNI7GWYRWBYHI
+
+===== NODE k3d-tesi-e02-flannel-netpol-on-agent-0 =====
+[4:240] -A KUBE-NWPLCY-FCGYCEL2S3RNK6IP -m comment --comment "rule to log dropped traffic" -m limit --limit 10/min --limit-burst 10 -m mark ! --mark 0x10000/0x10000 -j NFLOG --nflog-prefix "DROP by policy net-lab/default-deny-ingress" --nflog-group 100
+[4:240] -A KUBE-NWPLCY-XZWWUD437ACFMAJN -p tcp -m comment --comment "rule to ACCEPT traffic from source pods to dest pods selected by policy name allow-client-to-http-servers namespace net-lab" -m set --match-set KUBE-SRC-ECYRTATM4APZBIFC src -m set --match-set KUBE-DST-VXFHLUDFBCFXQ4QX dst -m tcp --dport 8080 -j MARK --set-xmark 0x10000/0x10000
+[4:240] -A KUBE-NWPLCY-XZWWUD437ACFMAJN -p tcp -m comment --comment "rule to ACCEPT traffic from source pods to dest pods selected by policy name allow-client-to-http-servers namespace net-lab" -m set --match-set KUBE-SRC-ECYRTATM4APZBIFC src -m set --match-set KUBE-DST-VXFHLUDFBCFXQ4QX dst -m tcp --dport 8080 -m mark --mark 0x10000/0x10000 -j RETURN
+[0:0] -A KUBE-NWPLCY-XZWWUD437ACFMAJN -m comment --comment "rule to log dropped traffic" -m limit --limit 10/min --limit-burst 10 -m mark ! --mark 0x10000/0x10000 -j NFLOG --nflog-prefix "DROP by policy net-lab/allow-client-to-http-servers" --nflog-group 100
+[0:0] -A KUBE-POD-FW-N6MEBKRXNCZEKLUQ -d 10.42.0.4/32 -m comment --comment "rule to permit the traffic traffic to pods when source is the pod\'s local node" -m addrtype --src-type LOCAL -j ACCEPT
+[4:240] -A KUBE-POD-FW-N6MEBKRXNCZEKLUQ -s 10.42.0.4/32 -m comment --comment "run through default egress network policy chain" -j KUBE-NWPLCY-DEFAULT
+[4:240] -A KUBE-POD-FW-N6MEBKRXNCZEKLUQ -d 10.42.0.4/32 -m comment --comment "run through nw policy default-deny-ingress" -j KUBE-NWPLCY-FCGYCEL2S3RNK6IP
+[4:240] -A KUBE-POD-FW-N6MEBKRXNCZEKLUQ -d 10.42.0.4/32 -m comment --comment "run through nw policy allow-client-to-http-servers" -j KUBE-NWPLCY-XZWWUD437ACFMAJN
+[0:0] -A KUBE-POD-FW-N6MEBKRXNCZEKLUQ -m comment --comment "rule to log dropped traffic POD name:server-a namespace: net-lab" -m mark ! --mark 0x10000/0x10000 -m limit --limit 10/min --limit-burst 10 -j NFLOG --nflog-group 100
+[0:0] -A KUBE-POD-FW-N6MEBKRXNCZEKLUQ -m comment --comment "rule to REJECT traffic destined for POD name:server-a namespace: net-lab" -m mark ! --mark 0x10000/0x10000 -j REJECT --reject-with icmp-port-unreachable
+[0:0] -A KUBE-POD-FW-X7DSMT6SY2FHNYLN -d 10.42.0.3/32 -m comment --comment "rule to permit the traffic traffic to pods when source is the pod\'s local node" -m addrtype --src-type LOCAL -j ACCEPT
+[6:360] -A KUBE-POD-FW-X7DSMT6SY2FHNYLN -s 10.42.0.3/32 -m comment --comment "run through default egress network policy chain" -j KUBE-NWPLCY-DEFAULT
+[0:0] -A KUBE-POD-FW-X7DSMT6SY2FHNYLN -d 10.42.0.3/32 -m comment --comment "run through nw policy default-deny-ingress" -j KUBE-NWPLCY-FCGYCEL2S3RNK6IP
+[0:0] -A KUBE-POD-FW-X7DSMT6SY2FHNYLN -m comment --comment "rule to log dropped traffic POD name:client namespace: net-lab" -m mark ! --mark 0x10000/0x10000 -m limit --limit 10/min --limit-burst 10 -j NFLOG --nflog-group 100
+[0:0] -A KUBE-POD-FW-X7DSMT6SY2FHNYLN -m comment --comment "rule to REJECT traffic destined for POD name:client namespace: net-lab" -m mark ! --mark 0x10000/0x10000 -j REJECT --reject-with icmp-port-unreachable
+[24:2144] -A KUBE-ROUTER-FORWARD -d 10.42.0.3/32 -m comment --comment "rule to jump traffic destined to POD name:client namespace: net-lab to chain KUBE-POD-FW-X7DSMT6SY2FHNYLN" -j KUBE-POD-FW-X7DSMT6SY2FHNYLN
+[0:0] -A KUBE-ROUTER-FORWARD -d 10.42.0.3/32 -m physdev --physdev-is-bridged -m comment --comment "rule to jump traffic destined to POD name:client namespace: net-lab to chain KUBE-POD-FW-X7DSMT6SY2FHNYLN" -j KUBE-POD-FW-X7DSMT6SY2FHNYLN
+[26:1692] -A KUBE-ROUTER-FORWARD -s 10.42.0.3/32 -m comment --comment "rule to jump traffic from POD name:client namespace: net-lab to chain KUBE-POD-FW-X7DSMT6SY2FHNYLN" -j KUBE-POD-FW-X7DSMT6SY2FHNYLN
+[2:120] -A KUBE-ROUTER-FORWARD -s 10.42.0.3/32 -m physdev --physdev-is-bridged -m comment --comment "rule to jump traffic from POD name:client namespace: net-lab to chain KUBE-POD-FW-X7DSMT6SY2FHNYLN" -j KUBE-POD-FW-X7DSMT6SY2FHNYLN
+[6:472] -A KUBE-ROUTER-FORWARD -d 10.42.0.4/32 -m comment --comment "rule to jump traffic destined to POD name:server-a namespace: net-lab to chain KUBE-POD-FW-N6MEBKRXNCZEKLUQ" -j KUBE-POD-FW-N6MEBKRXNCZEKLUQ
+[2:120] -A KUBE-ROUTER-FORWARD -d 10.42.0.4/32 -m physdev --physdev-is-bridged -m comment --comment "rule to jump traffic destined to POD name:server-a namespace: net-lab to chain KUBE-POD-FW-N6MEBKRXNCZEKLUQ" -j KUBE-POD-FW-N6MEBKRXNCZEKLUQ
+[4:240] -A KUBE-ROUTER-FORWARD -s 10.42.0.4/32 -m comment --comment "rule to jump traffic from POD name:server-a namespace: net-lab to chain KUBE-POD-FW-N6MEBKRXNCZEKLUQ" -j KUBE-POD-FW-N6MEBKRXNCZEKLUQ
+[0:0] -A KUBE-ROUTER-FORWARD -s 10.42.0.4/32 -m physdev --physdev-is-bridged -m comment --comment "rule to jump traffic from POD name:server-a namespace: net-lab to chain KUBE-POD-FW-N6MEBKRXNCZEKLUQ" -j KUBE-POD-FW-N6MEBKRXNCZEKLUQ
+[0:0] -A KUBE-ROUTER-INPUT -s 10.42.0.3/32 -m comment --comment "rule to jump traffic from POD name:client namespace: net-lab to chain KUBE-POD-FW-X7DSMT6SY2FHNYLN" -j KUBE-POD-FW-X7DSMT6SY2FHNYLN
+[0:0] -A KUBE-ROUTER-INPUT -s 10.42.0.4/32 -m comment --comment "rule to jump traffic from POD name:server-a namespace: net-lab to chain KUBE-POD-FW-N6MEBKRXNCZEKLUQ" -j KUBE-POD-FW-N6MEBKRXNCZEKLUQ
+[0:0] -A KUBE-ROUTER-OUTPUT -d 10.42.0.3/32 -m comment --comment "rule to jump traffic destined to POD name:client namespace: net-lab to chain KUBE-POD-FW-X7DSMT6SY2FHNYLN" -j KUBE-POD-FW-X7DSMT6SY2FHNYLN
+[0:0] -A KUBE-ROUTER-OUTPUT -s 10.42.0.3/32 -m comment --comment "rule to jump traffic from POD name:client namespace: net-lab to chain KUBE-POD-FW-X7DSMT6SY2FHNYLN" -j KUBE-POD-FW-X7DSMT6SY2FHNYLN
+[0:0] -A KUBE-ROUTER-OUTPUT -d 10.42.0.4/32 -m comment --comment "rule to jump traffic destined to POD name:server-a namespace: net-lab to chain KUBE-POD-FW-N6MEBKRXNCZEKLUQ" -j KUBE-POD-FW-N6MEBKRXNCZEKLUQ
+[0:0] -A KUBE-ROUTER-OUTPUT -s 10.42.0.4/32 -m comment --comment "rule to jump traffic from POD name:server-a namespace: net-lab to chain KUBE-POD-FW-N6MEBKRXNCZEKLUQ" -j KUBE-POD-FW-N6MEBKRXNCZEKLUQ
+[0:0] -A KUBE-SEP-FIG74G4IG3ZIZKXH -s 10.42.0.4/32 -m comment --comment "net-lab/servers:http" -j KUBE-MARK-MASQ
+[0:0] -A KUBE-SEP-FIG74G4IG3ZIZKXH -p tcp -m comment --comment "net-lab/servers:http" -m tcp -j DNAT --to-destination 10.42.0.4:8080
+[0:0] -A KUBE-SEP-PDYZNI7GWYRWBYHI -s 10.42.1.3/32 -m comment --comment "net-lab/servers:http" -j KUBE-MARK-MASQ
+[0:0] -A KUBE-SEP-PDYZNI7GWYRWBYHI -p tcp -m comment --comment "net-lab/servers:http" -m tcp -j DNAT --to-destination 10.42.1.3:8080
+[0:0] -A KUBE-SVC-52E5QOXW62TEVVLC -m comment --comment "net-lab/servers:http -> 10.42.0.4:8080" -m statistic --mode random --probability 0.50000000000 -j KUBE-SEP-FIG74G4IG3ZIZKXH
+[0:0] -A KUBE-SVC-52E5QOXW62TEVVLC -m comment --comment "net-lab/servers:http -> 10.42.1.3:8080" -j KUBE-SEP-PDYZNI7GWYRWBYHI
+
+===== NODE k3d-tesi-e02-flannel-netpol-on-agent-1 =====
+[2:120] -A KUBE-NWPLCY-44TQK4G7QNFDEVUF -p tcp -m comment --comment "rule to ACCEPT traffic from source pods to dest pods selected by policy name allow-client-to-http-servers namespace net-lab" -m set --match-set KUBE-SRC-ECYRTATM4APZBIFC src -m set --match-set KUBE-DST-VXFHLUDFBCFXQ4QX dst -m tcp --dport 8080 -j MARK --set-xmark 0x10000/0x10000
+[2:120] -A KUBE-NWPLCY-44TQK4G7QNFDEVUF -p tcp -m comment --comment "rule to ACCEPT traffic from source pods to dest pods selected by policy name allow-client-to-http-servers namespace net-lab" -m set --match-set KUBE-SRC-ECYRTATM4APZBIFC src -m set --match-set KUBE-DST-VXFHLUDFBCFXQ4QX dst -m tcp --dport 8080 -m mark --mark 0x10000/0x10000 -j RETURN
+[4:240] -A KUBE-NWPLCY-44TQK4G7QNFDEVUF -m comment --comment "rule to log dropped traffic" -m limit --limit 10/min --limit-burst 10 -m mark ! --mark 0x10000/0x10000 -j NFLOG --nflog-prefix "DROP by policy net-lab/allow-client-to-http-servers" --nflog-group 100
+[4:240] -A KUBE-NWPLCY-7PDXKMGOCTU4TWFI -m comment --comment "rule to log dropped traffic" -m limit --limit 10/min --limit-burst 10 -m mark ! --mark 0x10000/0x10000 -j NFLOG --nflog-prefix "DROP by policy net-lab/default-deny-ingress" --nflog-group 100
+[0:0] -A KUBE-POD-FW-2ORTZ4ZEUM7CYUBM -d 10.42.1.3/32 -m comment --comment "rule to permit the traffic traffic to pods when source is the pod\'s local node" -m addrtype --src-type LOCAL -j ACCEPT
+[0:0] -A KUBE-POD-FW-2ORTZ4ZEUM7CYUBM -s 10.42.1.3/32 -m comment --comment "run through default egress network policy chain" -j KUBE-NWPLCY-DEFAULT
+[6:360] -A KUBE-POD-FW-2ORTZ4ZEUM7CYUBM -d 10.42.1.3/32 -m comment --comment "run through nw policy allow-client-to-http-servers" -j KUBE-NWPLCY-44TQK4G7QNFDEVUF
+[6:360] -A KUBE-POD-FW-2ORTZ4ZEUM7CYUBM -d 10.42.1.3/32 -m comment --comment "run through nw policy default-deny-ingress" -j KUBE-NWPLCY-7PDXKMGOCTU4TWFI
+[4:240] -A KUBE-POD-FW-2ORTZ4ZEUM7CYUBM -m comment --comment "rule to log dropped traffic POD name:server-b namespace: net-lab" -m mark ! --mark 0x10000/0x10000 -m limit --limit 10/min --limit-burst 10 -j NFLOG --nflog-group 100
+[4:240] -A KUBE-POD-FW-2ORTZ4ZEUM7CYUBM -m comment --comment "rule to REJECT traffic destined for POD name:server-b namespace: net-lab" -m mark ! --mark 0x10000/0x10000 -j REJECT --reject-with icmp-port-unreachable
+[18:1138] -A KUBE-ROUTER-FORWARD -d 10.42.1.3/32 -m comment --comment "rule to jump traffic destined to POD name:server-b namespace: net-lab to chain KUBE-POD-FW-2ORTZ4ZEUM7CYUBM" -j KUBE-POD-FW-2ORTZ4ZEUM7CYUBM
+[0:0] -A KUBE-ROUTER-FORWARD -d 10.42.1.3/32 -m physdev --physdev-is-bridged -m comment --comment "rule to jump traffic destined to POD name:server-b namespace: net-lab to chain KUBE-POD-FW-2ORTZ4ZEUM7CYUBM" -j KUBE-POD-FW-2ORTZ4ZEUM7CYUBM
+[12:1072] -A KUBE-ROUTER-FORWARD -s 10.42.1.3/32 -m comment --comment "rule to jump traffic from POD name:server-b namespace: net-lab to chain KUBE-POD-FW-2ORTZ4ZEUM7CYUBM" -j KUBE-POD-FW-2ORTZ4ZEUM7CYUBM
+[0:0] -A KUBE-ROUTER-FORWARD -s 10.42.1.3/32 -m physdev --physdev-is-bridged -m comment --comment "rule to jump traffic from POD name:server-b namespace: net-lab to chain KUBE-POD-FW-2ORTZ4ZEUM7CYUBM" -j KUBE-POD-FW-2ORTZ4ZEUM7CYUBM
+[0:0] -A KUBE-ROUTER-INPUT -s 10.42.1.3/32 -m comment --comment "rule to jump traffic from POD name:server-b namespace: net-lab to chain KUBE-POD-FW-2ORTZ4ZEUM7CYUBM" -j KUBE-POD-FW-2ORTZ4ZEUM7CYUBM
+[0:0] -A KUBE-ROUTER-OUTPUT -d 10.42.1.3/32 -m comment --comment "rule to jump traffic destined to POD name:server-b namespace: net-lab to chain KUBE-POD-FW-2ORTZ4ZEUM7CYUBM" -j KUBE-POD-FW-2ORTZ4ZEUM7CYUBM
+[0:0] -A KUBE-ROUTER-OUTPUT -s 10.42.1.3/32 -m comment --comment "rule to jump traffic from POD name:server-b namespace: net-lab to chain KUBE-POD-FW-2ORTZ4ZEUM7CYUBM" -j KUBE-POD-FW-2ORTZ4ZEUM7CYUBM
+[0:0] -A KUBE-SEP-FIG74G4IG3ZIZKXH -s 10.42.0.4/32 -m comment --comment "net-lab/servers:http" -j KUBE-MARK-MASQ
+[0:0] -A KUBE-SEP-FIG74G4IG3ZIZKXH -p tcp -m comment --comment "net-lab/servers:http" -m tcp -j DNAT --to-destination 10.42.0.4:8080
+[0:0] -A KUBE-SEP-PDYZNI7GWYRWBYHI -s 10.42.1.3/32 -m comment --comment "net-lab/servers:http" -j KUBE-MARK-MASQ
+[0:0] -A KUBE-SEP-PDYZNI7GWYRWBYHI -p tcp -m comment --comment "net-lab/servers:http" -m tcp -j DNAT --to-destination 10.42.1.3:8080
+[0:0] -A KUBE-SVC-52E5QOXW62TEVVLC -m comment --comment "net-lab/servers:http -> 10.42.0.4:8080" -m statistic --mode random --probability 0.50000000000 -j KUBE-SEP-FIG74G4IG3ZIZKXH
+[0:0] -A KUBE-SVC-52E5QOXW62TEVVLC -m comment --comment "net-lab/servers:http -> 10.42.1.3:8080" -j KUBE-SEP-PDYZNI7GWYRWBYHI

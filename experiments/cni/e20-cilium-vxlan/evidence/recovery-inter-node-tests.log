@@ -1,0 +1,22 @@
+timestamp=2026-08-09T16:33:48,604893088+02:00 server_b_ip=10.42.1.199
+=== destination before ===
+NAME       IP            NODE                                READY   RESTARTS
+server-b   10.42.1.199   k3d-tesi-e20-cilium-vxlan-agent-1   true    0
+test=icmp source=client destination=10.42.1.199 timestamp=2026-08-09T16:33:48,825468891+02:00
+icmp_exit=0
+PING 10.42.1.199 (10.42.1.199): 56 data bytes
+64 bytes from 10.42.1.199: seq=0 ttl=63 time=0.635 ms
+64 bytes from 10.42.1.199: seq=1 ttl=63 time=0.397 ms
+64 bytes from 10.42.1.199: seq=2 ttl=63 time=0.364 ms
+
+--- 10.42.1.199 ping statistics ---
+3 packets transmitted, 3 packets received, 0% packet loss
+round-trip min/avg/max = 0.364/0.465/0.635 ms
+test=http source=client destination=10.42.1.199:8080 timestamp=2026-08-09T16:33:51,480645736+02:00
+http_exit=0
+http_response=server-b
+=== destination after ===
+NAME       IP            NODE                                READY   RESTARTS
+server-b   10.42.1.199   k3d-tesi-e20-cilium-vxlan-agent-1   true    0
+functional_failures=0
+inter_node_recovery_tests=PASS

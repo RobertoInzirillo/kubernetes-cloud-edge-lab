@@ -1,0 +1,26 @@
+timestamp_end=2026-08-09T17:17:42,267412745+02:00
+service_ip=10.43.59.99
+attempts=2
+server_a_seen=1
+server_b_seen=1
+kubeproxy_relevant_rules_byte_identical=yes
+cilium_lb_entries_byte_identical=yes
+new_cilium_tcp_svc_entries=2
+hubble_flow_records=8
+networkpolicy_count_final=0
+residual_process_groups=0
+=== new Cilium TCP SVC/CT entries ===
+TCP OUT 10.42.0.169:41398 -> 10.42.0.76:8080 expires=29071 Packets=0 Bytes=0 RxFlagsSeen=0x1b LastRxReport=29061 TxFlagsSeen=0x1b LastTxReport=29061 Flags=0x0013 [ RxClosing TxClosing SeenNonSyn ] RevNAT=7 SourceSecurityID=21766 BackendID=0 NatPort=0 
+TCP IN 10.42.0.169:41398 -> 10.42.0.76:8080 expires=29071 Packets=0 Bytes=0 RxFlagsSeen=0x1b LastRxReport=29061 TxFlagsSeen=0x1b LastTxReport=29061 Flags=0x0013 [ RxClosing TxClosing SeenNonSyn ] RevNAT=0 SourceSecurityID=21766 BackendID=0 NatPort=0 
+TCP SVC 10.42.0.169:41398 -> 10.43.59.99:8080 expires=29071 Packets=0 Bytes=0 RxFlagsSeen=0x00 LastRxReport=0 TxFlagsSeen=0x1b LastTxReport=29061 Flags=0x0013 [ RxClosing TxClosing SeenNonSyn ] RevNAT=7 SourceSecurityID=0 BackendID=7 NatPort=0 
+TCP SVC 10.42.0.169:41402 -> 10.43.59.99:8080 expires=29071 Packets=0 Bytes=0 RxFlagsSeen=0x00 LastRxReport=0 TxFlagsSeen=0x1b LastTxReport=29061 Flags=0x0013 [ RxClosing TxClosing SeenNonSyn ] RevNAT=7 SourceSecurityID=0 BackendID=8 NatPort=0 
+TCP OUT 10.42.0.169:41402 -> 10.42.1.199:8080 expires=29071 Packets=0 Bytes=0 RxFlagsSeen=0x1b LastRxReport=29061 TxFlagsSeen=0x1b LastTxReport=29061 Flags=0x0013 [ RxClosing TxClosing SeenNonSyn ] RevNAT=7 SourceSecurityID=21766 BackendID=0 NatPort=0 
+=== Hubble compact correlation ===
+2026-08-09T15:17:38.418295946Z	10.42.0.169	41398	10.42.0.76	server-a	TO_ENDPOINT	FORWARDED	TCP Flags: SYN
+2026-08-09T15:17:38.418344246Z	10.42.0.169	41398	10.42.0.76	server-a	TO_ENDPOINT	FORWARDED	TCP Flags: ACK
+2026-08-09T15:17:38.418434988Z	10.42.0.169	41398	10.42.0.76	server-a	TO_ENDPOINT	FORWARDED	TCP Flags: ACK, PSH
+2026-08-09T15:17:38.456591530Z	10.42.0.169	41398	10.42.0.76	server-a	TO_ENDPOINT	FORWARDED	TCP Flags: ACK, FIN
+2026-08-09T15:17:38.828969734Z	10.42.0.169	41402	10.42.1.199	server-b	TO_OVERLAY	FORWARDED	TCP Flags: SYN
+2026-08-09T15:17:38.829153667Z	10.42.0.169	41402	10.42.1.199	server-b	TO_OVERLAY	FORWARDED	TCP Flags: ACK
+2026-08-09T15:17:38.829294783Z	10.42.0.169	41402	10.42.1.199	server-b	TO_OVERLAY	FORWARDED	TCP Flags: ACK, PSH
+2026-08-09T15:17:38.830027476Z	10.42.0.169	41402	10.42.1.199	server-b	TO_OVERLAY	FORWARDED	TCP Flags: ACK, FIN

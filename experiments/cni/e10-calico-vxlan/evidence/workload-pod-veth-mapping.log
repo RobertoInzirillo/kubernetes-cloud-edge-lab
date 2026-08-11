@@ -1,0 +1,150 @@
+=== pod=client ===
+ip=10.42.113.67
+node=k3d-tesi-e10-calico-vxlan-agent-0
+sandbox_id=4133bd53f9e3b8a68d9bd0de08d14b79842190f47f5a1371bbd97e4c44cf7733
+sandbox_pid=5899
+network_namespace=/var/run/netns/cni-094a8ec7-71b8-f0fe-bf3c-3282fd918967
+host_veth=cali651ff5ba98e
+--- CRI network ---
+{
+  "status": {
+    "id": "4133bd53f9e3b8a68d9bd0de08d14b79842190f47f5a1371bbd97e4c44cf7733",
+    "metadata": {
+      "attempt": 0,
+      "name": "client",
+      "namespace": "net-lab",
+      "uid": "32762f5a-c6b9-40fe-a37d-4f37e1624900"
+    },
+    "network": {
+      "additionalIps": [],
+      "ip": "10.42.113.67"
+    },
+    "state": "SANDBOX_READY"
+  },
+  "info": {
+    "pid": 5899,
+    "networkNamespace": {
+      "path": "/var/run/netns/cni-094a8ec7-71b8-f0fe-bf3c-3282fd918967",
+      "type": "network"
+    }
+  }
+}
+--- pod namespace eth0/address/route ---
+2: eth0@if8: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1450 qdisc noqueue state UP mode DEFAULT group default qlen 1000\    link/ether 1e:68:8b:6b:61:4f brd ff:ff:ff:ff:ff:ff link-netnsid 0
+2: eth0    inet 10.42.113.67/32 scope global eth0\       valid_lft forever preferred_lft forever
+2: eth0    inet6 fe80::1c68:8bff:fe6b:614f/64 scope link proto kernel_ll \       valid_lft forever preferred_lft forever
+default via 169.254.1.1 dev eth0 
+169.254.1.1 dev eth0 scope link 
+--- host route/link ---
+10.42.113.67 dev cali651ff5ba98e src 172.19.0.3 uid 0 
+    cache 
+8: cali651ff5ba98e@if2: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1450 qdisc noqueue state UP mode DEFAULT group default 
+    link/ether ee:ee:ee:ee:ee:ee brd ff:ff:ff:ff:ff:ff link-netns cni-094a8ec7-71b8-f0fe-bf3c-3282fd918967 promiscuity 0 allmulti 0 minmtu 68 maxmtu 65535 
+    veth addrgenmode eui64 numtxqueues 1 numrxqueues 1 gso_max_size 65536 gso_max_segs 65535 tso_max_size 524280 tso_max_segs 65535 gro_max_size 65536 gso_ipv4_max_size 65536 gro_ipv4_max_size 65536 
+--- CNI WorkloadEndpoint record ---
+2026-08-05 17:15:38.652 [INFO][5790] cni-plugin/k8s.go 422: Populated endpoint ContainerID="4133bd53f9e3b8a68d9bd0de08d14b79842190f47f5a1371bbd97e4c44cf7733" Namespace="net-lab" Pod="client" WorkloadEndpoint="k3d--tesi--e10--calico--vxlan--agent--0-k8s-client-eth0" endpoint=&internalapi.WorkloadEndpoint{TypeMeta:v1.TypeMeta{Kind:"WorkloadEndpoint", APIVersion:"projectcalico.org/v3"}, ObjectMeta:v1.ObjectMeta{Name:"k3d--tesi--e10--calico--vxlan--agent--0-k8s-client-eth0", GenerateName:"", Namespace:"net-lab", SelfLink:"", UID:"32762f5a-c6b9-40fe-a37d-4f37e1624900", ResourceVersion:"4355", Generation:0, CreationTimestamp:time.Date(2026, time.August, 5, 17, 15, 37, 0, time.Local), DeletionTimestamp:<nil>, DeletionGracePeriodSeconds:(*int64)(nil), Labels:map[string]string{"app.kubernetes.io/instance":"client", "app.kubernetes.io/name":"network-client", "app.kubernetes.io/part-of":"e01-network-baseline", "projectcalico.org/namespace":"net-lab", "projectcalico.org/orchestrator":"k8s", "projectcalico.org/serviceaccount":"default"}, Annotations:map[string]string(nil), OwnerReferences:[]v1.OwnerReference(nil), Finalizers:[]string(nil), ManagedFields:[]v1.ManagedFieldsEntry(nil)}, Spec:internalapi.WorkloadEndpointSpec{Orchestrator:"k8s", Workload:"", Node:"k3d-tesi-e10-calico-vxlan-agent-0", ContainerID:"", Pod:"client", Endpoint:"eth0", ServiceAccountName:"default", IPNetworks:[]string{"10.42.113.67/32"}, IPNATs:[]internalapi.IPNAT(nil), IPv4Gateway:"", IPv6Gateway:"", Profiles:[]string{"kns.net-lab", "ksa.net-lab.default"}, InterfaceName:"cali651ff5ba98e", MAC:"", Ports:[]internalapi.WorkloadEndpointPort(nil), AllowSpoofedSourcePrefixes:[]string(nil), QoSControls:(*internalapi.QoSControls)(nil)}}
+2026-08-05 17:15:38.653 [INFO][5790] cni-plugin/dataplane_linux.go 77: Setting the host side veth name to cali651ff5ba98e ContainerID="4133bd53f9e3b8a68d9bd0de08d14b79842190f47f5a1371bbd97e4c44cf7733" Namespace="net-lab" Pod="client" WorkloadEndpoint="k3d--tesi--e10--calico--vxlan--agent--0-k8s-client-eth0"
+2026-08-05 17:15:38.678 [INFO][5790] cni-plugin/k8s.go 544: Wrote updated endpoint to datastore ContainerID="4133bd53f9e3b8a68d9bd0de08d14b79842190f47f5a1371bbd97e4c44cf7733" Namespace="net-lab" Pod="client" WorkloadEndpoint="k3d--tesi--e10--calico--vxlan--agent--0-k8s-client-eth0"
+--- cni0 expected absent ---
+Device "cni0" does not exist.
+cni0 absent
+=== pod=server-a ===
+ip=10.42.113.68
+node=k3d-tesi-e10-calico-vxlan-agent-0
+sandbox_id=84cea32d4baa3b6148a694a4745a8a95a34e3e3bf0ca143ca76809d8397904eb
+sandbox_pid=5959
+network_namespace=/var/run/netns/cni-1b791eda-f068-c342-d126-0063e83e6852
+host_veth=cali2f026170013
+--- CRI network ---
+{
+  "status": {
+    "id": "84cea32d4baa3b6148a694a4745a8a95a34e3e3bf0ca143ca76809d8397904eb",
+    "metadata": {
+      "attempt": 0,
+      "name": "server-a",
+      "namespace": "net-lab",
+      "uid": "2c664833-8fb6-4d2d-b3fb-de990f0af2a6"
+    },
+    "network": {
+      "additionalIps": [],
+      "ip": "10.42.113.68"
+    },
+    "state": "SANDBOX_READY"
+  },
+  "info": {
+    "pid": 5959,
+    "networkNamespace": {
+      "path": "/var/run/netns/cni-1b791eda-f068-c342-d126-0063e83e6852",
+      "type": "network"
+    }
+  }
+}
+--- pod namespace eth0/address/route ---
+2: eth0@if9: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1450 qdisc noqueue state UP mode DEFAULT group default qlen 1000\    link/ether 5a:5b:ba:97:aa:5f brd ff:ff:ff:ff:ff:ff link-netnsid 0
+2: eth0    inet 10.42.113.68/32 scope global eth0\       valid_lft forever preferred_lft forever
+2: eth0    inet6 fe80::585b:baff:fe97:aa5f/64 scope link proto kernel_ll \       valid_lft forever preferred_lft forever
+default via 169.254.1.1 dev eth0 
+169.254.1.1 dev eth0 scope link 
+--- host route/link ---
+10.42.113.68 dev cali2f026170013 src 172.19.0.3 uid 0 
+    cache 
+9: cali2f026170013@if2: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1450 qdisc noqueue state UP mode DEFAULT group default 
+    link/ether ee:ee:ee:ee:ee:ee brd ff:ff:ff:ff:ff:ff link-netns cni-1b791eda-f068-c342-d126-0063e83e6852 promiscuity 0 allmulti 0 minmtu 68 maxmtu 65535 
+    veth addrgenmode eui64 numtxqueues 1 numrxqueues 1 gso_max_size 65536 gso_max_segs 65535 tso_max_size 524280 tso_max_segs 65535 gro_max_size 65536 gso_ipv4_max_size 65536 gro_ipv4_max_size 65536 
+--- CNI WorkloadEndpoint record ---
+2026-08-05 17:15:39.348 [INFO][5802] cni-plugin/k8s.go 422: Populated endpoint ContainerID="84cea32d4baa3b6148a694a4745a8a95a34e3e3bf0ca143ca76809d8397904eb" Namespace="net-lab" Pod="server-a" WorkloadEndpoint="k3d--tesi--e10--calico--vxlan--agent--0-k8s-server--a-eth0" endpoint=&internalapi.WorkloadEndpoint{TypeMeta:v1.TypeMeta{Kind:"WorkloadEndpoint", APIVersion:"projectcalico.org/v3"}, ObjectMeta:v1.ObjectMeta{Name:"k3d--tesi--e10--calico--vxlan--agent--0-k8s-server--a-eth0", GenerateName:"", Namespace:"net-lab", SelfLink:"", UID:"2c664833-8fb6-4d2d-b3fb-de990f0af2a6", ResourceVersion:"4358", Generation:0, CreationTimestamp:time.Date(2026, time.August, 5, 17, 15, 37, 0, time.Local), DeletionTimestamp:<nil>, DeletionGracePeriodSeconds:(*int64)(nil), Labels:map[string]string{"app.kubernetes.io/instance":"server-a", "app.kubernetes.io/name":"http-server", "app.kubernetes.io/part-of":"e01-network-baseline", "projectcalico.org/namespace":"net-lab", "projectcalico.org/orchestrator":"k8s", "projectcalico.org/serviceaccount":"default"}, Annotations:map[string]string(nil), OwnerReferences:[]v1.OwnerReference(nil), Finalizers:[]string(nil), ManagedFields:[]v1.ManagedFieldsEntry(nil)}, Spec:internalapi.WorkloadEndpointSpec{Orchestrator:"k8s", Workload:"", Node:"k3d-tesi-e10-calico-vxlan-agent-0", ContainerID:"", Pod:"server-a", Endpoint:"eth0", ServiceAccountName:"default", IPNetworks:[]string{"10.42.113.68/32"}, IPNATs:[]internalapi.IPNAT(nil), IPv4Gateway:"", IPv6Gateway:"", Profiles:[]string{"kns.net-lab", "ksa.net-lab.default"}, InterfaceName:"cali2f026170013", MAC:"", Ports:[]internalapi.WorkloadEndpointPort{internalapi.WorkloadEndpointPort{Name:"http", Protocol:numorstring.Protocol{Type:1, NumVal:0x0, StrVal:"TCP"}, Port:0x1f90, HostPort:0x0, HostIP:""}}, AllowSpoofedSourcePrefixes:[]string(nil), QoSControls:(*internalapi.QoSControls)(nil)}}
+2026-08-05 17:15:39.349 [INFO][5802] cni-plugin/dataplane_linux.go 77: Setting the host side veth name to cali2f026170013 ContainerID="84cea32d4baa3b6148a694a4745a8a95a34e3e3bf0ca143ca76809d8397904eb" Namespace="net-lab" Pod="server-a" WorkloadEndpoint="k3d--tesi--e10--calico--vxlan--agent--0-k8s-server--a-eth0"
+2026-08-05 17:15:39.377 [INFO][5802] cni-plugin/k8s.go 544: Wrote updated endpoint to datastore ContainerID="84cea32d4baa3b6148a694a4745a8a95a34e3e3bf0ca143ca76809d8397904eb" Namespace="net-lab" Pod="server-a" WorkloadEndpoint="k3d--tesi--e10--calico--vxlan--agent--0-k8s-server--a-eth0"
+--- cni0 expected absent ---
+Device "cni0" does not exist.
+cni0 absent
+=== pod=server-b ===
+ip=10.42.144.131
+node=k3d-tesi-e10-calico-vxlan-agent-1
+sandbox_id=8c95e25c9de8d52893c8eab5a1b87b4e500055941a3bce8bdd04c2facff8316b
+sandbox_pid=5846
+network_namespace=/var/run/netns/cni-73835633-43f5-0c3f-dc93-e8a946da86ae
+host_veth=caliec1544aea47
+--- CRI network ---
+{
+  "status": {
+    "id": "8c95e25c9de8d52893c8eab5a1b87b4e500055941a3bce8bdd04c2facff8316b",
+    "metadata": {
+      "attempt": 0,
+      "name": "server-b",
+      "namespace": "net-lab",
+      "uid": "7c768cc0-a2e5-491b-be2c-81d7e946b664"
+    },
+    "network": {
+      "additionalIps": [],
+      "ip": "10.42.144.131"
+    },
+    "state": "SANDBOX_READY"
+  },
+  "info": {
+    "pid": 5846,
+    "networkNamespace": {
+      "path": "/var/run/netns/cni-73835633-43f5-0c3f-dc93-e8a946da86ae",
+      "type": "network"
+    }
+  }
+}
+--- pod namespace eth0/address/route ---
+2: eth0@if8: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1450 qdisc noqueue state UP mode DEFAULT group default qlen 1000\    link/ether 0e:03:e3:a1:b9:40 brd ff:ff:ff:ff:ff:ff link-netnsid 0
+2: eth0    inet 10.42.144.131/32 scope global eth0\       valid_lft forever preferred_lft forever
+2: eth0    inet6 fe80::c03:e3ff:fea1:b940/64 scope link proto kernel_ll \       valid_lft forever preferred_lft forever
+default via 169.254.1.1 dev eth0 
+169.254.1.1 dev eth0 scope link 
+--- host route/link ---
+10.42.144.131 dev caliec1544aea47 src 172.19.0.4 uid 0 
+    cache 
+8: caliec1544aea47@if2: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1450 qdisc noqueue state UP mode DEFAULT group default 
+    link/ether ee:ee:ee:ee:ee:ee brd ff:ff:ff:ff:ff:ff link-netns cni-73835633-43f5-0c3f-dc93-e8a946da86ae promiscuity 0 allmulti 0 minmtu 68 maxmtu 65535 
+    veth addrgenmode eui64 numtxqueues 1 numrxqueues 1 gso_max_size 65536 gso_max_segs 65535 tso_max_size 524280 tso_max_segs 65535 gro_max_size 65536 gso_ipv4_max_size 65536 gro_ipv4_max_size 65536 
+--- CNI WorkloadEndpoint record ---
+2026-08-05 17:15:39.557 [INFO][5760] cni-plugin/k8s.go 422: Populated endpoint ContainerID="8c95e25c9de8d52893c8eab5a1b87b4e500055941a3bce8bdd04c2facff8316b" Namespace="net-lab" Pod="server-b" WorkloadEndpoint="k3d--tesi--e10--calico--vxlan--agent--1-k8s-server--b-eth0" endpoint=&internalapi.WorkloadEndpoint{TypeMeta:v1.TypeMeta{Kind:"WorkloadEndpoint", APIVersion:"projectcalico.org/v3"}, ObjectMeta:v1.ObjectMeta{Name:"k3d--tesi--e10--calico--vxlan--agent--1-k8s-server--b-eth0", GenerateName:"", Namespace:"net-lab", SelfLink:"", UID:"7c768cc0-a2e5-491b-be2c-81d7e946b664", ResourceVersion:"4363", Generation:0, CreationTimestamp:time.Date(2026, time.August, 5, 17, 15, 37, 0, time.Local), DeletionTimestamp:<nil>, DeletionGracePeriodSeconds:(*int64)(nil), Labels:map[string]string{"app.kubernetes.io/instance":"server-b", "app.kubernetes.io/name":"http-server", "app.kubernetes.io/part-of":"e01-network-baseline", "projectcalico.org/namespace":"net-lab", "projectcalico.org/orchestrator":"k8s", "projectcalico.org/serviceaccount":"default"}, Annotations:map[string]string(nil), OwnerReferences:[]v1.OwnerReference(nil), Finalizers:[]string(nil), ManagedFields:[]v1.ManagedFieldsEntry(nil)}, Spec:internalapi.WorkloadEndpointSpec{Orchestrator:"k8s", Workload:"", Node:"k3d-tesi-e10-calico-vxlan-agent-1", ContainerID:"", Pod:"server-b", Endpoint:"eth0", ServiceAccountName:"default", IPNetworks:[]string{"10.42.144.131/32"}, IPNATs:[]internalapi.IPNAT(nil), IPv4Gateway:"", IPv6Gateway:"", Profiles:[]string{"kns.net-lab", "ksa.net-lab.default"}, InterfaceName:"caliec1544aea47", MAC:"", Ports:[]internalapi.WorkloadEndpointPort{internalapi.WorkloadEndpointPort{Name:"http", Protocol:numorstring.Protocol{Type:1, NumVal:0x0, StrVal:"TCP"}, Port:0x1f90, HostPort:0x0, HostIP:""}}, AllowSpoofedSourcePrefixes:[]string(nil), QoSControls:(*internalapi.QoSControls)(nil)}}
+2026-08-05 17:15:39.557 [INFO][5760] cni-plugin/dataplane_linux.go 77: Setting the host side veth name to caliec1544aea47 ContainerID="8c95e25c9de8d52893c8eab5a1b87b4e500055941a3bce8bdd04c2facff8316b" Namespace="net-lab" Pod="server-b" WorkloadEndpoint="k3d--tesi--e10--calico--vxlan--agent--1-k8s-server--b-eth0"
+2026-08-05 17:15:39.590 [INFO][5760] cni-plugin/k8s.go 544: Wrote updated endpoint to datastore ContainerID="8c95e25c9de8d52893c8eab5a1b87b4e500055941a3bce8bdd04c2facff8316b" Namespace="net-lab" Pod="server-b" WorkloadEndpoint="k3d--tesi--e10--calico--vxlan--agent--1-k8s-server--b-eth0"
+--- cni0 expected absent ---
+Device "cni0" does not exist.
+cni0 absent

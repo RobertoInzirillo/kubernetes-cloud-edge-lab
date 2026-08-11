@@ -1,0 +1,279 @@
+timestamp=2026-08-09T17:39:52,108075877+02:00
+=== nodes ===
+NAME                                 STATUS   ROLES           AGE   VERSION        INTERNAL-IP   EXTERNAL-IP   OS-IMAGE           KERNEL-VERSION     CONTAINER-RUNTIME
+k3d-tesi-e20-cilium-vxlan-agent-0    Ready    <none>          2d    v1.34.9+k3s1   172.19.0.4    <none>        K3s v1.34.9+k3s1   7.0.0-28-generic   containerd://2.2.5-k3s2
+k3d-tesi-e20-cilium-vxlan-agent-1    Ready    <none>          2d    v1.34.9+k3s1   172.19.0.3    <none>        K3s v1.34.9+k3s1   7.0.0-28-generic   containerd://2.2.5-k3s2
+k3d-tesi-e20-cilium-vxlan-server-0   Ready    control-plane   2d    v1.34.9+k3s1   172.19.0.2    <none>        K3s v1.34.9+k3s1   7.0.0-28-generic   containerd://2.2.5-k3s2
+=== Cilium and operator ===
+NAME     DESIRED   CURRENT   READY   UP-TO-DATE   AVAILABLE   NODE SELECTOR            AGE
+cilium   3         3         3       3            3           kubernetes.io/os=linux   2d
+NAME              READY   UP-TO-DATE   AVAILABLE   AGE
+cilium-operator   1/1     1            1           2d
+NAME           READY   STATUS    RESTARTS     AGE   IP           NODE                                 NOMINATED NODE   READINESS GATES
+cilium-grhtl   1/1     Running   0            69m   172.19.0.3   k3d-tesi-e20-cilium-vxlan-agent-1    <none>           <none>
+cilium-rcb5j   1/1     Running   3 (8h ago)   2d    172.19.0.2   k3d-tesi-e20-cilium-vxlan-server-0   <none>           <none>
+cilium-sdlx7   1/1     Running   3 (8h ago)   2d    172.19.0.4   k3d-tesi-e20-cilium-vxlan-agent-0    <none>           <none>
+OK
+OK
+OK
+=== kube-proxy ===
+node=k3d-tesi-e20-cilium-vxlan-server-0 health={"lastUpdated":"2026-08-09T15:39:53.716109838Z","currentTime":"2026-08-09T15:39:53.71607972Z","nodeEligible":true,"healthy":true,"status":{"IPv4":{"lastUpdated":"2026-08-09T15:30:53.141114459Z","healthy":true},"IPv6":{"lastUpdated":"2026-08-09T15:13:41.712227695Z","healthy":true}}}
+node=k3d-tesi-e20-cilium-vxlan-agent-0 health={"lastUpdated":"2026-08-09T15:39:53.771235737Z","currentTime":"2026-08-09T15:39:53.771203183Z","nodeEligible":true,"healthy":true,"status":{"IPv4":{"lastUpdated":"2026-08-09T15:30:53.132929451Z","healthy":true},"IPv6":{"lastUpdated":"2026-08-09T15:13:45.142176537Z","healthy":true}}}
+node=k3d-tesi-e20-cilium-vxlan-agent-1 health={"lastUpdated":"2026-08-09T15:39:53.829321469Z","currentTime":"2026-08-09T15:39:53.829286588Z","nodeEligible":true,"healthy":true,"status":{"IPv4":{"lastUpdated":"2026-08-09T15:30:53.141120808Z","healthy":true},"IPv6":{"lastUpdated":"2026-08-09T15:13:46.0590941Z","healthy":true}}}
+=== workload ===
+NAME       READY   STATUS    RESTARTS   AGE   IP            NODE                                NOMINATED NODE   READINESS GATES
+client     1/1     Running   0          83m   10.42.0.169   k3d-tesi-e20-cilium-vxlan-agent-0   <none>           <none>
+server-a   1/1     Running   0          83m   10.42.0.76    k3d-tesi-e20-cilium-vxlan-agent-0   <none>           <none>
+server-b   1/1     Running   0          83m   10.42.1.199   k3d-tesi-e20-cilium-vxlan-agent-1   <none>           <none>
+=== policies and endpoint state ===
+NAME                           POD-SELECTOR                         AGE
+allow-client-to-http-servers   app.kubernetes.io/name=http-server   3m2s
+default-deny-ingress           <none>                               3m33s
+NAME       SECURITY IDENTITY   INGRESS ENFORCEMENT   EGRESS ENFORCEMENT   ENDPOINT STATE   IPV4          IPV6
+client     21766                                                          ready            10.42.0.169   
+server-a   1647                                                           ready            10.42.0.76    
+server-b   16090                                                          ready            10.42.1.199   
+{
+  "spec": {
+    "allowed-egress-identities": [
+      0
+    ],
+    "allowed-ingress-identities": [
+      1
+    ],
+    "build": 3,
+    "denied-egress-identities": null,
+    "denied-ingress-identities": null,
+    "id": 1647,
+    "l4": {
+      "egress": [],
+      "ingress": [
+        {
+          "derived-from-rules": [
+            [
+              "k8s:io.cilium.k8s.policy.derived-from=NetworkPolicy",
+              "k8s:io.cilium.k8s.policy.name=allow-client-to-http-servers",
+              "k8s:io.cilium.k8s.policy.namespace=net-lab",
+              "k8s:io.cilium.k8s.policy.uid=d86cd2ff-5ad2-483d-a078-b3985b24271b"
+            ]
+          ],
+          "rule": "{\"port\":8080,\"protocol\":\"TCP\",\"l7-rules\":[{\"\\u0026LabelSelector{MatchLabels:map[string]string{k8s.app.kubernetes.io/name: network-client,k8s.io.cilium.k8s.policy.cluster: default,k8s.io.kubernetes.pod.namespace: net-lab,},MatchExpressions:[]LabelSelectorRequirement{},}\":null}]}",
+          "rules-by-selector": {
+            "&LabelSelector{MatchLabels:map[string]string{k8s.app.kubernetes.io/name: network-client,k8s.io.cilium.k8s.policy.cluster: default,k8s.io.kubernetes.pod.namespace: net-lab,},MatchExpressions:[]LabelSelectorRequirement{},}": [
+              [
+                "k8s:io.cilium.k8s.policy.derived-from=NetworkPolicy",
+                "k8s:io.cilium.k8s.policy.name=allow-client-to-http-servers",
+                "k8s:io.cilium.k8s.policy.namespace=net-lab",
+                "k8s:io.cilium.k8s.policy.uid=d86cd2ff-5ad2-483d-a078-b3985b24271b"
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    "policy-enabled": "ingress",
+    "policy-revision": 3
+  },
+  "realized": {
+    "allowed-egress-identities": [
+      0
+    ],
+    "allowed-ingress-identities": [
+      1
+    ],
+    "build": 3,
+    "denied-egress-identities": null,
+    "denied-ingress-identities": null,
+    "id": 1647,
+    "l4": {
+      "egress": [],
+      "ingress": [
+        {
+          "derived-from-rules": [
+            [
+              "k8s:io.cilium.k8s.policy.derived-from=NetworkPolicy",
+              "k8s:io.cilium.k8s.policy.name=allow-client-to-http-servers",
+              "k8s:io.cilium.k8s.policy.namespace=net-lab",
+              "k8s:io.cilium.k8s.policy.uid=d86cd2ff-5ad2-483d-a078-b3985b24271b"
+            ]
+          ],
+          "rule": "{\"port\":8080,\"protocol\":\"TCP\",\"l7-rules\":[{\"\\u0026LabelSelector{MatchLabels:map[string]string{k8s.app.kubernetes.io/name: network-client,k8s.io.cilium.k8s.policy.cluster: default,k8s.io.kubernetes.pod.namespace: net-lab,},MatchExpressions:[]LabelSelectorRequirement{},}\":null}]}",
+          "rules-by-selector": {
+            "&LabelSelector{MatchLabels:map[string]string{k8s.app.kubernetes.io/name: network-client,k8s.io.cilium.k8s.policy.cluster: default,k8s.io.kubernetes.pod.namespace: net-lab,},MatchExpressions:[]LabelSelectorRequirement{},}": [
+              [
+                "k8s:io.cilium.k8s.policy.derived-from=NetworkPolicy",
+                "k8s:io.cilium.k8s.policy.name=allow-client-to-http-servers",
+                "k8s:io.cilium.k8s.policy.namespace=net-lab",
+                "k8s:io.cilium.k8s.policy.uid=d86cd2ff-5ad2-483d-a078-b3985b24271b"
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    "policy-enabled": "ingress",
+    "policy-revision": 3
+  }
+}
+POLICY   DIRECTION   IDENTITY   PORT/PROTO   PROXY PORT   AUTH TYPE   BYTES   PACKETS   PREFIX   COOKIE
+Allow    Ingress     1          ANY          NONE         disabled    -       -         0        0
+Allow    Ingress     21766      8080/TCP     NONE         disabled    1030    13        24       0
+Allow    Egress      0          ANY          NONE         disabled    1986    26        0        0
+{
+  "spec": {
+    "allowed-egress-identities": [
+      0
+    ],
+    "allowed-ingress-identities": [
+      1
+    ],
+    "build": 3,
+    "denied-egress-identities": null,
+    "denied-ingress-identities": null,
+    "id": 16090,
+    "l4": {
+      "egress": [],
+      "ingress": [
+        {
+          "derived-from-rules": [
+            [
+              "k8s:io.cilium.k8s.policy.derived-from=NetworkPolicy",
+              "k8s:io.cilium.k8s.policy.name=allow-client-to-http-servers",
+              "k8s:io.cilium.k8s.policy.namespace=net-lab",
+              "k8s:io.cilium.k8s.policy.uid=d86cd2ff-5ad2-483d-a078-b3985b24271b"
+            ]
+          ],
+          "rule": "{\"port\":8080,\"protocol\":\"TCP\",\"l7-rules\":[{\"\\u0026LabelSelector{MatchLabels:map[string]string{k8s.app.kubernetes.io/name: network-client,k8s.io.cilium.k8s.policy.cluster: default,k8s.io.kubernetes.pod.namespace: net-lab,},MatchExpressions:[]LabelSelectorRequirement{},}\":null}]}",
+          "rules-by-selector": {
+            "&LabelSelector{MatchLabels:map[string]string{k8s.app.kubernetes.io/name: network-client,k8s.io.cilium.k8s.policy.cluster: default,k8s.io.kubernetes.pod.namespace: net-lab,},MatchExpressions:[]LabelSelectorRequirement{},}": [
+              [
+                "k8s:io.cilium.k8s.policy.derived-from=NetworkPolicy",
+                "k8s:io.cilium.k8s.policy.name=allow-client-to-http-servers",
+                "k8s:io.cilium.k8s.policy.namespace=net-lab",
+                "k8s:io.cilium.k8s.policy.uid=d86cd2ff-5ad2-483d-a078-b3985b24271b"
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    "policy-enabled": "ingress",
+    "policy-revision": 3
+  },
+  "realized": {
+    "allowed-egress-identities": [
+      0
+    ],
+    "allowed-ingress-identities": [
+      1
+    ],
+    "build": 3,
+    "denied-egress-identities": null,
+    "denied-ingress-identities": null,
+    "id": 16090,
+    "l4": {
+      "egress": [],
+      "ingress": [
+        {
+          "derived-from-rules": [
+            [
+              "k8s:io.cilium.k8s.policy.derived-from=NetworkPolicy",
+              "k8s:io.cilium.k8s.policy.name=allow-client-to-http-servers",
+              "k8s:io.cilium.k8s.policy.namespace=net-lab",
+              "k8s:io.cilium.k8s.policy.uid=d86cd2ff-5ad2-483d-a078-b3985b24271b"
+            ]
+          ],
+          "rule": "{\"port\":8080,\"protocol\":\"TCP\",\"l7-rules\":[{\"\\u0026LabelSelector{MatchLabels:map[string]string{k8s.app.kubernetes.io/name: network-client,k8s.io.cilium.k8s.policy.cluster: default,k8s.io.kubernetes.pod.namespace: net-lab,},MatchExpressions:[]LabelSelectorRequirement{},}\":null}]}",
+          "rules-by-selector": {
+            "&LabelSelector{MatchLabels:map[string]string{k8s.app.kubernetes.io/name: network-client,k8s.io.cilium.k8s.policy.cluster: default,k8s.io.kubernetes.pod.namespace: net-lab,},MatchExpressions:[]LabelSelectorRequirement{},}": [
+              [
+                "k8s:io.cilium.k8s.policy.derived-from=NetworkPolicy",
+                "k8s:io.cilium.k8s.policy.name=allow-client-to-http-servers",
+                "k8s:io.cilium.k8s.policy.namespace=net-lab",
+                "k8s:io.cilium.k8s.policy.uid=d86cd2ff-5ad2-483d-a078-b3985b24271b"
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    "policy-enabled": "ingress",
+    "policy-revision": 3
+  }
+}
+POLICY   DIRECTION   IDENTITY   PORT/PROTO   PROXY PORT   AUTH TYPE   BYTES   PACKETS   PREFIX   COOKIE
+Allow    Ingress     1          ANY          NONE         disabled    -       -         0        0
+Allow    Ingress     21766      8080/TCP     NONE         disabled    1098    14        24       0
+Allow    Egress      0          ANY          NONE         disabled    -       -         0        0
+=== underlay current coherence ===
+node=k3d-tesi-e20-cilium-vxlan-server-0 docker=172.19.0.2 kubernetes=172.19.0.2 cilium=172.19.0.2
+node=k3d-tesi-e20-cilium-vxlan-agent-0 docker=172.19.0.4 kubernetes=172.19.0.4 cilium=172.19.0.4
+node=k3d-tesi-e20-cilium-vxlan-agent-1 docker=172.19.0.3 kubernetes=172.19.0.3 cilium=172.19.0.3
+=== K3s networking flags ===
+["server","--cluster-cidr=10.42.0.0/16","--service-cidr=10.43.0.0/16","--disable=traefik","--flannel-backend=none","--disable-network-policy","--tls-san","127.0.0.1","--tls-san","k3d-tesi-e20-cilium-vxlan-serverlb"]
+["agent"]
+["agent"]
+=== Hubble evidence gates ===
+=== previous evidence integrity ===
+README.md: OK
+blocker-final-state.log: OK
+chart-integrity.log: OK
+cilium-runtime-config.log: OK
+cluster-create.log: OK
+cni-bpf-datapath-invalid-path.log: OK
+cni-bpf-datapath.log: OK
+final-gate-partial.log: OK
+final-gate-unsupported-key.log: OK
+final-gate.log: OK
+helm-install.log: OK
+images-components.log: OK
+images-invalid-comparison.log: OK
+inter-node-failure-diagnosis.log: OK
+intra-node-path.log: OK
+kubeproxy-flannel-netpol.log: OK
+network-block-copy-verification.log: OK
+network-block-final-state.log: OK
+network-paths-resume-gate.log: OK
+networking-baseline-failed.log: OK
+node-absence-check.log: OK
+node-ebpf-prerequisites.log: OK
+optional-components.log: OK
+preflight.log: OK
+preworkload-state.log: OK
+recovery-agent1-restart.log: OK
+recovery-final-state.log: OK
+recovery-health-observation.log: OK
+recovery-inter-node-tests.log: OK
+recovery-pre-state.log: OK
+recovery-reconciliation.log: OK
+resume-gate-20260809.log: OK
+service-attribution-procedure-invalid-kubeproxy-configmap.log: OK
+service-attribution-procedure.log: OK
+service-attribution-summary.log: OK
+service-cilium-bpf-after.log: OK
+service-cilium-bpf-before.log: OK
+service-cilium-ct-after.log: OK
+service-cilium-ct-before.log: OK
+service-cilium-ct-new.log: OK
+service-cilium-lb-after.txt: OK
+service-cilium-lb-before.txt: OK
+service-cilium-lb-delta.log: OK
+service-cilium-metrics-delta.json: OK
+service-http-flows.log: OK
+service-hubble-flows.jsonl: OK
+service-hubble-summary.log: OK
+service-kubeproxy-after.log: OK
+service-kubeproxy-before.log: OK
+service-kubeproxy-delta.log: OK
+service-topology.log: OK
+vxlan-capture-authoritative.log: OK
+vxlan-capture-preflight.log: OK
+vxlan-capture-procedure.log: OK
+vxlan-capture-summary.log: OK
+vxlan-http-flow.log: OK
+vxlan-vni-offline-analysis.log: OK
+workload-apply.log: OK
+workload-topology-ipam.log: OK
+=== residual diagnostic processes ===
+
+policy_final_gate=PASS

@@ -1,0 +1,68 @@
+timestamp=2026-08-09T16:31:42,575873095+02:00
+agent0_pod=cilium-sdlx7 agent1_new_pod=cilium-grhtl
+docker_ip=172.19.0.3 kubernetes_internal_ip=172.19.0.3 cilium_node_ip=172.19.0.3
+=== new agent startup addressing logs ===
+time=2026-08-09T14:30:48.393223072Z level=info msg="  --enable-cilium-health-api-server-access='*'"
+time=2026-08-09T14:30:49.205142747Z level=info msg="Fallback node addresses updated" module=agent.datapath.node-address addresses="172.19.0.3 (primary), ::1 (primary)" device=*
+time=2026-08-09T14:30:49.205270586Z level=info msg="Node addresses updated" module=agent.datapath.node-address addresses="172.19.0.3 (primary, nodeport)" device=eth0
+time=2026-08-09T14:30:49.205765923Z level=info msg="Node addresses updated" module=agent.datapath.node-address addresses="10.42.1.188 (primary), fe80::8064:6bff:feca:100c" device=cilium_host
+time=2026-08-09T14:30:49.205945219Z level=info msg="Node addresses updated" module=agent.datapath.node-address addresses="172.19.0.3 (primary), ::1 (primary)" device=*
+time=2026-08-09T14:30:49.322150948Z level=info msg="Received own node information from API server" module=agent.controlplane.daemon nodeName=k3d-tesi-e20-cilium-vxlan-agent-1 labels="map[beta.kubernetes.io/arch:amd64 beta.kubernetes.io/instance-type:k3s beta.kubernetes.io/os:linux kubernetes.io/arch:amd64 kubernetes.io/hostname:k3d-tesi-e20-cilium-vxlan-agent-1 kubernetes.io/os:linux node.kubernetes.io/instance-type:k3s tesi-placement:b]" ipv4=172.19.0.2 ipv6="" v4Prefix=10.42.1.0/24 v6Prefix=<nil> k8sNodeIP=172.19.0.2
+time=2026-08-09T14:30:49.424250952Z level=info msg="Fallback node addresses updated" module=agent.datapath.node-address addresses="172.19.0.3 (primary), ::1 (primary)" device=*
+time=2026-08-09T14:30:49.705168167Z level=info msg="Fallback node addresses updated" module=agent.datapath.node-address addresses="172.19.0.3 (primary), ::1 (primary)" device=*
+time=2026-08-09T14:30:50.23725802Z level=info msg="Launching Cilium health daemon" module=agent.controlplane.cilium-health
+time=2026-08-09T14:30:50.23884125Z level=info msg="Launching Cilium health endpoint" module=agent.controlplane.cilium-health
+time=2026-08-09T14:30:50.239048374Z level=info msg="Cleaning up Cilium health endpoint" module=agent.controlplane.cilium-health
+time=2026-08-09T14:30:50.4047904Z level=info msg="Fallback node addresses updated" module=agent.datapath.node-address addresses="172.19.0.3 (primary), ::1 (primary)" device=*
+time=2026-08-09T14:30:52.404840485Z level=info msg="Fallback node addresses updated" module=agent.datapath.node-address addresses="172.19.0.3 (primary), ::1 (primary)" device=*
+time=2026-08-09T14:30:52.724147154Z level=info msg="Serving cilium health API at unix:///var/run/cilium/health.sock" module=agent.controlplane.cilium-health subsys=cilium-health-api-server
+=== current Docker/Kubernetes/CiliumNode ===
+name=/k3d-tesi-e20-cilium-vxlan-agent-1 running=true pid=1861 network=k3d-tesi-e20-cilium-vxlan ip=172.19.0.3
+NAME                                INTERNAL_IP   READY
+k3d-tesi-e20-cilium-vxlan-agent-1   172.19.0.3    True
+NAME                                INTERNAL_IP   CILIUM_INTERNAL_IP   PODCIDR        GENERATION   RESOURCE_VERSION
+k3d-tesi-e20-cilium-vxlan-agent-1   172.19.0.3    10.42.1.188          10.42.1.0/24   7            41591
+=== node list from pod=cilium-sdlx7 ===
+Name                                 IPv4 Address   Endpoint CIDR   IPv6 Address   Endpoint CIDR   Source
+k3d-tesi-e20-cilium-vxlan-agent-0    172.19.0.4     10.42.0.0/24                                   local
+k3d-tesi-e20-cilium-vxlan-agent-1    172.19.0.3     10.42.1.0/24                                   custom-resource
+k3d-tesi-e20-cilium-vxlan-server-0   172.19.0.2     10.42.2.0/24                                   custom-resource
+=== relevant IP cache from pod=cilium-sdlx7 ===
+10.42.1.0/24        identity=2 encryptkey=0 tunnelendpoint=172.19.0.3 flags=hastunnel       
+172.19.0.2/32       identity=7 encryptkey=0 tunnelendpoint=0.0.0.0 flags=<none>             
+10.42.1.199/32      identity=16090 encryptkey=0 tunnelendpoint=172.19.0.3 flags=hastunnel   
+172.19.0.4/32       identity=1 encryptkey=0 tunnelendpoint=0.0.0.0 flags=<none>             
+172.19.0.3/32       identity=6 encryptkey=0 tunnelendpoint=0.0.0.0 flags=<none>             
+=== node list from pod=cilium-grhtl ===
+Name                                 IPv4 Address   Endpoint CIDR   IPv6 Address   Endpoint CIDR   Source
+k3d-tesi-e20-cilium-vxlan-agent-0    172.19.0.4     10.42.0.0/24                                   custom-resource
+k3d-tesi-e20-cilium-vxlan-agent-1    172.19.0.3     10.42.1.0/24                                   local
+k3d-tesi-e20-cilium-vxlan-server-0   172.19.0.2     10.42.2.0/24                                   custom-resource
+=== relevant IP cache from pod=cilium-grhtl ===
+172.19.0.2/32       identity=7 encryptkey=0 tunnelendpoint=0.0.0.0 flags=<none>             
+172.19.0.3/32       identity=1 encryptkey=0 tunnelendpoint=0.0.0.0 flags=<none>             
+10.42.1.199/32      identity=16090 encryptkey=0 tunnelendpoint=0.0.0.0 flags=<none>         
+172.19.0.4/32       identity=6 encryptkey=0 tunnelendpoint=0.0.0.0 flags=<none>             
+=== Cilium health ===
+--- pod/cilium-grhtl ---
+OK
+--- pod/cilium-rcb5j ---
+OK
+--- pod/cilium-sdlx7 ---
+OK
+=== cilium-health probe from new agent ===
+Cluster health:   0/0 reachable   (2026-08-09T14:30:52Z)   (Probe interval: 0s)
+Name              IP              Node                     Endpoints
+cilium_health_probe_exit=0
+=== component stability ===
+NAME                                 STATUS   ROLES           AGE   VERSION
+k3d-tesi-e20-cilium-vxlan-agent-0    Ready    <none>          47h   v1.34.9+k3s1
+k3d-tesi-e20-cilium-vxlan-agent-1    Ready    <none>          47h   v1.34.9+k3s1
+k3d-tesi-e20-cilium-vxlan-server-0   Ready    control-plane   47h   v1.34.9+k3s1
+NAME     DESIRED   CURRENT   READY   UP-TO-DATE   AVAILABLE   NODE SELECTOR            AGE
+cilium   3         3         3       3            3           kubernetes.io/os=linux   47h
+NAME              READY   UP-TO-DATE   AVAILABLE   AGE
+cilium-operator   1/1     1            1           47h
+=== coherence gate ===
+nodelist_ip=172.19.0.3 ipcache_tunnel=172.19.0.3 expected_runtime_ip=172.19.0.3
+reconciliation_gate=PASS

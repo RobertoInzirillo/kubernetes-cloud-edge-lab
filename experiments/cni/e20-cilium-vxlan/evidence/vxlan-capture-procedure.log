@@ -1,0 +1,30 @@
+info: Using default fan map value (33)
+timestamp_preflight=2026-08-09T16:59:40,446272654+02:00
+terminal_profile=unconfined
+source_node=k3d-tesi-e20-cilium-vxlan-agent-0
+destination_node=k3d-tesi-e20-cilium-vxlan-agent-1
+node_pid=1895
+client_ip=10.42.0.169
+server_b_ip=10.42.1.199
+client_veth=lxc713e3fb92fbd
+vxlan_interface=cilium_vxlan
+vxlan_port_from_runtime=8472
+vxlan_vni=to_be_observed_in_capture
+underlay_source=172.19.0.4
+underlay_destination=172.19.0.3
+filter=((tcp port 8080 and host 10.42.0.169 and host 10.42.1.199) or (udp port 8472 and host 172.19.0.4 and host 172.19.0.3))
+info: Using default fan map value (33)
+timestamp_end=2026-08-09T16:59:51,590958934+02:00
+capture_exit=0
+flow_subshell_exit=0
+flow_exit=0
+response=server-b
+tcpdump_summary_lines=3
+client_veth_lines=12
+vxlan_interface_lines=12
+eth0_lines=12
+outer_underlay_lines=6
+vni_lines=0
+residual_process_groups=0
+fallback_sigkill_used=no
+ERRORE: VNI non decodificato

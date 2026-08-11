@@ -1,0 +1,25 @@
+state=default-deny-plus-allow expectation=client-allow
+client_ip=10.42.113.67 server_a_ip=10.42.113.68 server_b_ip=10.42.144.131
+
+timestamp=2026-08-05T19:47:53,480646410+02:00 state=default-deny-plus-allow attempt=1 source=client destination=server-a destination_ip=10.42.113.68 expected_result=allow expected_body=server-a observed_body=server-a exit_code=0 duration_ms=464 destination_ready=true destination_restarts=0
+
+timestamp=2026-08-05T19:47:54,375869992+02:00 state=default-deny-plus-allow attempt=2 source=client destination=server-a destination_ip=10.42.113.68 expected_result=allow expected_body=server-a observed_body=server-a exit_code=0 duration_ms=252 destination_ready=true destination_restarts=0
+
+timestamp=2026-08-05T19:47:54,866909023+02:00 state=default-deny-plus-allow attempt=1 source=client destination=server-b destination_ip=10.42.144.131 expected_result=allow expected_body=server-b observed_body=server-b exit_code=0 duration_ms=278 destination_ready=true destination_restarts=0
+
+timestamp=2026-08-05T19:47:55,502344337+02:00 state=default-deny-plus-allow attempt=2 source=client destination=server-b destination_ip=10.42.144.131 expected_result=allow expected_body=server-b observed_body=server-b exit_code=0 duration_ms=233 destination_ready=true destination_restarts=0
+
+timestamp=2026-08-05T19:47:56,086133282+02:00 state=default-deny-plus-allow attempt=1 source=server-a destination=server-b destination_ip=10.42.144.131 expected_result=deny expected_body=server-b observed_body=$'wget: download timed out\ncommand terminated with exit code 1' exit_code=1 duration_ms=3478 destination_ready=true destination_restarts=0
+
+timestamp=2026-08-05T19:47:59,975536310+02:00 state=default-deny-plus-allow attempt=2 source=server-a destination=server-b destination_ip=10.42.144.131 expected_result=deny expected_body=server-b observed_body=$'wget: download timed out\ncommand terminated with exit code 1' exit_code=1 duration_ms=3588 destination_ready=true destination_restarts=0
+
+=== final stability ===
+NAME       READY   STATUS    RESTARTS   AGE   IP              NODE                                NOMINATED NODE   READINESS GATES
+client     1/1     Running   0          32m   10.42.113.67    k3d-tesi-e10-calico-vxlan-agent-0   <none>           <none>
+server-a   1/1     Running   0          32m   10.42.113.68    k3d-tesi-e10-calico-vxlan-agent-0   <none>           <none>
+server-b   1/1     Running   0          32m   10.42.144.131   k3d-tesi-e10-calico-vxlan-agent-1   <none>           <none>
+NAME                                 STATUS   ROLES           AGE   VERSION
+k3d-tesi-e10-calico-vxlan-agent-0    Ready    <none>          84m   v1.34.9+k3s1
+k3d-tesi-e10-calico-vxlan-agent-1    Ready    <none>          84m   v1.34.9+k3s1
+k3d-tesi-e10-calico-vxlan-server-0   Ready    control-plane   84m   v1.34.9+k3s1
+matrix_exit=0

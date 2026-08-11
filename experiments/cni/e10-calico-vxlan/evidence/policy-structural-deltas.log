@@ -1,0 +1,89 @@
+=== node=server-0 baseline -> default-deny (counters normalized) ===
+
+=== node=server-0 default-deny -> default-deny-plus-allow (counters normalized) ===
+
+=== node=agent-0 baseline -> default-deny (counters normalized) ===
+--- /dev/fd/63	2026-08-05 19:50:34.613271507 +0200
++++ /dev/fd/62	2026-08-05 19:50:34.614271506 +0200
+@@ -5,6 +5,7 @@
+ :cali-fw-cali651ff5ba98e - [0:0]
+ :cali-fw-cali88e0f7680da - [0:0]
+ :cali-pi-_0dPptdegtTXt1D_kwEh - [0:0]
++:cali-pi-_ONDeB8oTnBLr7kWeYtF - [0:0]
+ :cali-pi-_vdnIkxgfh8_Emv59EWL - [0:0]
+ :cali-po-_0dPptdegtTXt1D_kwEh - [0:0]
+ :cali-po-_vdnIkxgfh8_Emv59EWL - [0:0]
+@@ -18,6 +19,8 @@
+ [X:X] -A cali-fw-cali0b35f5e0bfa -m comment --comment "cali:EDDyk_FOrgd3psMC" -m mark --mark 0x0/0x20000 -j cali-po-_vdnIkxgfh8_Emv59EWL
+ [X:X] -A cali-fw-cali88e0f7680da -m comment --comment "cali:6ThtPINIEC96hZHy" -m mark --mark 0x0/0x20000 -j cali-po-_0dPptdegtTXt1D_kwEh
+ [X:X] -A cali-tw-cali0b35f5e0bfa -m comment --comment "cali:mR8wCr9GQvLgflY6" -m mark --mark 0x0/0x20000 -j cali-pi-_vdnIkxgfh8_Emv59EWL
++[X:X] -A cali-tw-cali2f026170013 -m comment --comment "cali:S1F2X9VWj6KTdzvR" -m mark --mark 0x0/0x20000 -j cali-pi-_ONDeB8oTnBLr7kWeYtF
++[X:X] -A cali-tw-cali651ff5ba98e -m comment --comment "cali:76H5O-XwUGArJQyR" -m mark --mark 0x0/0x20000 -j cali-pi-_ONDeB8oTnBLr7kWeYtF
+ [X:X] -A cali-tw-cali88e0f7680da -m comment --comment "cali:rVPhS3_SQrrYKsMe" -m mark --mark 0x0/0x20000 -j cali-pi-_0dPptdegtTXt1D_kwEh
+ === relevant Pod IP occurrences ===
+ [X:X] -A KUBE-SEP-PIHVHRGJYEGUWQGF -s 10.42.144.131/32 -m comment --comment "net-lab/servers:http" -j KUBE-MARK-MASQ
+
+=== node=agent-0 default-deny -> default-deny-plus-allow (counters normalized) ===
+--- /dev/fd/63	2026-08-05 19:50:34.624271501 +0200
++++ /dev/fd/62	2026-08-05 19:50:34.625271500 +0200
+@@ -6,6 +6,7 @@
+ :cali-fw-cali88e0f7680da - [0:0]
+ :cali-pi-_0dPptdegtTXt1D_kwEh - [0:0]
+ :cali-pi-_ONDeB8oTnBLr7kWeYtF - [0:0]
++:cali-pi-_tLi4jLokhxcd6z1A42G - [0:0]
+ :cali-pi-_vdnIkxgfh8_Emv59EWL - [0:0]
+ :cali-po-_0dPptdegtTXt1D_kwEh - [0:0]
+ :cali-po-_vdnIkxgfh8_Emv59EWL - [0:0]
+@@ -19,7 +20,8 @@
+ [X:X] -A cali-fw-cali0b35f5e0bfa -m comment --comment "cali:EDDyk_FOrgd3psMC" -m mark --mark 0x0/0x20000 -j cali-po-_vdnIkxgfh8_Emv59EWL
+ [X:X] -A cali-fw-cali88e0f7680da -m comment --comment "cali:6ThtPINIEC96hZHy" -m mark --mark 0x0/0x20000 -j cali-po-_0dPptdegtTXt1D_kwEh
+ [X:X] -A cali-tw-cali0b35f5e0bfa -m comment --comment "cali:mR8wCr9GQvLgflY6" -m mark --mark 0x0/0x20000 -j cali-pi-_vdnIkxgfh8_Emv59EWL
+-[X:X] -A cali-tw-cali2f026170013 -m comment --comment "cali:S1F2X9VWj6KTdzvR" -m mark --mark 0x0/0x20000 -j cali-pi-_ONDeB8oTnBLr7kWeYtF
++[X:X] -A cali-tw-cali2f026170013 -m comment --comment "cali:TuteKU3pvY2BehS3" -m mark --mark 0x0/0x20000 -j cali-pi-_tLi4jLokhxcd6z1A42G
++[X:X] -A cali-tw-cali2f026170013 -m comment --comment "cali:YowBoxIPiHM2OYy9" -m mark --mark 0x0/0x20000 -j cali-pi-_ONDeB8oTnBLr7kWeYtF
+ [X:X] -A cali-tw-cali651ff5ba98e -m comment --comment "cali:76H5O-XwUGArJQyR" -m mark --mark 0x0/0x20000 -j cali-pi-_ONDeB8oTnBLr7kWeYtF
+ [X:X] -A cali-tw-cali88e0f7680da -m comment --comment "cali:rVPhS3_SQrrYKsMe" -m mark --mark 0x0/0x20000 -j cali-pi-_0dPptdegtTXt1D_kwEh
+ === relevant Pod IP occurrences ===
+
+=== node=agent-1 baseline -> default-deny (counters normalized) ===
+--- /dev/fd/63	2026-08-05 19:50:34.649271487 +0200
++++ /dev/fd/62	2026-08-05 19:50:34.650271487 +0200
+@@ -5,6 +5,7 @@
+ :cali-fw-calidcca500992d - [0:0]
+ :cali-fw-caliec1544aea47 - [0:0]
+ :cali-pi-_0dPptdegtTXt1D_kwEh - [0:0]
++:cali-pi-_ONDeB8oTnBLr7kWeYtF - [0:0]
+ :cali-pi-_vdnIkxgfh8_Emv59EWL - [0:0]
+ :cali-po-_0dPptdegtTXt1D_kwEh - [0:0]
+ :cali-po-_vdnIkxgfh8_Emv59EWL - [0:0]
+@@ -19,6 +20,7 @@
+ [X:X] -A cali-fw-calidcca500992d -m comment --comment "cali:G3BrrYaJtf311K8k" -m mark --mark 0x0/0x20000 -j cali-po-_vdnIkxgfh8_Emv59EWL
+ [X:X] -A cali-tw-calid706a774681 -m comment --comment "cali:ZB2Evrh26iXCQ4uS" -m mark --mark 0x0/0x20000 -j cali-pi-_0dPptdegtTXt1D_kwEh
+ [X:X] -A cali-tw-calidcca500992d -m comment --comment "cali:6dwwt9xVpLHMh-AM" -m mark --mark 0x0/0x20000 -j cali-pi-_vdnIkxgfh8_Emv59EWL
++[X:X] -A cali-tw-caliec1544aea47 -m comment --comment "cali:6s5GEFj160zcNg-q" -m mark --mark 0x0/0x20000 -j cali-pi-_ONDeB8oTnBLr7kWeYtF
+ === relevant Pod IP occurrences ===
+ [X:X] -A KUBE-SEP-PIHVHRGJYEGUWQGF -s 10.42.144.131/32 -m comment --comment "net-lab/servers:http" -j KUBE-MARK-MASQ
+ [X:X] -A KUBE-SEP-PIHVHRGJYEGUWQGF -p tcp -m comment --comment "net-lab/servers:http" -m tcp -j DNAT --to-destination 10.42.144.131:8080
+
+=== node=agent-1 default-deny -> default-deny-plus-allow (counters normalized) ===
+--- /dev/fd/63	2026-08-05 19:50:34.657271483 +0200
++++ /dev/fd/62	2026-08-05 19:50:34.657271483 +0200
+@@ -6,6 +6,7 @@
+ :cali-fw-caliec1544aea47 - [0:0]
+ :cali-pi-_0dPptdegtTXt1D_kwEh - [0:0]
+ :cali-pi-_ONDeB8oTnBLr7kWeYtF - [0:0]
++:cali-pi-_tLi4jLokhxcd6z1A42G - [0:0]
+ :cali-pi-_vdnIkxgfh8_Emv59EWL - [0:0]
+ :cali-po-_0dPptdegtTXt1D_kwEh - [0:0]
+ :cali-po-_vdnIkxgfh8_Emv59EWL - [0:0]
+@@ -20,7 +21,8 @@
+ [X:X] -A cali-fw-calidcca500992d -m comment --comment "cali:G3BrrYaJtf311K8k" -m mark --mark 0x0/0x20000 -j cali-po-_vdnIkxgfh8_Emv59EWL
+ [X:X] -A cali-tw-calid706a774681 -m comment --comment "cali:ZB2Evrh26iXCQ4uS" -m mark --mark 0x0/0x20000 -j cali-pi-_0dPptdegtTXt1D_kwEh
+ [X:X] -A cali-tw-calidcca500992d -m comment --comment "cali:6dwwt9xVpLHMh-AM" -m mark --mark 0x0/0x20000 -j cali-pi-_vdnIkxgfh8_Emv59EWL
+-[X:X] -A cali-tw-caliec1544aea47 -m comment --comment "cali:6s5GEFj160zcNg-q" -m mark --mark 0x0/0x20000 -j cali-pi-_ONDeB8oTnBLr7kWeYtF
++[X:X] -A cali-tw-caliec1544aea47 -m comment --comment "cali:sDxCGP8wxraIxUsp" -m mark --mark 0x0/0x20000 -j cali-pi-_tLi4jLokhxcd6z1A42G
++[X:X] -A cali-tw-caliec1544aea47 -m comment --comment "cali:WXdxEr1zoKUL1VSJ" -m mark --mark 0x0/0x20000 -j cali-pi-_ONDeB8oTnBLr7kWeYtF
+ === relevant Pod IP occurrences ===
+ [X:X] -A KUBE-SEP-PIHVHRGJYEGUWQGF -s 10.42.144.131/32 -m comment --comment "net-lab/servers:http" -j KUBE-MARK-MASQ
+ [X:X] -A KUBE-SEP-PIHVHRGJYEGUWQGF -p tcp -m comment --comment "net-lab/servers:http" -m tcp -j DNAT --to-destination 10.42.144.131:8080
+

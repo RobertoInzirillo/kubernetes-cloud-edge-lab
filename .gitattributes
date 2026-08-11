@@ -1,0 +1,12 @@
+# Normal repository text files
+*.md   text eol=lf
+*.yaml text eol=lf
+*.sh   text eol=lf
+
+# Preserve published experimental evidence byte-for-byte.
+# Runtime outputs may legitimately contain trailing whitespace.
+experiments/cni/**/evidence/** -text -whitespace
+
+# Editorial evidence indexes remain normal text files.
+experiments/cni/**/evidence/README.md text eol=lf whitespace
+experiments/cni/**/evidence/SHA256SUMS text eol=lf whitespace

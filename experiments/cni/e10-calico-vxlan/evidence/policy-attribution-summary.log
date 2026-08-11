@@ -1,0 +1,54 @@
+experiment_id=20260805T160549Z
+timestamp=2026-08-05T19:50:34,685451945+02:00
+kubernetes_networkpolicy_objects=2
+baseline_matrix=6/6 allowed
+default_deny_matrix=6/6 denied
+deny_plus_allow_matrix=4/6 allowed, 2/6 denied according to selector
+
+=== active Kubernetes policy rules and counters after final flows ===
+node=agent-0
+[6:360] -A cali-pi-_ONDeB8oTnBLr7kWeYtF -m comment --comment "cali:fz8hJ5pnzh_puM8k" -m comment --comment "KubernetesNetworkPolicy net-lab/default-deny-ingress ingress"
+[2:120] -A cali-pi-_tLi4jLokhxcd6z1A42G -p tcp -m comment --comment "cali:lFU_dcEAW5DM1z53" -m comment --comment "KubernetesNetworkPolicy net-lab/allow-client-to-http-servers ingress" -m set --match-set cali40s:Rg3IfxXscbcLY3pBS4WamP6 src -m multiport --dports 8080 -j MARK --set-xmark 0x10000/0x10000
+node=agent-1
+[18:1080] -A cali-pi-_ONDeB8oTnBLr7kWeYtF -m comment --comment "cali:fz8hJ5pnzh_puM8k" -m comment --comment "KubernetesNetworkPolicy net-lab/default-deny-ingress ingress"
+[2:120] -A cali-pi-_tLi4jLokhxcd6z1A42G -p tcp -m comment --comment "cali:lFU_dcEAW5DM1z53" -m comment --comment "KubernetesNetworkPolicy net-lab/allow-client-to-http-servers ingress" -m set --match-set cali40s:Rg3IfxXscbcLY3pBS4WamP6 src -m multiport --dports 8080 -j MARK --set-xmark 0x10000/0x10000
+
+=== selector ipset membership ===
+node=agent-0
+create cali40s:Rg3IfxXscbcLY3pBS4WamP6 hash:net family inet hashsize 1024 maxelem 1048576 bucketsize 12 initval 0xd65635f0
+add cali40s:Rg3IfxXscbcLY3pBS4WamP6 10.42.113.67
+node=agent-1
+create cali40s:Rg3IfxXscbcLY3pBS4WamP6 hash:net family inet hashsize 1024 maxelem 1048576 bucketsize 12 initval 0xe46685fe
+add cali40s:Rg3IfxXscbcLY3pBS4WamP6 10.42.113.67
+
+=== Felix policy translation/programming excerpts ===
+2026-08-05 17:46:09.166 [INFO][71] felix/label_inheritance_index.go 187: Updating selector id=Policy(Name=default-deny-ingress, Namespace=net-lab, Kind=KubernetesNetworkPolicy) selector=(projectcalico.org/orchestrator == "k8s" && projectcalico.org/namespace == "net-lab")
+2026-08-05 17:46:09.166 [INFO][74] felix/int_dataplane.go 2514: Received *proto.ActivePolicyUpdate update from calculation graph. msg=id:{name:"default-deny-ingress"  namespace:"net-lab"  kind:"KubernetesNetworkPolicy"}  policy:{namespace:"net-lab"  original_selector:"(projectcalico.org/orchestrator == \"k8s\" && projectcalico.org/namespace == \"net-lab\")"  tier:"default"}
+2026-08-05 17:46:09.166 [INFO][74] felix/int_dataplane.go 2514: Received *proto.WorkloadEndpointUpdate update from calculation graph. msg=id:{orchestrator_id:"k8s"  workload_id:"net-lab/server-b"  endpoint_id:"eth0"}  endpoint:{state:"active"  name:"caliec1544aea47"  profile_ids:"kns.net-lab"  profile_ids:"ksa.net-lab.default"  ipv4_nets:"10.42.144.131/32"  tiers:{name:"default"  ingress_policies:{name:"default-deny-ingress"  namespace:"net-lab"  kind:"KubernetesNetworkPolicy"}  default_action:"Deny"}}
+2026-08-05 17:46:09.166 [INFO][74] felix/label_inheritance_index.go 187: Updating selector id=Policy(Name=default-deny-ingress, Namespace=net-lab, Kind=KubernetesNetworkPolicy) selector=(projectcalico.org/orchestrator == "k8s" && projectcalico.org/namespace == "net-lab")
+2026-08-05 17:46:09.166 [INFO][84] felix/int_dataplane.go 2514: Received *proto.ActivePolicyUpdate update from calculation graph. msg=id:{name:"default-deny-ingress"  namespace:"net-lab"  kind:"KubernetesNetworkPolicy"}  policy:{namespace:"net-lab"  original_selector:"(projectcalico.org/orchestrator == \"k8s\" && projectcalico.org/namespace == \"net-lab\")"  tier:"default"}
+2026-08-05 17:46:09.166 [INFO][84] felix/int_dataplane.go 2514: Received *proto.WorkloadEndpointUpdate update from calculation graph. msg=id:{orchestrator_id:"k8s"  workload_id:"net-lab/client"  endpoint_id:"eth0"}  endpoint:{state:"active"  name:"cali651ff5ba98e"  profile_ids:"kns.net-lab"  profile_ids:"ksa.net-lab.default"  ipv4_nets:"10.42.113.67/32"  tiers:{name:"default"  ingress_policies:{name:"default-deny-ingress"  namespace:"net-lab"  kind:"KubernetesNetworkPolicy"}  default_action:"Deny"}}
+2026-08-05 17:46:09.166 [INFO][84] felix/int_dataplane.go 2514: Received *proto.WorkloadEndpointUpdate update from calculation graph. msg=id:{orchestrator_id:"k8s"  workload_id:"net-lab/server-a"  endpoint_id:"eth0"}  endpoint:{state:"active"  name:"cali2f026170013"  profile_ids:"kns.net-lab"  profile_ids:"ksa.net-lab.default"  ipv4_nets:"10.42.113.68/32"  tiers:{name:"default"  ingress_policies:{name:"default-deny-ingress"  namespace:"net-lab"  kind:"KubernetesNetworkPolicy"}  default_action:"Deny"}}
+2026-08-05 17:46:09.166 [INFO][84] felix/label_inheritance_index.go 187: Updating selector id=Policy(Name=default-deny-ingress, Namespace=net-lab, Kind=KubernetesNetworkPolicy) selector=(projectcalico.org/orchestrator == "k8s" && projectcalico.org/namespace == "net-lab")
+2026-08-05 17:47:29.346 [INFO][71] felix/label_inheritance_index.go 187: Updating selector id=Policy(Name=allow-client-to-http-servers, Namespace=net-lab, Kind=KubernetesNetworkPolicy) selector=((projectcalico.org/orchestrator == "k8s" && app.kubernetes.io/name == "http-server") && projectcalico.org/namespace == "net-lab")
+2026-08-05 17:47:29.346 [INFO][74] felix/label_inheritance_index.go 187: Updating selector id=Policy(Name=allow-client-to-http-servers, Namespace=net-lab, Kind=KubernetesNetworkPolicy) selector=((projectcalico.org/orchestrator == "k8s" && app.kubernetes.io/name == "http-server") && projectcalico.org/namespace == "net-lab")
+2026-08-05 17:47:29.346 [INFO][84] felix/label_inheritance_index.go 187: Updating selector id=Policy(Name=allow-client-to-http-servers, Namespace=net-lab, Kind=KubernetesNetworkPolicy) selector=((projectcalico.org/orchestrator == "k8s" && app.kubernetes.io/name == "http-server") && projectcalico.org/namespace == "net-lab")
+2026-08-05 17:47:29.347 [INFO][74] felix/int_dataplane.go 2514: Received *proto.IPSetUpdate update from calculation graph. msg=id:"s:Rg3IfxXscbcLY3pBS4WamP6haRZJaDISxDVQbA"  members:"10.42.113.67/32"  type:NET
+2026-08-05 17:47:29.347 [INFO][84] felix/int_dataplane.go 2514: Received *proto.IPSetUpdate update from calculation graph. msg=id:"s:Rg3IfxXscbcLY3pBS4WamP6haRZJaDISxDVQbA"  members:"10.42.113.67/32"  type:NET
+2026-08-05 17:47:29.348 [INFO][74] felix/int_dataplane.go 2514: Received *proto.ActivePolicyUpdate update from calculation graph. msg=id:{name:"allow-client-to-http-servers"  namespace:"net-lab"  kind:"KubernetesNetworkPolicy"}  policy:{namespace:"net-lab"  inbound_rules:{action:"allow"  protocol:{name:"tcp"}  dst_ports:{first:8080  last:8080}  src_ip_set_ids:"s:Rg3IfxXscbcLY3pBS4WamP6haRZJaDISxDVQbA"  original_src_selector:"projectcalico.org/orchestrator == 'k8s' && app.kubernetes.io/name == 'network-client'"  rule_id:"5Q5Ds_MZxcNhr4Ci"}  original_selector:"((projectcalico.org/orchestrator == \"k8s\" && app.kubernetes.io/name == \"http-server\") && projectcalico.org/namespace == \"net-lab\")"  tier:"default"}
+2026-08-05 17:47:29.348 [INFO][74] felix/int_dataplane.go 2514: Received *proto.WorkloadEndpointUpdate update from calculation graph. msg=id:{orchestrator_id:"k8s"  workload_id:"net-lab/server-b"  endpoint_id:"eth0"}  endpoint:{state:"active"  name:"caliec1544aea47"  profile_ids:"kns.net-lab"  profile_ids:"ksa.net-lab.default"  ipv4_nets:"10.42.144.131/32"  tiers:{name:"default"  ingress_policies:{name:"allow-client-to-http-servers"  namespace:"net-lab"  kind:"KubernetesNetworkPolicy"}  ingress_policies:{name:"default-deny-ingress"  namespace:"net-lab"  kind:"KubernetesNetworkPolicy"}  default_action:"Deny"}}
+2026-08-05 17:47:29.348 [INFO][84] felix/int_dataplane.go 2514: Received *proto.ActivePolicyUpdate update from calculation graph. msg=id:{name:"allow-client-to-http-servers"  namespace:"net-lab"  kind:"KubernetesNetworkPolicy"}  policy:{namespace:"net-lab"  inbound_rules:{action:"allow"  protocol:{name:"tcp"}  dst_ports:{first:8080  last:8080}  src_ip_set_ids:"s:Rg3IfxXscbcLY3pBS4WamP6haRZJaDISxDVQbA"  original_src_selector:"projectcalico.org/orchestrator == 'k8s' && app.kubernetes.io/name == 'network-client'"  rule_id:"5Q5Ds_MZxcNhr4Ci"}  original_selector:"((projectcalico.org/orchestrator == \"k8s\" && app.kubernetes.io/name == \"http-server\") && projectcalico.org/namespace == \"net-lab\")"  tier:"default"}
+2026-08-05 17:47:29.348 [INFO][84] felix/int_dataplane.go 2514: Received *proto.WorkloadEndpointUpdate update from calculation graph. msg=id:{orchestrator_id:"k8s"  workload_id:"net-lab/server-a"  endpoint_id:"eth0"}  endpoint:{state:"active"  name:"cali2f026170013"  profile_ids:"kns.net-lab"  profile_ids:"ksa.net-lab.default"  ipv4_nets:"10.42.113.68/32"  tiers:{name:"default"  ingress_policies:{name:"allow-client-to-http-servers"  namespace:"net-lab"  kind:"KubernetesNetworkPolicy"}  ingress_policies:{name:"default-deny-ingress"  namespace:"net-lab"  kind:"KubernetesNetworkPolicy"}  default_action:"Deny"}}
+
+=== calico-kube-controllers observed responsibility ===
+DATASTORE_TYPE=kubernetes
+ENABLED_CONTROLLERS=node,loadbalancer
+Interpretation: in this KDD installation, enabled kube-controllers are node,loadbalancer; policy updates were observed in Felix calculation graph and dataplane logs, not in a kube-controllers policy controller.
+
+=== second policy engine exclusion ===
+k3d-tesi-e10-calico-vxlan-server-0 kube_router_processes=0
+k3d-tesi-e10-calico-vxlan-server-0 kube_router_chains=0
+k3d-tesi-e10-calico-vxlan-agent-0 kube_router_processes=0
+k3d-tesi-e10-calico-vxlan-agent-0 kube_router_chains=0
+k3d-tesi-e10-calico-vxlan-agent-1 kube_router_processes=0
+k3d-tesi-e10-calico-vxlan-agent-1 kube_router_chains=0

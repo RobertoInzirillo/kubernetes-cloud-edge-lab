@@ -1,0 +1,43 @@
+experiment_id=20260805T160549Z
+context=k3d-tesi-e10-calico-vxlan
+client_ip=10.42.113.67
+server_a_ip=10.42.113.68
+server_b_ip=10.42.144.131
+service_ip=10.43.68.63
+
+timestamp=2026-08-05T19:20:53,507702179+02:00 type=ICMP source=client destination=server-a destination_ip=10.42.113.68 expected=success exit_code=0
+PING 10.42.113.68 (10.42.113.68): 56 data bytes
+64 bytes from 10.42.113.68: seq=0 ttl=63 time=90.360 ms
+64 bytes from 10.42.113.68: seq=1 ttl=63 time=0.200 ms
+
+--- 10.42.113.68 ping statistics ---
+2 packets transmitted, 2 packets received, 0% packet loss
+round-trip min/avg/max = 0.200/45.280/90.360 ms
+
+timestamp=2026-08-05T19:20:54,838323171+02:00 type=HTTP source=client destination=server-a destination_ip=10.42.113.68 attempt=1 expected=server-a observed=server-a exit_code=0 destination_ready=true destination_restarts=0
+
+timestamp=2026-08-05T19:20:55,525551503+02:00 type=ICMP source=client destination=server-b destination_ip=10.42.144.131 expected=success exit_code=0
+PING 10.42.144.131 (10.42.144.131): 56 data bytes
+64 bytes from 10.42.144.131: seq=0 ttl=62 time=10.833 ms
+64 bytes from 10.42.144.131: seq=1 ttl=62 time=0.515 ms
+
+--- 10.42.144.131 ping statistics ---
+2 packets transmitted, 2 packets received, 0% packet loss
+round-trip min/avg/max = 0.515/5.674/10.833 ms
+
+timestamp=2026-08-05T19:20:56,736066849+02:00 type=HTTP source=client destination=server-b destination_ip=10.42.144.131 attempt=1 expected=server-b observed=server-b exit_code=0 destination_ready=true destination_restarts=0
+
+timestamp=2026-08-05T19:20:57,649066930+02:00 type=HTTP source=client destination=Service/servers destination_ip=10.43.68.63 attempt=1 expected=server-a_or_server-b observed=server-b exit_code=0
+
+timestamp=2026-08-05T19:20:58,037221938+02:00 type=HTTP source=client destination=Service/servers destination_ip=10.43.68.63 attempt=2 expected=server-a_or_server-b observed=server-b exit_code=0
+
+=== final stability ===
+NAME                                 STATUS   ROLES           AGE   VERSION
+k3d-tesi-e10-calico-vxlan-agent-0    Ready    <none>          57m   v1.34.9+k3s1
+k3d-tesi-e10-calico-vxlan-agent-1    Ready    <none>          57m   v1.34.9+k3s1
+k3d-tesi-e10-calico-vxlan-server-0   Ready    control-plane   57m   v1.34.9+k3s1
+NAME       READY   STATUS    RESTARTS   AGE     IP              NODE                                NOMINATED NODE   READINESS GATES
+client     1/1     Running   0          5m22s   10.42.113.67    k3d-tesi-e10-calico-vxlan-agent-0   <none>           <none>
+server-a   1/1     Running   0          5m22s   10.42.113.68    k3d-tesi-e10-calico-vxlan-agent-0   <none>           <none>
+server-b   1/1     Running   0          5m22s   10.42.144.131   k3d-tesi-e10-calico-vxlan-agent-1   <none>           <none>
+matrix_exit=0

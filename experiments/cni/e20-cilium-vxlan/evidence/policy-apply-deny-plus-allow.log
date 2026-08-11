@@ -1,0 +1,52 @@
+timestamp=2026-08-09T17:36:53,608551043+02:00
+stage=deny-plus-allow manifest=manifests/e02-allow-client-to-http-servers.yaml
+4b0bf42fea75b3af75fac826d95f622aa8afd2425a352de08b2fd853e0b3ef07  manifests/e02-allow-client-to-http-servers.yaml
+networkpolicy.networking.k8s.io/allow-client-to-http-servers created
+=== API object(s) ===
+apiVersion: v1
+items:
+- apiVersion: networking.k8s.io/v1
+  kind: NetworkPolicy
+  metadata:
+    annotations:
+      kubectl.kubernetes.io/last-applied-configuration: |
+        {"apiVersion":"networking.k8s.io/v1","kind":"NetworkPolicy","metadata":{"annotations":{},"name":"allow-client-to-http-servers","namespace":"net-lab"},"spec":{"ingress":[{"from":[{"podSelector":{"matchLabels":{"app.kubernetes.io/name":"network-client"}}}],"ports":[{"port":8080,"protocol":"TCP"}]}],"podSelector":{"matchLabels":{"app.kubernetes.io/name":"http-server"}},"policyTypes":["Ingress"]}}
+    creationTimestamp: "2026-08-09T15:36:53Z"
+    generation: 1
+    name: allow-client-to-http-servers
+    namespace: net-lab
+    resourceVersion: "45618"
+    uid: d86cd2ff-5ad2-483d-a078-b3985b24271b
+  spec:
+    ingress:
+    - from:
+      - podSelector:
+          matchLabels:
+            app.kubernetes.io/name: network-client
+      ports:
+      - port: 8080
+        protocol: TCP
+    podSelector:
+      matchLabels:
+        app.kubernetes.io/name: http-server
+    policyTypes:
+    - Ingress
+- apiVersion: networking.k8s.io/v1
+  kind: NetworkPolicy
+  metadata:
+    annotations:
+      kubectl.kubernetes.io/last-applied-configuration: |
+        {"apiVersion":"networking.k8s.io/v1","kind":"NetworkPolicy","metadata":{"annotations":{},"name":"default-deny-ingress","namespace":"net-lab"},"spec":{"podSelector":{},"policyTypes":["Ingress"]}}
+    creationTimestamp: "2026-08-09T15:36:22Z"
+    generation: 1
+    name: default-deny-ingress
+    namespace: net-lab
+    resourceVersion: "45587"
+    uid: e7811c0b-00e9-430f-adc0-3f30febe1088
+  spec:
+    podSelector: {}
+    policyTypes:
+    - Ingress
+kind: List
+metadata:
+  resourceVersion: ""

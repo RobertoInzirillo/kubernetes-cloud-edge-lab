@@ -1,0 +1,339 @@
+timestamp=2026-08-09T16:19:16,644391695+02:00
+source_node=k3d-tesi-e20-cilium-vxlan-agent-0 source_cilium_pod=cilium-sdlx7 destination_node=k3d-tesi-e20-cilium-vxlan-agent-1 destination_cilium_pod=cilium-ww6f2 server_b_ip=10.42.1.199
+=== Docker authoritative container state/IP/PID ===
+name=/k3d-tesi-e20-cilium-vxlan-server-0 running=true pid=1876 network=k3d-tesi-e20-cilium-vxlan ip=172.19.0.2
+name=/k3d-tesi-e20-cilium-vxlan-agent-0 running=true pid=1895 network=k3d-tesi-e20-cilium-vxlan ip=172.19.0.4
+name=/k3d-tesi-e20-cilium-vxlan-agent-1 running=true pid=1861 network=k3d-tesi-e20-cilium-vxlan ip=172.19.0.3
+=== Kubernetes Node InternalIP ===
+NAME                                 INTERNAL_IP
+k3d-tesi-e20-cilium-vxlan-agent-0    172.19.0.4
+k3d-tesi-e20-cilium-vxlan-agent-1    172.19.0.3
+k3d-tesi-e20-cilium-vxlan-server-0   172.19.0.2
+=== CiliumNode InternalIP/CiliumInternalIP ===
+NAME                                 INTERNAL_IP   CILIUM_INTERNAL_IP   PODCIDR
+k3d-tesi-e20-cilium-vxlan-agent-0    172.19.0.4    10.42.0.119          10.42.0.0/24
+k3d-tesi-e20-cilium-vxlan-agent-1    172.19.0.2    10.42.1.188          10.42.1.0/24
+k3d-tesi-e20-cilium-vxlan-server-0   172.19.0.2    10.42.2.197          10.42.2.0/24
+=== CiliumEndpoint node fields ===
+NAME       POD_IP        NODE         STATE
+client     10.42.0.169   172.19.0.4   ready
+server-a   10.42.0.76    172.19.0.4   ready
+server-b   10.42.1.199   172.19.0.2   ready
+=== source node routing/tunnel state ===
+10.42.1.199 dev cilium_host src 10.42.0.119 uid 0 
+    cache mtu 1450 
+info: Using default fan map value (33)
+5: cilium_vxlan: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UNKNOWN mode DEFAULT group default 
+    link/ether 8a:1c:8a:17:2c:92 brd ff:ff:ff:ff:ff:ff promiscuity 0  allmulti 0 minmtu 68 maxmtu 65535 
+    vxlan external id 0 fan-map srcport 0 0 dstport 8472 nolearning ttl auto ageing 300 udpcsum noudp6zerocsumtx noudp6zerocsumrx addrgenmode eui64 numtxqueues 1 numrxqueues 1 gso_max_size 65536 gso_max_segs 65535 tso_max_size 65536 tso_max_segs 65535 gro_max_size 65536 
+=== source Cilium node list ===
+Name                                 IPv4 Address   Endpoint CIDR   IPv6 Address   Endpoint CIDR   Source
+k3d-tesi-e20-cilium-vxlan-agent-0    172.19.0.4     10.42.0.0/24                                   local
+k3d-tesi-e20-cilium-vxlan-agent-1    172.19.0.2     10.42.1.0/24                                   custom-resource
+k3d-tesi-e20-cilium-vxlan-server-0   172.19.0.2     10.42.2.0/24                                   custom-resource
+=== source Cilium tunnel map ===
+Direct access to local BPF maps
+
+Usage:
+  cilium-dbg bpf [command]
+
+Available Commands:
+  auth        Manage authenticated connections between identities
+  bandwidth   BPF datapath bandwidth settings
+  config      Manage runtime config
+  ct          Connection tracking tables
+  egress      Manage the egress routing rules
+  endpoint    Local endpoint map
+  frag        Manage the IPv4 datagram fragments
+  fs          BPF filesystem mount
+  ipcache     Manage the IPCache mappings for IP/CIDR <-> Identity
+  ipmasq      ip-masq-agent CIDRs
+  lb          Load-balancing configuration
+  metrics     BPF datapath traffic metrics
+  multicast   Manage multicast BPF programs
+  nat         NAT mapping tables
+  nodeid      Manage the node IDs
+  policy      Manage policy related BPF maps
+  sha         Manage compiled BPF template objects
+  socknat     Socket NAT operations
+  srv6        Manage the SRv6 routing rules
+  vtep        Manage the VTEP mappings for IP/CIDR <-> VTEP MAC/IP
+
+Flags:
+  -h, --help   help for bpf
+
+Global Flags:
+      --config string        Config file (default is $HOME/.cilium.yaml)
+  -D, --debug                Enable debug messages
+  -H, --host string          URI to server-side API
+      --log-driver strings   Logging endpoints to use (example: syslog)
+      --log-opt map          Log driver options (example: format=json)
+
+Use "cilium-dbg bpf [command] --help" for more information about a command.
+tunnel_list_exit=0
+=== source IP cache entries relevant to destination ===
+172.19.0.2/32       identity=7 encryptkey=0 tunnelendpoint=0.0.0.0 flags=<none>             
+10.42.1.120/32      identity=24658 encryptkey=0 tunnelendpoint=172.19.0.2 flags=hastunnel   
+10.42.1.199/32      identity=16090 encryptkey=0 tunnelendpoint=172.19.0.2 flags=hastunnel   
+10.42.1.0/24        identity=2 encryptkey=0 tunnelendpoint=172.19.0.2 flags=hastunnel       
+10.42.2.197/32      identity=6 encryptkey=0 tunnelendpoint=172.19.0.2 flags=hastunnel       
+10.42.1.172/32      identity=10842 encryptkey=0 tunnelendpoint=172.19.0.2 flags=hastunnel   
+10.42.1.80/32       identity=54339 encryptkey=0 tunnelendpoint=172.19.0.2 flags=hastunnel   
+10.42.1.188/32      identity=6 encryptkey=0 tunnelendpoint=172.19.0.2 flags=hastunnel       
+10.42.2.0/24        identity=2 encryptkey=0 tunnelendpoint=172.19.0.2 flags=hastunnel       
+172.19.0.4/32       identity=1 encryptkey=0 tunnelendpoint=0.0.0.0 flags=<none>             
+10.42.1.74/32       identity=4 encryptkey=0 tunnelendpoint=172.19.0.2 flags=hastunnel       
+10.42.2.13/32       identity=4 encryptkey=0 tunnelendpoint=172.19.0.2 flags=hastunnel       
+=== destination endpoint state ===
+destination_endpoint_id=2389
+[
+  {
+    "id": 2389,
+    "spec": {
+      "label-configuration": {},
+      "options": {
+        "ConntrackAccounting": "Disabled",
+        "Debug": "Disabled",
+        "DebugLB": "Disabled",
+        "DebugPolicy": "Disabled",
+        "DropNotification": "Enabled",
+        "MonitorAggregationLevel": "Medium",
+        "PolicyAccounting": "Enabled",
+        "PolicyAuditMode": "Disabled",
+        "PolicyVerdictNotification": "Enabled",
+        "SourceIPVerification": "Enabled",
+        "TraceNotification": "Enabled"
+      }
+    },
+    "status": {
+      "controllers": [
+        {
+          "configuration": {
+            "error-retry": true,
+            "error-retry-base": "2s",
+            "interval": "1s"
+          },
+          "name": "endpoint-2389-regeneration-recovery",
+          "status": {
+            "last-failure-timestamp": "0001-01-01T00:00:00.000Z",
+            "last-success-timestamp": "0001-01-01T00:00:00.000Z"
+          },
+          "uuid": "e06511e4-d9df-4244-a742-68cb1d17e776"
+        },
+        {
+          "configuration": {
+            "error-retry": true,
+            "interval": "5m0s"
+          },
+          "name": "resolve-identity-2389",
+          "status": {
+            "last-failure-timestamp": "0001-01-01T00:00:00.000Z",
+            "last-success-timestamp": "2026-08-09T14:16:46.410Z",
+            "success-count": 1
+          },
+          "uuid": "c0b937c8-d973-4b26-830a-667ce957562b"
+        },
+        {
+          "configuration": {
+            "error-retry": true
+          },
+          "name": "resolve-labels-net-lab/server-b",
+          "status": {
+            "last-failure-timestamp": "0001-01-01T00:00:00.000Z",
+            "last-success-timestamp": "2026-08-09T14:16:46.410Z",
+            "success-count": 1
+          },
+          "uuid": "6cc0eccd-c066-4c86-9f59-42c7474e86c2"
+        },
+        {
+          "configuration": {
+            "error-retry": true,
+            "interval": "15m0s"
+          },
+          "name": "sync-policymap-2389",
+          "status": {
+            "last-failure-timestamp": "0001-01-01T00:00:00.000Z",
+            "last-success-timestamp": "2026-08-09T14:16:46.698Z",
+            "success-count": 1
+          },
+          "uuid": "d40cc559-36da-481f-ab18-82f33442820d"
+        },
+        {
+          "configuration": {
+            "error-retry": true,
+            "interval": "10s"
+          },
+          "name": "sync-to-k8s-ciliumendpoint (2389)",
+          "status": {
+            "last-failure-timestamp": "0001-01-01T00:00:00.000Z",
+            "last-success-timestamp": "2026-08-09T14:19:16.439Z",
+            "success-count": 17
+          },
+          "uuid": "2eaf5385-5bf0-4a45-8b60-37f2cb560bc8"
+        }
+      ],
+      "external-identifiers": {
+        "cni-attachment-id": "262e9b265b692d7d6c4b02c64b7131478b4165ca1c647b88229caeb5b1c9c5e5:eth0",
+        "container-id": "262e9b265b692d7d6c4b02c64b7131478b4165ca1c647b88229caeb5b1c9c5e5",
+        "k8s-namespace": "net-lab",
+        "k8s-pod-name": "server-b",
+        "pod-name": "net-lab/server-b"
+      },
+      "health": {
+        "bpf": "OK",
+        "connected": true,
+        "overallHealth": "OK",
+        "policy": "OK"
+      },
+      "identity": {
+        "id": 16090,
+        "labels": [
+          "k8s:app.kubernetes.io/instance=server-b",
+          "k8s:app.kubernetes.io/name=http-server",
+          "k8s:app.kubernetes.io/part-of=e01-network-baseline",
+          "k8s:io.cilium.k8s.namespace.labels.app.kubernetes.io/part-of=e01-network-baseline",
+          "k8s:io.cilium.k8s.namespace.labels.kubernetes.io/metadata.name=net-lab",
+          "k8s:io.cilium.k8s.policy.cluster=default",
+          "k8s:io.cilium.k8s.policy.serviceaccount=default",
+          "k8s:io.kubernetes.pod.namespace=net-lab"
+        ]
+      },
+      "labels": {
+        "realized": {},
+        "security-relevant": [
+          "k8s:app.kubernetes.io/instance=server-b",
+          "k8s:app.kubernetes.io/name=http-server",
+          "k8s:app.kubernetes.io/part-of=e01-network-baseline",
+          "k8s:io.cilium.k8s.namespace.labels.app.kubernetes.io/part-of=e01-network-baseline",
+          "k8s:io.cilium.k8s.namespace.labels.kubernetes.io/metadata.name=net-lab",
+          "k8s:io.cilium.k8s.policy.cluster=default",
+          "k8s:io.cilium.k8s.policy.serviceaccount=default",
+          "k8s:io.kubernetes.pod.namespace=net-lab"
+        ]
+      },
+      "log": [
+        {
+          "code": "OK",
+          "message": "Successfully regenerated endpoint program (Reason: periodic endpoint regeneration)",
+          "state": "ready",
+          "timestamp": "2026-08-09T14:17:58Z"
+        }
+      ],
+      "namedPorts": [
+        {
+          "name": "http",
+          "port": 8080,
+          "protocol": "TCP"
+        }
+      ],
+      "networking": {
+        "addressing": [
+          {
+            "ipv4": "10.42.1.199",
+            "ipv4-pool-name": "default"
+          }
+        ],
+        "container-interface-name": "eth0",
+        "host-mac": "de:14:11:d3:7a:22",
+        "interface-index": 15,
+        "interface-name": "lxcea51477b60b2",
+        "mac": "6e:14:1e:d3:61:21"
+      },
+      "policy": {
+        "proxy-policy-revision": 1,
+        "proxy-statistics": [],
+        "realized": {
+          "allowed-egress-identities": [
+            0
+          ],
+          "allowed-ingress-identities": [
+            0,
+            1
+          ],
+          "build": 1,
+          "denied-egress-identities": null,
+          "denied-ingress-identities": null,
+          "id": 16090,
+          "l4": {
+            "egress": [],
+            "ingress": []
+          },
+          "policy-enabled": "none",
+          "policy-revision": 1
+        },
+        "spec": {
+          "allowed-egress-identities": [
+            0
+          ],
+          "allowed-ingress-identities": [
+            0,
+            1
+          ],
+          "build": 1,
+          "denied-egress-identities": null,
+          "denied-ingress-identities": null,
+          "id": 16090,
+          "l4": {
+            "egress": [],
+            "ingress": []
+          },
+          "policy-enabled": "none",
+          "policy-revision": 1
+        }
+      },
+      "realized": {
+        "label-configuration": {},
+        "options": {
+          "ConntrackAccounting": "Disabled",
+          "Debug": "Disabled",
+          "DebugLB": "Disabled",
+          "DebugPolicy": "Disabled",
+          "DropNotification": "Enabled",
+          "MonitorAggregationLevel": "Medium",
+          "PolicyAccounting": "Enabled",
+          "PolicyAuditMode": "Disabled",
+          "PolicyVerdictNotification": "Enabled",
+          "SourceIPVerification": "Enabled",
+          "TraceNotification": "Enabled"
+        }
+      },
+      "state": "ready"
+    }
+  }
+]
+
+=== concise recent Cilium warnings/errors ===
+time=2026-08-09T07:13:56.216284564Z level=info msg="Fallback node addresses updated" module=agent.datapath.node-address addresses="172.19.0.4 (primary), ::1 (primary)" device=*
+time=2026-08-09T07:13:56.224505914Z level=info msg="Node addresses updated" module=agent.datapath.node-address addresses="172.19.0.4 (primary, nodeport)" device=eth0
+time=2026-08-09T07:13:56.225074782Z level=info msg="Node addresses updated" module=agent.datapath.node-address addresses="172.19.0.4 (primary), ::1 (primary)" device=*
+time=2026-08-09T07:13:56.499483049Z level=info msg="Received own node information from API server" module=agent.controlplane.daemon nodeName=k3d-tesi-e20-cilium-vxlan-agent-0 labels="map[beta.kubernetes.io/arch:amd64 beta.kubernetes.io/instance-type:k3s beta.kubernetes.io/os:linux kubernetes.io/arch:amd64 kubernetes.io/hostname:k3d-tesi-e20-cilium-vxlan-agent-0 kubernetes.io/os:linux node.kubernetes.io/instance-type:k3s]" ipv4=172.19.0.5 ipv6="" v4Prefix=10.42.0.0/24 v6Prefix=<nil> k8sNodeIP=172.19.0.5
+time=2026-08-09T07:13:56.500066641Z level=info msg="Fallback node addresses updated" module=agent.datapath.node-address addresses="172.19.0.4 (primary), ::1 (primary)" device=*
+time=2026-08-09T07:13:56.516768164Z level=info msg="Fallback node addresses updated" module=agent.datapath.node-address addresses="172.19.0.4 (primary), ::1 (primary)" device=*
+time=2026-08-09T07:13:56.816452501Z level=info msg="Fallback node addresses updated" module=agent.datapath.node-address addresses="172.19.0.4 (primary), ::1 (primary)" device=*
+time=2026-08-09T07:13:57.41746539Z level=info msg="Fallback node addresses updated" module=agent.datapath.node-address addresses="172.19.0.4 (primary), ::1 (primary)" device=*
+time=2026-08-09T07:13:58.717982328Z level=info msg="Fallback node addresses updated" module=agent.datapath.node-address addresses="172.19.0.4 (primary), ::1 (primary)" device=*
+time=2026-08-09T07:14:04.21716216Z level=info msg="Fallback node addresses updated" module=agent.datapath.node-address addresses="172.19.0.4 (primary), ::1 (primary)" device=*
+time=2026-08-09T14:16:44.342555929Z level=info msg="Fallback node addresses updated" module=agent.datapath.node-address addresses="172.19.0.4 (primary), ::1 (primary)" device=*
+time=2026-08-09T14:16:46.517898411Z level=info msg="Fallback node addresses updated" module=agent.datapath.node-address addresses="172.19.0.4 (primary), ::1 (primary)" device=*
+time=2026-08-09T14:16:48.016671111Z level=info msg="Fallback node addresses updated" module=agent.datapath.node-address addresses="172.19.0.4 (primary), ::1 (primary)" device=*
+time=2026-08-09T14:16:48.417543214Z level=info msg="Fallback node addresses updated" module=agent.datapath.node-address addresses="172.19.0.4 (primary), ::1 (primary)" device=*
+time=2026-08-09T07:13:57.117181166Z level=info msg="Fallback node addresses updated" module=agent.datapath.node-address addresses="172.19.0.3 (primary), ::1 (primary)" device=*
+time=2026-08-09T07:13:57.11778202Z level=info msg="Node addresses updated" module=agent.datapath.node-address addresses="172.19.0.3 (primary, nodeport)" device=eth0
+time=2026-08-09T07:13:57.118163186Z level=info msg="Node addresses updated" module=agent.datapath.node-address addresses="172.19.0.3 (primary), ::1 (primary)" device=*
+time=2026-08-09T07:13:57.303147385Z level=info msg="Received own node information from API server" module=agent.controlplane.daemon nodeName=k3d-tesi-e20-cilium-vxlan-agent-1 labels="map[beta.kubernetes.io/arch:amd64 beta.kubernetes.io/instance-type:k3s beta.kubernetes.io/os:linux kubernetes.io/arch:amd64 kubernetes.io/hostname:k3d-tesi-e20-cilium-vxlan-agent-1 kubernetes.io/os:linux node.kubernetes.io/instance-type:k3s]" ipv4=172.19.0.3 ipv6="" v4Prefix=10.42.1.0/24 v6Prefix=<nil> k8sNodeIP=172.19.0.3
+time=2026-08-09T07:13:57.317441395Z level=info msg="Fallback node addresses updated" module=agent.datapath.node-address addresses="172.19.0.3 (primary), ::1 (primary)" device=*
+time=2026-08-09T07:13:57.617802735Z level=info msg="Fallback node addresses updated" module=agent.datapath.node-address addresses="172.19.0.3 (primary), ::1 (primary)" device=*
+time=2026-08-09T07:13:58.219137098Z level=info msg="Fallback node addresses updated" module=agent.datapath.node-address addresses="172.19.0.3 (primary), ::1 (primary)" device=*
+time=2026-08-09T07:13:58.417834277Z level=info msg="Fallback node addresses updated" module=agent.datapath.node-address addresses="172.19.0.3 (primary), ::1 (primary)" device=*
+time=2026-08-09T07:13:58.817556739Z level=info msg="Fallback node addresses updated" module=agent.datapath.node-address addresses="172.19.0.3 (primary), ::1 (primary)" device=*
+time=2026-08-09T07:13:59.31899594Z level=info msg="Fallback node addresses updated" module=agent.datapath.node-address addresses="172.19.0.3 (primary), ::1 (primary)" device=*
+time=2026-08-09T07:14:00.9178263Z level=info msg="Fallback node addresses updated" module=agent.datapath.node-address addresses="172.19.0.3 (primary), ::1 (primary)" device=*
+time=2026-08-09T07:14:01.018690224Z level=info msg="Fallback node addresses updated" module=agent.datapath.node-address addresses="172.19.0.3 (primary), ::1 (primary)" device=*
+time=2026-08-09T07:14:02.217852734Z level=info msg="Fallback node addresses updated" module=agent.datapath.node-address addresses="172.19.0.3 (primary), ::1 (primary)" device=*
+time=2026-08-09T07:14:02.425965731Z level=error msg="Failed to serve cilium-health API" module=agent.controlplane.cilium-health error="listen tcp 172.19.0.2:4240: bind: cannot assign requested address"
+time=2026-08-09T07:14:02.6182802Z level=info msg="Fallback node addresses updated" module=agent.datapath.node-address addresses="172.19.0.3 (primary), ::1 (primary)" device=*
+time=2026-08-09T07:14:05.619148516Z level=info msg="Fallback node addresses updated" module=agent.datapath.node-address addresses="172.19.0.3 (primary), ::1 (primary)" device=*
+time=2026-08-09T14:16:44.44287522Z level=info msg="Fallback node addresses updated" module=agent.datapath.node-address addresses="172.19.0.3 (primary), ::1 (primary)" device=*
+time=2026-08-09T14:16:46.518752204Z level=info msg="Fallback node addresses updated" module=agent.datapath.node-address addresses="172.19.0.3 (primary), ::1 (primary)" device=*
+time=2026-08-09T14:16:47.718089807Z level=info msg="Fallback node addresses updated" module=agent.datapath.node-address addresses="172.19.0.3 (primary), ::1 (primary)" device=*
+diagnosis_read_only=COMPLETE

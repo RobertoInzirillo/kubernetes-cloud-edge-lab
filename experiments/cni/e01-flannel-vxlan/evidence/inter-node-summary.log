@@ -1,0 +1,20 @@
+run=20260802T203053
+prepared_at=2026-08-02T20:30:53,928524369+02:00
+capture_node=k3d-tesi-flannel-vxlan-agent-0
+node_pid=8577
+client_ip=10.42.0.6
+server_b_ip=10.42.1.4
+source_underlay=172.18.0.2
+dest_underlay=172.18.0.4
+filter=((host 10.42.0.6 and host 10.42.1.4 and tcp port 8080) or (host 172.18.0.2 and host 172.18.0.4 and udp port 8472))
+capture_log=/tmp/e01-inter-any-20260802T203053.log
+flow_log=/tmp/e01-inter-any-flow-20260802T203053.log
+capture_command=sudo nsenter --target 8577 --net timeout --foreground --preserve-status --signal=TERM --kill-after=2s 8s tcpdump -i any -tttt -nn -e -vv -A -s 0 -l FILTER
+capture_finished=2026-08-02T20:31:02,229781378+02:00
+capture_exit=0
+flow_job_exit=0
+kill_fallback_used=no
+residual_processes=0
+capture_lines=473
+flow_lines=5
+procedure_exit=0

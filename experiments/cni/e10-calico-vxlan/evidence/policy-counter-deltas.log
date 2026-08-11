@@ -1,0 +1,128 @@
+=== node=server-0 baseline matrix counter delta ===
+--- /tmp/e10-20260805T160549Z/policy-baseline-server-0-netfilter.log	2026-08-05 19:45:33.187647427 +0200
++++ /tmp/e10-20260805T160549Z/policy-baseline-after-flows-server-0-netfilter.log	2026-08-05 19:46:07.420579076 +0200
+@@ -1,4 +1,4 @@
+-timestamp=2026-08-05T19:45:33,171722445+02:00 state=baseline node=k3d-tesi-e10-calico-vxlan-server-0
++timestamp=2026-08-05T19:46:07,412873443+02:00 state=baseline-after-flows node=k3d-tesi-e10-calico-vxlan-server-0
+ === policy and workload chain definitions/rules ===
+ :cali-from-wl-dispatch - [0:0]
+ :cali-from-wl-dispatch-b - [0:0]
+
+=== node=server-0 default-deny matrix counter delta ===
+--- /tmp/e10-20260805T160549Z/policy-default-deny-before-flows-server-0-netfilter.log	2026-08-05 19:46:16.151562879 +0200
++++ /tmp/e10-20260805T160549Z/policy-default-deny-after-flows-server-0-netfilter.log	2026-08-05 19:46:50.154504348 +0200
+@@ -1,4 +1,4 @@
+-timestamp=2026-08-05T19:46:16,134736546+02:00 state=default-deny-before-flows node=k3d-tesi-e10-calico-vxlan-server-0
++timestamp=2026-08-05T19:46:50,138275406+02:00 state=default-deny-after-flows node=k3d-tesi-e10-calico-vxlan-server-0
+ === policy and workload chain definitions/rules ===
+ :cali-from-wl-dispatch - [0:0]
+ :cali-from-wl-dispatch-b - [0:0]
+
+=== node=server-0 allow matrix counter delta ===
+--- /tmp/e10-20260805T160549Z/policy-default-deny-plus-allow-before-flows-server-0-netfilter.log	2026-08-05 19:47:36.512435560 +0200
++++ /tmp/e10-20260805T160549Z/policy-default-deny-plus-allow-after-flows-server-0-netfilter.log	2026-08-05 19:48:06.356397531 +0200
+@@ -1,4 +1,4 @@
+-timestamp=2026-08-05T19:47:36,496358720+02:00 state=default-deny-plus-allow-before-flows node=k3d-tesi-e10-calico-vxlan-server-0
++timestamp=2026-08-05T19:48:06,339869753+02:00 state=default-deny-plus-allow-after-flows node=k3d-tesi-e10-calico-vxlan-server-0
+ === policy and workload chain definitions/rules ===
+ :cali-from-wl-dispatch - [0:0]
+ :cali-from-wl-dispatch-b - [0:0]
+
+=== node=agent-0 baseline matrix counter delta ===
+--- /tmp/e10-20260805T160549Z/policy-baseline-agent-0-netfilter.log	2026-08-05 19:45:33.491646785 +0200
++++ /tmp/e10-20260805T160549Z/policy-baseline-after-flows-agent-0-netfilter.log	2026-08-05 19:46:07.559578815 +0200
+@@ -1,4 +1,4 @@
+-timestamp=2026-08-05T19:45:33,475971678+02:00 state=baseline node=k3d-tesi-e10-calico-vxlan-agent-0
++timestamp=2026-08-05T19:46:07,551788808+02:00 state=baseline-after-flows node=k3d-tesi-e10-calico-vxlan-agent-0
+ === policy and workload chain definitions/rules ===
+ :cali-from-wl-dispatch - [0:0]
+ :cali-fw-cali0b35f5e0bfa - [0:0]
+
+=== node=agent-0 default-deny matrix counter delta ===
+--- /tmp/e10-20260805T160549Z/policy-default-deny-before-flows-agent-0-netfilter.log	2026-08-05 19:46:16.452562329 +0200
++++ /tmp/e10-20260805T160549Z/policy-default-deny-after-flows-agent-0-netfilter.log	2026-08-05 19:46:50.477503826 +0200
+@@ -1,4 +1,4 @@
+-timestamp=2026-08-05T19:46:16,434739372+02:00 state=default-deny-before-flows node=k3d-tesi-e10-calico-vxlan-agent-0
++timestamp=2026-08-05T19:46:50,458908580+02:00 state=default-deny-after-flows node=k3d-tesi-e10-calico-vxlan-agent-0
+ === policy and workload chain definitions/rules ===
+ :cali-from-wl-dispatch - [0:0]
+ :cali-fw-cali0b35f5e0bfa - [0:0]
+@@ -20,7 +20,7 @@
+ [0:0] -A cali-fw-cali0b35f5e0bfa -m comment --comment "cali:EDDyk_FOrgd3psMC" -m mark --mark 0x0/0x20000 -j cali-po-_vdnIkxgfh8_Emv59EWL
+ [0:0] -A cali-fw-cali88e0f7680da -m comment --comment "cali:6ThtPINIEC96hZHy" -m mark --mark 0x0/0x20000 -j cali-po-_0dPptdegtTXt1D_kwEh
+ [0:0] -A cali-tw-cali0b35f5e0bfa -m comment --comment "cali:mR8wCr9GQvLgflY6" -m mark --mark 0x0/0x20000 -j cali-pi-_vdnIkxgfh8_Emv59EWL
+-[0:0] -A cali-tw-cali2f026170013 -m comment --comment "cali:S1F2X9VWj6KTdzvR" -m mark --mark 0x0/0x20000 -j cali-pi-_ONDeB8oTnBLr7kWeYtF
++[6:360] -A cali-tw-cali2f026170013 -m comment --comment "cali:S1F2X9VWj6KTdzvR" -m mark --mark 0x0/0x20000 -j cali-pi-_ONDeB8oTnBLr7kWeYtF
+ [0:0] -A cali-tw-cali651ff5ba98e -m comment --comment "cali:76H5O-XwUGArJQyR" -m mark --mark 0x0/0x20000 -j cali-pi-_ONDeB8oTnBLr7kWeYtF
+ [0:0] -A cali-tw-cali88e0f7680da -m comment --comment "cali:rVPhS3_SQrrYKsMe" -m mark --mark 0x0/0x20000 -j cali-pi-_0dPptdegtTXt1D_kwEh
+ === relevant Pod IP occurrences ===
+
+=== node=agent-0 allow matrix counter delta ===
+--- /tmp/e10-20260805T160549Z/policy-default-deny-plus-allow-before-flows-agent-0-netfilter.log	2026-08-05 19:47:36.805435163 +0200
++++ /tmp/e10-20260805T160549Z/policy-default-deny-plus-allow-after-flows-agent-0-netfilter.log	2026-08-05 19:48:06.651397178 +0200
+@@ -1,4 +1,4 @@
+-timestamp=2026-08-05T19:47:36,788409949+02:00 state=default-deny-plus-allow-before-flows node=k3d-tesi-e10-calico-vxlan-agent-0
++timestamp=2026-08-05T19:48:06,635288251+02:00 state=default-deny-plus-allow-after-flows node=k3d-tesi-e10-calico-vxlan-agent-0
+ === policy and workload chain definitions/rules ===
+ :cali-from-wl-dispatch - [0:0]
+ :cali-fw-cali0b35f5e0bfa - [0:0]
+@@ -21,7 +21,7 @@
+ [0:0] -A cali-fw-cali0b35f5e0bfa -m comment --comment "cali:EDDyk_FOrgd3psMC" -m mark --mark 0x0/0x20000 -j cali-po-_vdnIkxgfh8_Emv59EWL
+ [0:0] -A cali-fw-cali88e0f7680da -m comment --comment "cali:6ThtPINIEC96hZHy" -m mark --mark 0x0/0x20000 -j cali-po-_0dPptdegtTXt1D_kwEh
+ [0:0] -A cali-tw-cali0b35f5e0bfa -m comment --comment "cali:mR8wCr9GQvLgflY6" -m mark --mark 0x0/0x20000 -j cali-pi-_vdnIkxgfh8_Emv59EWL
+-[0:0] -A cali-tw-cali2f026170013 -m comment --comment "cali:TuteKU3pvY2BehS3" -m mark --mark 0x0/0x20000 -j cali-pi-_tLi4jLokhxcd6z1A42G
++[2:120] -A cali-tw-cali2f026170013 -m comment --comment "cali:TuteKU3pvY2BehS3" -m mark --mark 0x0/0x20000 -j cali-pi-_tLi4jLokhxcd6z1A42G
+ [0:0] -A cali-tw-cali2f026170013 -m comment --comment "cali:YowBoxIPiHM2OYy9" -m mark --mark 0x0/0x20000 -j cali-pi-_ONDeB8oTnBLr7kWeYtF
+ [0:0] -A cali-tw-cali651ff5ba98e -m comment --comment "cali:76H5O-XwUGArJQyR" -m mark --mark 0x0/0x20000 -j cali-pi-_ONDeB8oTnBLr7kWeYtF
+ [0:0] -A cali-tw-cali88e0f7680da -m comment --comment "cali:rVPhS3_SQrrYKsMe" -m mark --mark 0x0/0x20000 -j cali-pi-_0dPptdegtTXt1D_kwEh
+
+=== node=agent-1 baseline matrix counter delta ===
+--- /tmp/e10-20260805T160549Z/policy-baseline-agent-1-netfilter.log	2026-08-05 19:45:33.777646181 +0200
++++ /tmp/e10-20260805T160549Z/policy-baseline-after-flows-agent-1-netfilter.log	2026-08-05 19:46:07.756578444 +0200
+@@ -1,4 +1,4 @@
+-timestamp=2026-08-05T19:45:33,763896249+02:00 state=baseline node=k3d-tesi-e10-calico-vxlan-agent-1
++timestamp=2026-08-05T19:46:07,745267142+02:00 state=baseline-after-flows node=k3d-tesi-e10-calico-vxlan-agent-1
+ === policy and workload chain definitions/rules ===
+ :cali-from-wl-dispatch - [0:0]
+ :cali-from-wl-dispatch-d - [0:0]
+
+=== node=agent-1 default-deny matrix counter delta ===
+--- /tmp/e10-20260805T160549Z/policy-default-deny-before-flows-agent-1-netfilter.log	2026-08-05 19:46:16.742561800 +0200
++++ /tmp/e10-20260805T160549Z/policy-default-deny-after-flows-agent-1-netfilter.log	2026-08-05 19:46:50.750503385 +0200
+@@ -1,4 +1,4 @@
+-timestamp=2026-08-05T19:46:16,726771556+02:00 state=default-deny-before-flows node=k3d-tesi-e10-calico-vxlan-agent-1
++timestamp=2026-08-05T19:46:50,737812151+02:00 state=default-deny-after-flows node=k3d-tesi-e10-calico-vxlan-agent-1
+ === policy and workload chain definitions/rules ===
+ :cali-from-wl-dispatch - [0:0]
+ :cali-from-wl-dispatch-d - [0:0]
+@@ -21,7 +21,7 @@
+ [0:0] -A cali-fw-calidcca500992d -m comment --comment "cali:G3BrrYaJtf311K8k" -m mark --mark 0x0/0x20000 -j cali-po-_vdnIkxgfh8_Emv59EWL
+ [0:0] -A cali-tw-calid706a774681 -m comment --comment "cali:ZB2Evrh26iXCQ4uS" -m mark --mark 0x0/0x20000 -j cali-pi-_0dPptdegtTXt1D_kwEh
+ [0:0] -A cali-tw-calidcca500992d -m comment --comment "cali:6dwwt9xVpLHMh-AM" -m mark --mark 0x0/0x20000 -j cali-pi-_vdnIkxgfh8_Emv59EWL
+-[0:0] -A cali-tw-caliec1544aea47 -m comment --comment "cali:6s5GEFj160zcNg-q" -m mark --mark 0x0/0x20000 -j cali-pi-_ONDeB8oTnBLr7kWeYtF
++[12:720] -A cali-tw-caliec1544aea47 -m comment --comment "cali:6s5GEFj160zcNg-q" -m mark --mark 0x0/0x20000 -j cali-pi-_ONDeB8oTnBLr7kWeYtF
+ === relevant Pod IP occurrences ===
+ [0:0] -A KUBE-SEP-PIHVHRGJYEGUWQGF -s 10.42.144.131/32 -m comment --comment "net-lab/servers:http" -j KUBE-MARK-MASQ
+ [0:0] -A KUBE-SEP-PIHVHRGJYEGUWQGF -p tcp -m comment --comment "net-lab/servers:http" -m tcp -j DNAT --to-destination 10.42.144.131:8080
+
+=== node=agent-1 allow matrix counter delta ===
+--- /tmp/e10-20260805T160549Z/policy-default-deny-plus-allow-before-flows-agent-1-netfilter.log	2026-08-05 19:47:37.098434767 +0200
++++ /tmp/e10-20260805T160549Z/policy-default-deny-plus-allow-after-flows-agent-1-netfilter.log	2026-08-05 19:48:06.942396831 +0200
+@@ -1,4 +1,4 @@
+-timestamp=2026-08-05T19:47:37,083112399+02:00 state=default-deny-plus-allow-before-flows node=k3d-tesi-e10-calico-vxlan-agent-1
++timestamp=2026-08-05T19:48:06,927095997+02:00 state=default-deny-plus-allow-after-flows node=k3d-tesi-e10-calico-vxlan-agent-1
+ === policy and workload chain definitions/rules ===
+ :cali-from-wl-dispatch - [0:0]
+ :cali-from-wl-dispatch-d - [0:0]
+@@ -22,8 +22,8 @@
+ [0:0] -A cali-fw-calidcca500992d -m comment --comment "cali:G3BrrYaJtf311K8k" -m mark --mark 0x0/0x20000 -j cali-po-_vdnIkxgfh8_Emv59EWL
+ [0:0] -A cali-tw-calid706a774681 -m comment --comment "cali:ZB2Evrh26iXCQ4uS" -m mark --mark 0x0/0x20000 -j cali-pi-_0dPptdegtTXt1D_kwEh
+ [0:0] -A cali-tw-calidcca500992d -m comment --comment "cali:6dwwt9xVpLHMh-AM" -m mark --mark 0x0/0x20000 -j cali-pi-_vdnIkxgfh8_Emv59EWL
+-[0:0] -A cali-tw-caliec1544aea47 -m comment --comment "cali:sDxCGP8wxraIxUsp" -m mark --mark 0x0/0x20000 -j cali-pi-_tLi4jLokhxcd6z1A42G
+-[0:0] -A cali-tw-caliec1544aea47 -m comment --comment "cali:WXdxEr1zoKUL1VSJ" -m mark --mark 0x0/0x20000 -j cali-pi-_ONDeB8oTnBLr7kWeYtF
++[8:480] -A cali-tw-caliec1544aea47 -m comment --comment "cali:sDxCGP8wxraIxUsp" -m mark --mark 0x0/0x20000 -j cali-pi-_tLi4jLokhxcd6z1A42G
++[6:360] -A cali-tw-caliec1544aea47 -m comment --comment "cali:WXdxEr1zoKUL1VSJ" -m mark --mark 0x0/0x20000 -j cali-pi-_ONDeB8oTnBLr7kWeYtF
+ === relevant Pod IP occurrences ===
+ [0:0] -A KUBE-SEP-PIHVHRGJYEGUWQGF -s 10.42.144.131/32 -m comment --comment "net-lab/servers:http" -j KUBE-MARK-MASQ
+ [0:0] -A KUBE-SEP-PIHVHRGJYEGUWQGF -p tcp -m comment --comment "net-lab/servers:http" -m tcp -j DNAT --to-destination 10.42.144.131:8080
+

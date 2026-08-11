@@ -1,0 +1,339 @@
+tcpdump: data link type LINUX_SLL2
+tcpdump: listening on any, link-type LINUX_SLL2 (Linux cooked v2), snapshot length 262144 bytes
+2026-08-09 16:59:45.528194 lxc713e3fb92fbd In  ifindex 9 6e:b9:0e:cf:3d:c8 ethertype IPv4 (0x0800), length 80: (tos 0x0, ttl 64, id 50761, offset 0, flags [DF], proto TCP (6), length 60)
+    10.42.0.169.50734 > 10.42.1.199.8080: Flags [S], cksum 0x16f2 (incorrect -> 0x47ff), seq 719008314, win 64860, options [mss 1410,sackOK,TS val 3598242498 ecr 0,nop,wscale 10], length 0
+E..<.I@.@.].
+*..
+*......*.2:.......\...........
+.x.........
+
+2026-08-09 16:59:45.528234 cilium_vxlan Out ifindex 5 6e:b9:0e:cf:3d:c8 ethertype IPv4 (0x0800), length 80: (tos 0x0, ttl 64, id 50761, offset 0, flags [DF], proto TCP (6), length 60)
+    10.42.0.169.50734 > 10.42.1.199.8080: Flags [S], cksum 0x16f2 (incorrect -> 0x47ff), seq 719008314, win 64860, options [mss 1410,sackOK,TS val 3598242498 ecr 0,nop,wscale 10], length 0
+E..<.I@.@.].
+*..
+*......*.2:.......\...........
+.x.........
+
+2026-08-09 16:59:45.528288 eth0  Out ifindex 2 2a:0d:ab:23:d7:03 ethertype IPv4 (0x0800), length 130: (tos 0x0, ttl 64, id 51838, offset 0, flags [none], proto UDP (17), length 110)
+    172.19.0.4.48685 > 172.19.0.3.8472: [no cksum] OTV, flags [I] (0x08), overlay 0, instance 21766
+6e:b9:0e:cf:3d:c8 > 2e:28:35:9b:68:3f, ethertype IPv4 (0x0800), length 74: (tos 0x0, ttl 64, id 50761, offset 0, flags [DF], proto TCP (6), length 60)
+    10.42.0.169.50734 > 10.42.1.199.8080: Flags [S], cksum 0x16f2 (incorrect -> 0x47ff), seq 719008314, win 64860, options [mss 1410,sackOK,TS val 3598242498 ecr 0,nop,wscale 10], length 0
+E..n.~..@.W..........-!..Z.......U...(5.h?n...=...E..<.I@.@.].
+*..
+*......*.2:.......\...........
+.x.........
+
+2026-08-09 16:59:45.528444 eth0  In  ifindex 2 c2:d2:26:0e:96:07 ethertype IPv4 (0x0800), length 130: (tos 0x0, ttl 64, id 27320, offset 0, flags [none], proto UDP (17), length 110)
+    172.19.0.3.36612 > 172.19.0.4.8472: [no cksum] OTV, flags [I] (0x08), overlay 0, instance 16090
+6e:14:1e:d3:61:21 > de:14:11:d3:7a:22, ethertype IPv4 (0x0800), length 74: (tos 0x0, ttl 64, id 0, offset 0, flags [DF], proto TCP (6), length 60)
+    10.42.1.199.8080 > 10.42.0.169.50734: Flags [S.], cksum 0x16f2 (incorrect -> 0x4632), seq 4055198222, ack 719008315, win 64308, options [mss 1410,sackOK,TS val 1384338844 ecr 3598242498,nop,wscale 10], length 0
+E..nj...@.............!..Z.......>......z"n...a!..E..<..@.@.#.
+*..
+*........j.*.2;...4...........
+R.U..x.....
+
+2026-08-09 16:59:45.528460 cilium_vxlan P   ifindex 5 6e:14:1e:d3:61:21 ethertype IPv4 (0x0800), length 80: (tos 0x0, ttl 64, id 0, offset 0, flags [DF], proto TCP (6), length 60)
+    10.42.1.199.8080 > 10.42.0.169.50734: Flags [S.], cksum 0x16f2 (incorrect -> 0x4632), seq 4055198222, ack 719008315, win 64308, options [mss 1410,sackOK,TS val 1384338844 ecr 3598242498,nop,wscale 10], length 0
+E..<..@.@.#.
+*..
+*........j.*.2;...4...........
+R.U..x.....
+
+2026-08-09 16:59:45.528468 lxc713e3fb92fbd Out ifindex 9 2e:28:35:9b:68:3f ethertype IPv4 (0x0800), length 80: (tos 0x0, ttl 63, id 0, offset 0, flags [DF], proto TCP (6), length 60)
+    10.42.1.199.8080 > 10.42.0.169.50734: Flags [S.], cksum 0x16f2 (incorrect -> 0x4632), seq 4055198222, ack 719008315, win 64308, options [mss 1410,sackOK,TS val 1384338844 ecr 3598242498,nop,wscale 10], length 0
+E..<..@.?.$.
+*..
+*........j.*.2;...4...........
+R.U..x.....
+
+2026-08-09 16:59:45.528487 lxc713e3fb92fbd In  ifindex 9 6e:b9:0e:cf:3d:c8 ethertype IPv4 (0x0800), length 72: (tos 0x0, ttl 64, id 50762, offset 0, flags [DF], proto TCP (6), length 52)
+    10.42.0.169.50734 > 10.42.1.199.8080: Flags [.], cksum 0x16ea (incorrect -> 0x6fc4), seq 1, ack 1, win 64, options [nop,nop,TS val 3598242498 ecr 1384338844], length 0
+E..4.J@.@.].
+*..
+*......*.2;..j....@.......
+.x..R.U.
+2026-08-09 16:59:45.528494 cilium_vxlan Out ifindex 5 6e:b9:0e:cf:3d:c8 ethertype IPv4 (0x0800), length 72: (tos 0x0, ttl 64, id 50762, offset 0, flags [DF], proto TCP (6), length 52)
+    10.42.0.169.50734 > 10.42.1.199.8080: Flags [.], cksum 0x16ea (incorrect -> 0x6fc4), seq 1, ack 1, win 64, options [nop,nop,TS val 3598242498 ecr 1384338844], length 0
+E..4.J@.@.].
+*..
+*......*.2;..j....@.......
+.x..R.U.
+2026-08-09 16:59:45.528500 eth0  Out ifindex 2 2a:0d:ab:23:d7:03 ethertype IPv4 (0x0800), length 122: (tos 0x0, ttl 64, id 51839, offset 0, flags [none], proto UDP (17), length 102)
+    172.19.0.4.48685 > 172.19.0.3.8472: [no cksum] OTV, flags [I] (0x08), overlay 0, instance 21766
+6e:b9:0e:cf:3d:c8 > 2e:28:35:9b:68:3f, ethertype IPv4 (0x0800), length 66: (tos 0x0, ttl 64, id 50762, offset 0, flags [DF], proto TCP (6), length 52)
+    10.42.0.169.50734 > 10.42.1.199.8080: Flags [.], cksum 0x16ea (incorrect -> 0x6fc4), seq 1, ack 1, win 64, options [nop,nop,TS val 3598242498 ecr 1384338844], length 0
+E..f....@.W..........-!..R.......U...(5.h?n...=...E..4.J@.@.].
+*..
+*......*.2;..j....@.......
+.x..R.U.
+2026-08-09 16:59:45.528598 lxc713e3fb92fbd In  ifindex 9 6e:b9:0e:cf:3d:c8 ethertype IPv4 (0x0800), length 151: (tos 0x0, ttl 64, id 50763, offset 0, flags [DF], proto TCP (6), length 131)
+    10.42.0.169.50734 > 10.42.1.199.8080: Flags [P.], cksum 0x1739 (incorrect -> 0xb9f9), seq 1:80, ack 1, win 64, options [nop,nop,TS val 3598242498 ecr 1384338844], length 79: HTTP, length: 79
+	GET / HTTP/1.1
+	Host: 10.42.1.199:8080
+	User-Agent: Wget
+	Connection: close
+	
+E....K@.@.]f
+*..
+*......*.2;..j....@.9.....
+.x..R.U.GET / HTTP/1.1
+Host: 10.42.1.199:8080
+User-Agent: Wget
+Connection: close
+
+
+2026-08-09 16:59:45.528620 cilium_vxlan Out ifindex 5 6e:b9:0e:cf:3d:c8 ethertype IPv4 (0x0800), length 151: (tos 0x0, ttl 64, id 50763, offset 0, flags [DF], proto TCP (6), length 131)
+    10.42.0.169.50734 > 10.42.1.199.8080: Flags [P.], cksum 0x1739 (incorrect -> 0xb9f9), seq 1:80, ack 1, win 64, options [nop,nop,TS val 3598242498 ecr 1384338844], length 79: HTTP, length: 79
+	GET / HTTP/1.1
+	Host: 10.42.1.199:8080
+	User-Agent: Wget
+	Connection: close
+	
+E....K@.@.]f
+*..
+*......*.2;..j....@.9.....
+.x..R.U.GET / HTTP/1.1
+Host: 10.42.1.199:8080
+User-Agent: Wget
+Connection: close
+
+
+2026-08-09 16:59:45.528628 eth0  Out ifindex 2 2a:0d:ab:23:d7:03 ethertype IPv4 (0x0800), length 201: (tos 0x0, ttl 64, id 51840, offset 0, flags [none], proto UDP (17), length 181)
+    172.19.0.4.48685 > 172.19.0.3.8472: [no cksum] OTV, flags [I] (0x08), overlay 0, instance 21766
+6e:b9:0e:cf:3d:c8 > 2e:28:35:9b:68:3f, ethertype IPv4 (0x0800), length 145: (tos 0x0, ttl 64, id 50763, offset 0, flags [DF], proto TCP (6), length 131)
+    10.42.0.169.50734 > 10.42.1.199.8080: Flags [P.], cksum 0x1739 (incorrect -> 0xb9f9), seq 1:80, ack 1, win 64, options [nop,nop,TS val 3598242498 ecr 1384338844], length 79: HTTP, length: 79
+	GET / HTTP/1.1
+	Host: 10.42.1.199:8080
+	User-Agent: Wget
+	Connection: close
+	
+E.......@.W..........-!..........U...(5.h?n...=...E....K@.@.]f
+*..
+*......*.2;..j....@.9.....
+.x..R.U.GET / HTTP/1.1
+Host: 10.42.1.199:8080
+User-Agent: Wget
+Connection: close
+
+
+2026-08-09 16:59:45.528690 eth0  In  ifindex 2 c2:d2:26:0e:96:07 ethertype IPv4 (0x0800), length 122: (tos 0x0, ttl 64, id 27321, offset 0, flags [none], proto UDP (17), length 102)
+    172.19.0.3.36612 > 172.19.0.4.8472: [no cksum] OTV, flags [I] (0x08), overlay 0, instance 16090
+6e:14:1e:d3:61:21 > de:14:11:d3:7a:22, ethertype IPv4 (0x0800), length 66: (tos 0x0, ttl 64, id 54120, offset 0, flags [DF], proto TCP (6), length 52)
+    10.42.1.199.8080 > 10.42.0.169.50734: Flags [.], cksum 0x16ea (incorrect -> 0x6f75), seq 1, ack 80, win 63, options [nop,nop,TS val 1384338845 ecr 3598242498], length 0
+E..fj...@.............!..R.......>......z"n...a!..E..4.h@.@.P.
+*..
+*........j.*.2....?.......
+R.U..x..
+2026-08-09 16:59:45.528701 cilium_vxlan P   ifindex 5 6e:14:1e:d3:61:21 ethertype IPv4 (0x0800), length 72: (tos 0x0, ttl 64, id 54120, offset 0, flags [DF], proto TCP (6), length 52)
+    10.42.1.199.8080 > 10.42.0.169.50734: Flags [.], cksum 0x16ea (incorrect -> 0x6f75), seq 1, ack 80, win 63, options [nop,nop,TS val 1384338845 ecr 3598242498], length 0
+E..4.h@.@.P.
+*..
+*........j.*.2....?.......
+R.U..x..
+2026-08-09 16:59:45.528705 lxc713e3fb92fbd Out ifindex 9 2e:28:35:9b:68:3f ethertype IPv4 (0x0800), length 72: (tos 0x0, ttl 63, id 54120, offset 0, flags [DF], proto TCP (6), length 52)
+    10.42.1.199.8080 > 10.42.0.169.50734: Flags [.], cksum 0x16ea (incorrect -> 0x6f75), seq 1, ack 80, win 63, options [nop,nop,TS val 1384338845 ecr 3598242498], length 0
+E..4.h@.?.Q.
+*..
+*........j.*.2....?.......
+R.U..x..
+2026-08-09 16:59:45.529173 eth0  In  ifindex 2 c2:d2:26:0e:96:07 ethertype IPv4 (0x0800), length 329: (tos 0x0, ttl 64, id 27322, offset 0, flags [none], proto UDP (17), length 309)
+    172.19.0.3.36612 > 172.19.0.4.8472: [no cksum] OTV, flags [I] (0x08), overlay 0, instance 16090
+6e:14:1e:d3:61:21 > de:14:11:d3:7a:22, ethertype IPv4 (0x0800), length 273: (tos 0x0, ttl 64, id 54121, offset 0, flags [DF], proto TCP (6), length 259)
+    10.42.1.199.8080 > 10.42.0.169.50734: Flags [P.], cksum 0x17b9 (incorrect -> 0x98d9), seq 1:208, ack 80, win 63, options [nop,nop,TS val 1384338845 ecr 3598242498], length 207: HTTP, length: 207
+	HTTP/1.1 200 OK
+	Date: Sun, 09 Aug 2026 14:59:45 GMT
+	Connection: close
+	Content-type: text/html
+	Accept-Ranges: bytes
+	Last-Modified: Sun, 09 Aug 2026 14:16:53 GMT
+	ETag: "6a788bd5-9"
+	Content-Length: 9
+	
+E..5j...@.............!..!.......>......z"n...a!..E....i@.@.O.
+*..
+*........j.*.2....?.......
+R.U..x..HTTP/1.1 200 OK
+Date: Sun, 09 Aug 2026 14:59:45 GMT
+Connection: close
+Content-type: text/html
+Accept-Ranges: bytes
+Last-Modified: Sun, 09 Aug 2026 14:16:53 GMT
+ETag: "6a788bd5-9"
+Content-Length: 9
+
+
+2026-08-09 16:59:45.529191 cilium_vxlan P   ifindex 5 6e:14:1e:d3:61:21 ethertype IPv4 (0x0800), length 279: (tos 0x0, ttl 64, id 54121, offset 0, flags [DF], proto TCP (6), length 259)
+    10.42.1.199.8080 > 10.42.0.169.50734: Flags [P.], cksum 0x17b9 (incorrect -> 0x98d9), seq 1:208, ack 80, win 63, options [nop,nop,TS val 1384338845 ecr 3598242498], length 207: HTTP, length: 207
+	HTTP/1.1 200 OK
+	Date: Sun, 09 Aug 2026 14:59:45 GMT
+	Connection: close
+	Content-type: text/html
+	Accept-Ranges: bytes
+	Last-Modified: Sun, 09 Aug 2026 14:16:53 GMT
+	ETag: "6a788bd5-9"
+	Content-Length: 9
+	
+E....i@.@.O.
+*..
+*........j.*.2....?.......
+R.U..x..HTTP/1.1 200 OK
+Date: Sun, 09 Aug 2026 14:59:45 GMT
+Connection: close
+Content-type: text/html
+Accept-Ranges: bytes
+Last-Modified: Sun, 09 Aug 2026 14:16:53 GMT
+ETag: "6a788bd5-9"
+Content-Length: 9
+
+
+2026-08-09 16:59:45.529205 lxc713e3fb92fbd Out ifindex 9 2e:28:35:9b:68:3f ethertype IPv4 (0x0800), length 279: (tos 0x0, ttl 63, id 54121, offset 0, flags [DF], proto TCP (6), length 259)
+    10.42.1.199.8080 > 10.42.0.169.50734: Flags [P.], cksum 0x17b9 (incorrect -> 0x98d9), seq 1:208, ack 80, win 63, options [nop,nop,TS val 1384338845 ecr 3598242498], length 207: HTTP, length: 207
+	HTTP/1.1 200 OK
+	Date: Sun, 09 Aug 2026 14:59:45 GMT
+	Connection: close
+	Content-type: text/html
+	Accept-Ranges: bytes
+	Last-Modified: Sun, 09 Aug 2026 14:16:53 GMT
+	ETag: "6a788bd5-9"
+	Content-Length: 9
+	
+E....i@.?.P.
+*..
+*........j.*.2....?.......
+R.U..x..HTTP/1.1 200 OK
+Date: Sun, 09 Aug 2026 14:59:45 GMT
+Connection: close
+Content-type: text/html
+Accept-Ranges: bytes
+Last-Modified: Sun, 09 Aug 2026 14:16:53 GMT
+ETag: "6a788bd5-9"
+Content-Length: 9
+
+
+2026-08-09 16:59:45.529220 lxc713e3fb92fbd In  ifindex 9 6e:b9:0e:cf:3d:c8 ethertype IPv4 (0x0800), length 72: (tos 0x0, ttl 64, id 50764, offset 0, flags [DF], proto TCP (6), length 52)
+    10.42.0.169.50734 > 10.42.1.199.8080: Flags [.], cksum 0x16ea (incorrect -> 0x6ea4), seq 80, ack 208, win 64, options [nop,nop,TS val 3598242499 ecr 1384338845], length 0
+E..4.L@.@.].
+*..
+*......*.2...j....@.......
+.x..R.U.
+2026-08-09 16:59:45.529228 cilium_vxlan Out ifindex 5 6e:b9:0e:cf:3d:c8 ethertype IPv4 (0x0800), length 72: (tos 0x0, ttl 64, id 50764, offset 0, flags [DF], proto TCP (6), length 52)
+    10.42.0.169.50734 > 10.42.1.199.8080: Flags [.], cksum 0x16ea (incorrect -> 0x6ea4), seq 80, ack 208, win 64, options [nop,nop,TS val 3598242499 ecr 1384338845], length 0
+E..4.L@.@.].
+*..
+*......*.2...j....@.......
+.x..R.U.
+2026-08-09 16:59:45.529235 eth0  Out ifindex 2 2a:0d:ab:23:d7:03 ethertype IPv4 (0x0800), length 122: (tos 0x0, ttl 64, id 51841, offset 0, flags [none], proto UDP (17), length 102)
+    172.19.0.4.48685 > 172.19.0.3.8472: [no cksum] OTV, flags [I] (0x08), overlay 0, instance 21766
+6e:b9:0e:cf:3d:c8 > 2e:28:35:9b:68:3f, ethertype IPv4 (0x0800), length 66: (tos 0x0, ttl 64, id 50764, offset 0, flags [DF], proto TCP (6), length 52)
+    10.42.0.169.50734 > 10.42.1.199.8080: Flags [.], cksum 0x16ea (incorrect -> 0x6ea4), seq 80, ack 208, win 64, options [nop,nop,TS val 3598242499 ecr 1384338845], length 0
+E..f....@.W..........-!..R.......U...(5.h?n...=...E..4.L@.@.].
+*..
+*......*.2...j....@.......
+.x..R.U.
+2026-08-09 16:59:45.529308 eth0  In  ifindex 2 c2:d2:26:0e:96:07 ethertype IPv4 (0x0800), length 131: (tos 0x0, ttl 64, id 27323, offset 0, flags [none], proto UDP (17), length 111)
+    172.19.0.3.36612 > 172.19.0.4.8472: [no cksum] OTV, flags [I] (0x08), overlay 0, instance 16090
+6e:14:1e:d3:61:21 > de:14:11:d3:7a:22, ethertype IPv4 (0x0800), length 75: (tos 0x0, ttl 64, id 54122, offset 0, flags [DF], proto TCP (6), length 61)
+    10.42.1.199.8080 > 10.42.0.169.50734: Flags [P.], cksum 0x16f3 (incorrect -> 0xebe3), seq 208:217, ack 80, win 63, options [nop,nop,TS val 1384338845 ecr 3598242499], length 9: HTTP
+E..oj...@.............!..[.......>......z"n...a!..E..=.j@.@.P.
+*..
+*........j.*.2....?.......
+R.U..x..server-b
+
+2026-08-09 16:59:45.529314 cilium_vxlan P   ifindex 5 6e:14:1e:d3:61:21 ethertype IPv4 (0x0800), length 81: (tos 0x0, ttl 64, id 54122, offset 0, flags [DF], proto TCP (6), length 61)
+    10.42.1.199.8080 > 10.42.0.169.50734: Flags [P.], cksum 0x16f3 (incorrect -> 0xebe3), seq 208:217, ack 80, win 63, options [nop,nop,TS val 1384338845 ecr 3598242499], length 9: HTTP
+E..=.j@.@.P.
+*..
+*........j.*.2....?.......
+R.U..x..server-b
+
+2026-08-09 16:59:45.529316 lxc713e3fb92fbd Out ifindex 9 2e:28:35:9b:68:3f ethertype IPv4 (0x0800), length 81: (tos 0x0, ttl 63, id 54122, offset 0, flags [DF], proto TCP (6), length 61)
+    10.42.1.199.8080 > 10.42.0.169.50734: Flags [P.], cksum 0x16f3 (incorrect -> 0xebe3), seq 208:217, ack 80, win 63, options [nop,nop,TS val 1384338845 ecr 3598242499], length 9: HTTP
+E..=.j@.?.Q.
+*..
+*........j.*.2....?.......
+R.U..x..server-b
+
+2026-08-09 16:59:45.529322 lxc713e3fb92fbd In  ifindex 9 6e:b9:0e:cf:3d:c8 ethertype IPv4 (0x0800), length 72: (tos 0x0, ttl 64, id 50765, offset 0, flags [DF], proto TCP (6), length 52)
+    10.42.0.169.50734 > 10.42.1.199.8080: Flags [.], cksum 0x16ea (incorrect -> 0x6e9b), seq 80, ack 217, win 64, options [nop,nop,TS val 3598242499 ecr 1384338845], length 0
+E..4.M@.@.].
+*..
+*......*.2...j....@.......
+.x..R.U.
+2026-08-09 16:59:45.529325 cilium_vxlan Out ifindex 5 6e:b9:0e:cf:3d:c8 ethertype IPv4 (0x0800), length 72: (tos 0x0, ttl 64, id 50765, offset 0, flags [DF], proto TCP (6), length 52)
+    10.42.0.169.50734 > 10.42.1.199.8080: Flags [.], cksum 0x16ea (incorrect -> 0x6e9b), seq 80, ack 217, win 64, options [nop,nop,TS val 3598242499 ecr 1384338845], length 0
+E..4.M@.@.].
+*..
+*......*.2...j....@.......
+.x..R.U.
+2026-08-09 16:59:45.529328 eth0  Out ifindex 2 2a:0d:ab:23:d7:03 ethertype IPv4 (0x0800), length 122: (tos 0x0, ttl 64, id 51842, offset 0, flags [none], proto UDP (17), length 102)
+    172.19.0.4.48685 > 172.19.0.3.8472: [no cksum] OTV, flags [I] (0x08), overlay 0, instance 21766
+6e:b9:0e:cf:3d:c8 > 2e:28:35:9b:68:3f, ethertype IPv4 (0x0800), length 66: (tos 0x0, ttl 64, id 50765, offset 0, flags [DF], proto TCP (6), length 52)
+    10.42.0.169.50734 > 10.42.1.199.8080: Flags [.], cksum 0x16ea (incorrect -> 0x6e9b), seq 80, ack 217, win 64, options [nop,nop,TS val 3598242499 ecr 1384338845], length 0
+E..f....@.W..........-!..R.......U...(5.h?n...=...E..4.M@.@.].
+*..
+*......*.2...j....@.......
+.x..R.U.
+2026-08-09 16:59:45.529373 eth0  In  ifindex 2 c2:d2:26:0e:96:07 ethertype IPv4 (0x0800), length 122: (tos 0x0, ttl 64, id 27324, offset 0, flags [none], proto UDP (17), length 102)
+    172.19.0.3.36612 > 172.19.0.4.8472: [no cksum] OTV, flags [I] (0x08), overlay 0, instance 16090
+6e:14:1e:d3:61:21 > de:14:11:d3:7a:22, ethertype IPv4 (0x0800), length 66: (tos 0x0, ttl 64, id 54123, offset 0, flags [DF], proto TCP (6), length 52)
+    10.42.1.199.8080 > 10.42.0.169.50734: Flags [F.], cksum 0x16ea (incorrect -> 0x6e9b), seq 217, ack 80, win 63, options [nop,nop,TS val 1384338845 ecr 3598242499], length 0
+E..fj...@.............!..R.......>......z"n...a!..E..4.k@.@.P.
+*..
+*........j.*.2....?.......
+R.U..x..
+2026-08-09 16:59:45.529378 cilium_vxlan P   ifindex 5 6e:14:1e:d3:61:21 ethertype IPv4 (0x0800), length 72: (tos 0x0, ttl 64, id 54123, offset 0, flags [DF], proto TCP (6), length 52)
+    10.42.1.199.8080 > 10.42.0.169.50734: Flags [F.], cksum 0x16ea (incorrect -> 0x6e9b), seq 217, ack 80, win 63, options [nop,nop,TS val 1384338845 ecr 3598242499], length 0
+E..4.k@.@.P.
+*..
+*........j.*.2....?.......
+R.U..x..
+2026-08-09 16:59:45.529384 lxc713e3fb92fbd Out ifindex 9 2e:28:35:9b:68:3f ethertype IPv4 (0x0800), length 72: (tos 0x0, ttl 63, id 54123, offset 0, flags [DF], proto TCP (6), length 52)
+    10.42.1.199.8080 > 10.42.0.169.50734: Flags [F.], cksum 0x16ea (incorrect -> 0x6e9b), seq 217, ack 80, win 63, options [nop,nop,TS val 1384338845 ecr 3598242499], length 0
+E..4.k@.?.Q.
+*..
+*........j.*.2....?.......
+R.U..x..
+2026-08-09 16:59:45.550885 lxc713e3fb92fbd In  ifindex 9 6e:b9:0e:cf:3d:c8 ethertype IPv4 (0x0800), length 72: (tos 0x0, ttl 64, id 50766, offset 0, flags [DF], proto TCP (6), length 52)
+    10.42.0.169.50734 > 10.42.1.199.8080: Flags [F.], cksum 0x16ea (incorrect -> 0x6e83), seq 80, ack 218, win 64, options [nop,nop,TS val 3598242521 ecr 1384338845], length 0
+E..4.N@.@.].
+*..
+*......*.2...j....@.......
+.x..R.U.
+2026-08-09 16:59:45.550903 cilium_vxlan Out ifindex 5 6e:b9:0e:cf:3d:c8 ethertype IPv4 (0x0800), length 72: (tos 0x0, ttl 64, id 50766, offset 0, flags [DF], proto TCP (6), length 52)
+    10.42.0.169.50734 > 10.42.1.199.8080: Flags [F.], cksum 0x16ea (incorrect -> 0x6e83), seq 80, ack 218, win 64, options [nop,nop,TS val 3598242521 ecr 1384338845], length 0
+E..4.N@.@.].
+*..
+*......*.2...j....@.......
+.x..R.U.
+2026-08-09 16:59:45.550918 eth0  Out ifindex 2 2a:0d:ab:23:d7:03 ethertype IPv4 (0x0800), length 122: (tos 0x0, ttl 64, id 51853, offset 0, flags [none], proto UDP (17), length 102)
+    172.19.0.4.48685 > 172.19.0.3.8472: [no cksum] OTV, flags [I] (0x08), overlay 0, instance 21766
+6e:b9:0e:cf:3d:c8 > 2e:28:35:9b:68:3f, ethertype IPv4 (0x0800), length 66: (tos 0x0, ttl 64, id 50766, offset 0, flags [DF], proto TCP (6), length 52)
+    10.42.0.169.50734 > 10.42.1.199.8080: Flags [F.], cksum 0x16ea (incorrect -> 0x6e83), seq 80, ack 218, win 64, options [nop,nop,TS val 3598242521 ecr 1384338845], length 0
+E..f....@.W..........-!..R.......U...(5.h?n...=...E..4.N@.@.].
+*..
+*......*.2...j....@.......
+.x..R.U.
+2026-08-09 16:59:45.551034 eth0  In  ifindex 2 c2:d2:26:0e:96:07 ethertype IPv4 (0x0800), length 122: (tos 0x0, ttl 64, id 27341, offset 0, flags [none], proto UDP (17), length 102)
+    172.19.0.3.36612 > 172.19.0.4.8472: [no cksum] OTV, flags [I] (0x08), overlay 0, instance 16090
+6e:14:1e:d3:61:21 > de:14:11:d3:7a:22, ethertype IPv4 (0x0800), length 66: (tos 0x0, ttl 64, id 54124, offset 0, flags [DF], proto TCP (6), length 52)
+    10.42.1.199.8080 > 10.42.0.169.50734: Flags [.], cksum 0x16ea (incorrect -> 0x6e6e), seq 218, ack 81, win 63, options [nop,nop,TS val 1384338867 ecr 3598242521], length 0
+E..fj...@.............!..R.......>......z"n...a!..E..4.l@.@.P.
+*..
+*........j.*.2....?.......
+R.U..x..
+2026-08-09 16:59:45.551049 cilium_vxlan P   ifindex 5 6e:14:1e:d3:61:21 ethertype IPv4 (0x0800), length 72: (tos 0x0, ttl 64, id 54124, offset 0, flags [DF], proto TCP (6), length 52)
+    10.42.1.199.8080 > 10.42.0.169.50734: Flags [.], cksum 0x16ea (incorrect -> 0x6e6e), seq 218, ack 81, win 63, options [nop,nop,TS val 1384338867 ecr 3598242521], length 0
+E..4.l@.@.P.
+*..
+*........j.*.2....?.......
+R.U..x..
+2026-08-09 16:59:45.551056 lxc713e3fb92fbd Out ifindex 9 2e:28:35:9b:68:3f ethertype IPv4 (0x0800), length 72: (tos 0x0, ttl 63, id 54124, offset 0, flags [DF], proto TCP (6), length 52)
+    10.42.1.199.8080 > 10.42.0.169.50734: Flags [.], cksum 0x16ea (incorrect -> 0x6e6e), seq 218, ack 81, win 63, options [nop,nop,TS val 1384338867 ecr 3598242521], length 0
+E..4.l@.?.Q.
+*..
+*........j.*.2....?.......
+R.U..x..
+
+36 packets captured
+36 packets received by filter
+0 packets dropped by kernel

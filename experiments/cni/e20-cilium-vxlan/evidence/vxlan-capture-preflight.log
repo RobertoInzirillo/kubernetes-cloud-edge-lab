@@ -1,0 +1,22 @@
+timestamp=2026-08-09T16:54:23,221382158+02:00
+terminal_profile=unconfined
+=== residual diagnostic processes ===
+=== runtime identities ===
+client_node=k3d-tesi-e20-cilium-vxlan-agent-0
+server_b_node=k3d-tesi-e20-cilium-vxlan-agent-1
+client_ip=10.42.0.169
+server_b_ip=10.42.1.199
+cilium_pod=cilium-sdlx7
+client_endpoint_id=393
+client_veth=
+node_pid=1895
+node_running=true
+source_underlay=172.19.0.4
+destination_underlay=172.19.0.3
+=== actual VXLAN interface from Cilium agent network namespace ===
+5: cilium_vxlan: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UNKNOWN mode DEFAULT group default 
+    link/ether 8a:1c:8a:17:2c:92 brd ff:ff:ff:ff:ff:ff promiscuity 0  allmulti 0 minmtu 68 maxmtu 65535 
+    vxlan external id 0 fan-map srcport 0 0 dstport 8472 nolearning ttl auto ageing 300 udpcsum noudp6zerocsumtx noudp6zerocsumrx addrgenmode eui64 numtxqueues 1 numrxqueues 1 gso_max_size 65536 gso_max_segs 65535 tso_max_size 65536 tso_max_segs 65535 gro_max_size 65536 
+=== Cilium tunnel status ===
+Routing:                Network: Tunnel [vxlan]   Host: Legacy
+Attach Mode:            TCX

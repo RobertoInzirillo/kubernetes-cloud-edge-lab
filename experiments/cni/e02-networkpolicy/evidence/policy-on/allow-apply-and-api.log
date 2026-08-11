@@ -1,0 +1,67 @@
+apply_timestamp=2026-08-04T18:24:03,453844569+02:00
+networkpolicy.networking.k8s.io/allow-client-to-http-servers created
+
+== API objects ==
+apiVersion: v1
+items:
+- apiVersion: networking.k8s.io/v1
+  kind: NetworkPolicy
+  metadata:
+    annotations:
+      kubectl.kubernetes.io/last-applied-configuration: |
+        {"apiVersion":"networking.k8s.io/v1","kind":"NetworkPolicy","metadata":{"annotations":{},"name":"allow-client-to-http-servers","namespace":"net-lab"},"spec":{"ingress":[{"from":[{"podSelector":{"matchLabels":{"app.kubernetes.io/name":"network-client"}}}],"ports":[{"port":8080,"protocol":"TCP"}]}],"podSelector":{"matchLabels":{"app.kubernetes.io/name":"http-server"}},"policyTypes":["Ingress"]}}
+    creationTimestamp: "2026-08-04T16:24:03Z"
+    generation: 1
+    name: allow-client-to-http-servers
+    namespace: net-lab
+    resourceVersion: "1526"
+    uid: a63d50b6-d5e4-4b0c-89ba-2b477a8a4e63
+  spec:
+    ingress:
+    - from:
+      - podSelector:
+          matchLabels:
+            app.kubernetes.io/name: network-client
+      ports:
+      - port: 8080
+        protocol: TCP
+    podSelector:
+      matchLabels:
+        app.kubernetes.io/name: http-server
+    policyTypes:
+    - Ingress
+- apiVersion: networking.k8s.io/v1
+  kind: NetworkPolicy
+  metadata:
+    annotations:
+      kubectl.kubernetes.io/last-applied-configuration: |
+        {"apiVersion":"networking.k8s.io/v1","kind":"NetworkPolicy","metadata":{"annotations":{},"name":"default-deny-ingress","namespace":"net-lab"},"spec":{"podSelector":{},"policyTypes":["Ingress"]}}
+    creationTimestamp: "2026-08-04T16:20:57Z"
+    generation: 1
+    name: default-deny-ingress
+    namespace: net-lab
+    resourceVersion: "1430"
+    uid: b015131a-9427-476f-ba4e-d190f02eb75d
+  spec:
+    podSelector: {}
+    policyTypes:
+    - Ingress
+kind: List
+metadata:
+  resourceVersion: ""
+
+== default-deny manifest/API diff ==
+default_deny_diff_exit=0
+
+== allow manifest/API diff ==
+allow_diff_exit=0
+
+== exact allow semantic fields ==
+name=allow-client-to-http-servers
+namespace=net-lab
+podSelector={"app.kubernetes.io/name":"http-server"}
+policyTypes=["Ingress"]
+fromSelector={"app.kubernetes.io/name":"network-client"}
+protocol=TCP
+port=8080
+policy_count=2

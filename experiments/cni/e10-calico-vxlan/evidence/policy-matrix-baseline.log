@@ -1,0 +1,25 @@
+state=baseline expectation=all-allow
+client_ip=10.42.113.67 server_a_ip=10.42.113.68 server_b_ip=10.42.144.131
+
+timestamp=2026-08-05T19:45:35,854145660+02:00 state=baseline attempt=1 source=client destination=server-a destination_ip=10.42.113.68 expected_result=allow expected_body=server-a observed_body=server-a exit_code=0 duration_ms=179 destination_ready=true destination_restarts=0
+
+timestamp=2026-08-05T19:45:36,278200616+02:00 state=baseline attempt=2 source=client destination=server-a destination_ip=10.42.113.68 expected_result=allow expected_body=server-a observed_body=server-a exit_code=0 duration_ms=144 destination_ready=true destination_restarts=0
+
+timestamp=2026-08-05T19:45:36,604346621+02:00 state=baseline attempt=1 source=client destination=server-b destination_ip=10.42.144.131 expected_result=allow expected_body=server-b observed_body=server-b exit_code=0 duration_ms=437 destination_ready=true destination_restarts=0
+
+timestamp=2026-08-05T19:45:37,383834119+02:00 state=baseline attempt=2 source=client destination=server-b destination_ip=10.42.144.131 expected_result=allow expected_body=server-b observed_body=server-b exit_code=0 duration_ms=236 destination_ready=true destination_restarts=0
+
+timestamp=2026-08-05T19:45:37,975610226+02:00 state=baseline attempt=1 source=server-a destination=server-b destination_ip=10.42.144.131 expected_result=allow expected_body=server-b observed_body=server-b exit_code=0 duration_ms=291 destination_ready=true destination_restarts=0
+
+timestamp=2026-08-05T19:45:38,574612763+02:00 state=baseline attempt=2 source=server-a destination=server-b destination_ip=10.42.144.131 expected_result=allow expected_body=server-b observed_body=server-b exit_code=0 duration_ms=297 destination_ready=true destination_restarts=0
+
+=== final stability ===
+NAME       READY   STATUS    RESTARTS   AGE   IP              NODE                                NOMINATED NODE   READINESS GATES
+client     1/1     Running   0          30m   10.42.113.67    k3d-tesi-e10-calico-vxlan-agent-0   <none>           <none>
+server-a   1/1     Running   0          30m   10.42.113.68    k3d-tesi-e10-calico-vxlan-agent-0   <none>           <none>
+server-b   1/1     Running   0          30m   10.42.144.131   k3d-tesi-e10-calico-vxlan-agent-1   <none>           <none>
+NAME                                 STATUS   ROLES           AGE   VERSION
+k3d-tesi-e10-calico-vxlan-agent-0    Ready    <none>          81m   v1.34.9+k3s1
+k3d-tesi-e10-calico-vxlan-agent-1    Ready    <none>          81m   v1.34.9+k3s1
+k3d-tesi-e10-calico-vxlan-server-0   Ready    control-plane   81m   v1.34.9+k3s1
+matrix_exit=0

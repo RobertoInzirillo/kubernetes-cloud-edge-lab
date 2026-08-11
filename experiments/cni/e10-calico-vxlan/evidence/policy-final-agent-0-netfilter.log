@@ -1,0 +1,155 @@
+timestamp=2026-08-05T19:49:04,807497497+02:00 state=final-corrected-filter node=k3d-tesi-e10-calico-vxlan-agent-0
+=== policy and workload chain definitions/rules ===
+:cali-from-wl-dispatch - [0:0]
+:cali-fw-cali0b35f5e0bfa - [0:0]
+:cali-fw-cali2f026170013 - [0:0]
+:cali-fw-cali651ff5ba98e - [0:0]
+:cali-fw-cali88e0f7680da - [0:0]
+:cali-pi-_0dPptdegtTXt1D_kwEh - [0:0]
+:cali-pi-_ONDeB8oTnBLr7kWeYtF - [0:0]
+:cali-pi-_tLi4jLokhxcd6z1A42G - [0:0]
+:cali-pi-_vdnIkxgfh8_Emv59EWL - [0:0]
+:cali-po-_0dPptdegtTXt1D_kwEh - [0:0]
+:cali-po-_vdnIkxgfh8_Emv59EWL - [0:0]
+:cali-pri-kns.net-lab - [0:0]
+:cali-pro-kns.net-lab - [0:0]
+:cali-to-wl-dispatch - [0:0]
+:cali-tw-cali0b35f5e0bfa - [0:0]
+:cali-tw-cali2f026170013 - [0:0]
+:cali-tw-cali651ff5ba98e - [0:0]
+:cali-tw-cali88e0f7680da - [0:0]
+[3086:1270006] -A cali-from-wl-dispatch -i cali0b35f5e0bfa -m comment --comment "cali:cdXrs_a2RKEAZYED" -g cali-fw-cali0b35f5e0bfa
+[70:5546] -A cali-from-wl-dispatch -i cali2f026170013 -m comment --comment "cali:WQs_tM6kzs9-Zg5b" -g cali-fw-cali2f026170013
+[118:7682] -A cali-from-wl-dispatch -i cali651ff5ba98e -m comment --comment "cali:napE3vBKQ09qrKvU" -g cali-fw-cali651ff5ba98e
+[0:0] -A cali-from-wl-dispatch -i cali88e0f7680da -m comment --comment "cali:DO4HXA7yv7iZLLqO" -g cali-fw-cali88e0f7680da
+[0:0] -A cali-from-wl-dispatch -m comment --comment "cali:SdcCSq7upKK5kPMs" -m comment --comment "Unknown interface" -j DROP
+[5934:2500634] -A cali-fw-cali0b35f5e0bfa -m comment --comment "cali:exImeNgztPU1T0al" -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+[0:0] -A cali-fw-cali0b35f5e0bfa -m comment --comment "cali:S0s0GwkmYMiRetqB" -m conntrack --ctstate INVALID -j DROP
+[0:0] -A cali-fw-cali0b35f5e0bfa -m comment --comment "cali:badvR1uAw4Py2WBg" -j MARK --set-xmark 0x0/0x30000
+[0:0] -A cali-fw-cali0b35f5e0bfa -p udp -m comment --comment "cali:kKdO1kBee6TS0Gkx" -m comment --comment "Drop VXLAN encapped packets originating in workloads" -m multiport --dports 4789 -j DROP
+[0:0] -A cali-fw-cali0b35f5e0bfa -p 4 -m comment --comment "cali:G9RVsKsk0hoIvIG_" -m comment --comment "Drop IPinIP encapped packets originating in workloads" -j DROP
+[0:0] -A cali-fw-cali0b35f5e0bfa -m comment --comment "cali:2BgI87pOUz3M_7G_" -m comment --comment "Start of tier calico-system" -j MARK --set-xmark 0x0/0x20000
+[0:0] -A cali-fw-cali0b35f5e0bfa -m comment --comment "cali:EDDyk_FOrgd3psMC" -m mark --mark 0x0/0x20000 -j cali-po-_vdnIkxgfh8_Emv59EWL
+[0:0] -A cali-fw-cali0b35f5e0bfa -m comment --comment "cali:8Cty6R_f2PK0vqcA" -m comment --comment "Return if policy accepted" -m mark --mark 0x10000/0x10000 -j RETURN
+[0:0] -A cali-fw-cali0b35f5e0bfa -m comment --comment "cali:_kxMVrbghi3BiiR2" -m comment --comment "End of tier calico-system. Drop if no policies passed packet" -m mark --mark 0x0/0x20000 -j DROP
+[0:0] -A cali-fw-cali0b35f5e0bfa -m comment --comment "cali:2QkOzWFu8oN-zT57" -j cali-pro-kns.calico-system
+[0:0] -A cali-fw-cali0b35f5e0bfa -m comment --comment "cali:FEW42H0fEw13CRD0" -m comment --comment "Return if profile accepted" -m mark --mark 0x10000/0x10000 -j RETURN
+[0:0] -A cali-fw-cali0b35f5e0bfa -m comment --comment "cali:As35gDvH89AB9uUO" -j cali-pro-_nGWqPw-iaIRRUz-wyj
+[0:0] -A cali-fw-cali0b35f5e0bfa -m comment --comment "cali:MN3DDT2iUnYDt7vM" -m comment --comment "Return if profile accepted" -m mark --mark 0x10000/0x10000 -j RETURN
+[0:0] -A cali-fw-cali0b35f5e0bfa -m comment --comment "cali:pIP8Fje-5VbDpNx7" -m comment --comment "Drop if no profiles matched" -j DROP
+[56:4706] -A cali-fw-cali2f026170013 -m comment --comment "cali:GocHrdDCIe5o-O5c" -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+[0:0] -A cali-fw-cali2f026170013 -m comment --comment "cali:COQrkZ2PEKOdr9as" -m conntrack --ctstate INVALID -j DROP
+[14:840] -A cali-fw-cali2f026170013 -m comment --comment "cali:TXPUlM95w3eZtzUe" -j MARK --set-xmark 0x0/0x30000
+[0:0] -A cali-fw-cali2f026170013 -p udp -m comment --comment "cali:wruQd5ub9z_Xewz1" -m comment --comment "Drop VXLAN encapped packets originating in workloads" -m multiport --dports 4789 -j DROP
+[0:0] -A cali-fw-cali2f026170013 -p 4 -m comment --comment "cali:KxrAI5MAmA7WWyE1" -m comment --comment "Drop IPinIP encapped packets originating in workloads" -j DROP
+[14:840] -A cali-fw-cali2f026170013 -m comment --comment "cali:GIQmG3JuK6ZpAnFo" -j cali-pro-kns.net-lab
+[14:840] -A cali-fw-cali2f026170013 -m comment --comment "cali:IhTP4J6KGGcB9pGV" -m comment --comment "Return if profile accepted" -m mark --mark 0x10000/0x10000 -j RETURN
+[0:0] -A cali-fw-cali2f026170013 -m comment --comment "cali:NberSTp5Sbf2AQPL" -j cali-pro-ksa.net-lab.default
+[0:0] -A cali-fw-cali2f026170013 -m comment --comment "cali:xdfi_h4_4-rSDpl3" -m comment --comment "Return if profile accepted" -m mark --mark 0x10000/0x10000 -j RETURN
+[0:0] -A cali-fw-cali2f026170013 -m comment --comment "cali:ZHbMyNReVinYRwr1" -m comment --comment "Drop if no profiles matched" -j DROP
+[89:5894] -A cali-fw-cali651ff5ba98e -m comment --comment "cali:DF8IsqfMe487D5OQ" -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+[0:0] -A cali-fw-cali651ff5ba98e -m comment --comment "cali:Lo12w5h0RtWpP4Cx" -m conntrack --ctstate INVALID -j DROP
+[29:1788] -A cali-fw-cali651ff5ba98e -m comment --comment "cali:V_xTb91rnFJ3tfz2" -j MARK --set-xmark 0x0/0x30000
+[0:0] -A cali-fw-cali651ff5ba98e -p udp -m comment --comment "cali:bIhWoTzpdKZbvbAS" -m comment --comment "Drop VXLAN encapped packets originating in workloads" -m multiport --dports 4789 -j DROP
+[0:0] -A cali-fw-cali651ff5ba98e -p 4 -m comment --comment "cali:G1_cXVLTRch_wwrO" -m comment --comment "Drop IPinIP encapped packets originating in workloads" -j DROP
+[29:1788] -A cali-fw-cali651ff5ba98e -m comment --comment "cali:BJ8bHP3tt9bW6w7E" -j cali-pro-kns.net-lab
+[29:1788] -A cali-fw-cali651ff5ba98e -m comment --comment "cali:jYHbCT7YqNDPxHmm" -m comment --comment "Return if profile accepted" -m mark --mark 0x10000/0x10000 -j RETURN
+[0:0] -A cali-fw-cali651ff5ba98e -m comment --comment "cali:olvCZ38ZZfiWRO2P" -j cali-pro-ksa.net-lab.default
+[0:0] -A cali-fw-cali651ff5ba98e -m comment --comment "cali:OmL-IjG56ocBcpuh" -m comment --comment "Return if profile accepted" -m mark --mark 0x10000/0x10000 -j RETURN
+[0:0] -A cali-fw-cali651ff5ba98e -m comment --comment "cali:X09Utyhu53gXSrtB" -m comment --comment "Drop if no profiles matched" -j DROP
+[0:0] -A cali-fw-cali88e0f7680da -m comment --comment "cali:VRtV7316inxOcGBz" -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+[0:0] -A cali-fw-cali88e0f7680da -m comment --comment "cali:3ISULDL_C6ZsrFuy" -m conntrack --ctstate INVALID -j DROP
+[0:0] -A cali-fw-cali88e0f7680da -m comment --comment "cali:N2PVM5HHSAPhBeOY" -j MARK --set-xmark 0x0/0x30000
+[0:0] -A cali-fw-cali88e0f7680da -p udp -m comment --comment "cali:FyQz5lVkziXb_p8s" -m comment --comment "Drop VXLAN encapped packets originating in workloads" -m multiport --dports 4789 -j DROP
+[0:0] -A cali-fw-cali88e0f7680da -p 4 -m comment --comment "cali:-V_5ZuuiTXI53-Mt" -m comment --comment "Drop IPinIP encapped packets originating in workloads" -j DROP
+[0:0] -A cali-fw-cali88e0f7680da -m comment --comment "cali:bIZDV91QwzcchAOQ" -m comment --comment "Start of tier calico-system" -j MARK --set-xmark 0x0/0x20000
+[0:0] -A cali-fw-cali88e0f7680da -m comment --comment "cali:6ThtPINIEC96hZHy" -m mark --mark 0x0/0x20000 -j cali-po-_0dPptdegtTXt1D_kwEh
+[0:0] -A cali-fw-cali88e0f7680da -m comment --comment "cali:F5xyW9CFyneihkVk" -m comment --comment "Return if policy accepted" -m mark --mark 0x10000/0x10000 -j RETURN
+[0:0] -A cali-fw-cali88e0f7680da -m comment --comment "cali:oCh8PrmvQvZ79_iB" -m comment --comment "End of tier calico-system. Drop if no policies passed packet" -m mark --mark 0x0/0x20000 -j DROP
+[0:0] -A cali-fw-cali88e0f7680da -m comment --comment "cali:K9bhJ_JyECwUNjxQ" -j cali-pro-kns.calico-system
+[0:0] -A cali-fw-cali88e0f7680da -m comment --comment "cali:SGPkGu_i_URI12Ny" -m comment --comment "Return if profile accepted" -m mark --mark 0x10000/0x10000 -j RETURN
+[0:0] -A cali-fw-cali88e0f7680da -m comment --comment "cali:3SrZJ5K7WMKGLbxC" -j cali-pro-_ymJUz7yzI6NOKJhG2-
+[0:0] -A cali-fw-cali88e0f7680da -m comment --comment "cali:iFL0da69AFfTmLZ-" -m comment --comment "Return if profile accepted" -m mark --mark 0x10000/0x10000 -j RETURN
+[0:0] -A cali-fw-cali88e0f7680da -m comment --comment "cali:kF-lbiOcbzcIUWW_" -m comment --comment "Drop if no profiles matched" -j DROP
+[0:0] -A cali-pi-_0dPptdegtTXt1D_kwEh -m comment --comment "cali:NgXJ7k3HB153GBYO" -m comment --comment "NetworkPolicy calico-system/calico-system.default-deny ingress"
+[6:360] -A cali-pi-_ONDeB8oTnBLr7kWeYtF -m comment --comment "cali:fz8hJ5pnzh_puM8k" -m comment --comment "KubernetesNetworkPolicy net-lab/default-deny-ingress ingress"
+[2:120] -A cali-pi-_tLi4jLokhxcd6z1A42G -p tcp -m comment --comment "cali:lFU_dcEAW5DM1z53" -m comment --comment "KubernetesNetworkPolicy net-lab/allow-client-to-http-servers ingress" -m set --match-set cali40s:Rg3IfxXscbcLY3pBS4WamP6 src -m multiport --dports 8080 -j MARK --set-xmark 0x10000/0x10000
+[0:0] -A cali-pi-_vdnIkxgfh8_Emv59EWL -p tcp -m comment --comment "cali:mtp8utydvQNZNINJ" -m comment --comment "NetworkPolicy calico-system/calico-system.apiserver-access ingress" -m multiport --dports 443,5443,8080,10443 -j MARK --set-xmark 0x10000/0x10000
+[0:0] -A cali-po-_0dPptdegtTXt1D_kwEh -m comment --comment "cali:hCKLYWmJLQiYlcOL" -m comment --comment "NetworkPolicy calico-system/calico-system.default-deny egress"
+[0:0] -A cali-po-_vdnIkxgfh8_Emv59EWL -p udp -m comment --comment "cali:2IzZ9XJ9VdT1Lhsv" -m comment --comment "NetworkPolicy calico-system/calico-system.apiserver-access egress" -m set --match-set cali40s:IkX8sGssZSJYP2i1GgcRP5d dst -m multiport --dports 53 -j MARK --set-xmark 0x10000/0x10000
+[0:0] -A cali-po-_vdnIkxgfh8_Emv59EWL -m comment --comment "cali:rvyrtyqtFYrDHRKF" -m mark --mark 0x10000/0x10000 -j RETURN
+[0:0] -A cali-po-_vdnIkxgfh8_Emv59EWL -p tcp -m comment --comment "cali:yxmWjHcMxyvY1mmo" -m set --match-set cali40svc:gQrIAo_BHPov3ak3rMnN3 dst,dst -j MARK --set-xmark 0x10000/0x10000
+[0:0] -A cali-po-_vdnIkxgfh8_Emv59EWL -m comment --comment "cali:HQ5fcgQqIECWAUsD" -m mark --mark 0x10000/0x10000 -j RETURN
+[0:0] -A cali-po-_vdnIkxgfh8_Emv59EWL -p tcp -m comment --comment "cali:9MBbpB2MwWPp75CJ" -m set --match-set cali40s:fN838yxsjJ8LW-ipaBSvvul dst -m multiport --dports 9095 -j MARK --set-xmark 0x10000/0x10000
+[0:0] -A cali-po-_vdnIkxgfh8_Emv59EWL -m comment --comment "cali:eTG8EA_4bBTZz42b" -m mark --mark 0x10000/0x10000 -j RETURN
+[0:0] -A cali-po-_vdnIkxgfh8_Emv59EWL -p tcp -m comment --comment "cali:5T7DtyP0p5l5veCl" -m set --match-set cali40s:PewI7ShiyAc_6k9DMFYgiBk dst -m multiport --dports 5556 -j MARK --set-xmark 0x10000/0x10000
+[0:0] -A cali-po-_vdnIkxgfh8_Emv59EWL -m comment --comment "cali:GGZqc-OpDScsggxz" -m mark --mark 0x10000/0x10000 -j RETURN
+[0:0] -A cali-po-_vdnIkxgfh8_Emv59EWL -p tcp -m comment --comment "cali:J8XdNsxhqqoihAQK" -m set --match-set cali40s:9aQdxvhEnSq25dJCrDKFDmu dst -m multiport --dports 8444 -j MARK --set-xmark 0x10000/0x10000
+[0:0] -A cali-po-_vdnIkxgfh8_Emv59EWL -m comment --comment "cali:Nj7gXd4lxZgEzt6W" -m mark --mark 0x10000/0x10000 -j RETURN
+[0:0] -A cali-po-_vdnIkxgfh8_Emv59EWL -d 10.43.0.1/32 -p tcp -m comment --comment "cali:Bj33bjvpDPjNvJtu" -m multiport --dports 443 -j MARK --set-xmark 0x10000/0x10000
+[0:0] -A cali-po-_vdnIkxgfh8_Emv59EWL -m comment --comment "cali:y9ATLwm2yPE4ihq_" -m mark --mark 0x10000/0x10000 -j RETURN
+[0:0] -A cali-po-_vdnIkxgfh8_Emv59EWL -m comment --comment "cali:TOHn_5DT7sPyuk_D" -j MARK --set-xmark 0x20000/0x20000
+[6:384] -A cali-pri-kns.net-lab -m comment --comment "cali:RQnhw7DmC0XO9Fdo" -m comment --comment "Profile kns.net-lab ingress" -j MARK --set-xmark 0x10000/0x10000
+[43:2628] -A cali-pro-kns.net-lab -m comment --comment "cali:D-Sf9k0Tq0H0wzYa" -m comment --comment "Profile kns.net-lab egress" -j MARK --set-xmark 0x10000/0x10000
+[2628:539007] -A cali-to-wl-dispatch -o cali0b35f5e0bfa -m comment --comment "cali:tnSyG22Bf_DKZKCS" -g cali-tw-cali0b35f5e0bfa
+[26:1936] -A cali-to-wl-dispatch -o cali2f026170013 -m comment --comment "cali:LJxVoY-FskJ8ltl1" -g cali-tw-cali2f026170013
+[50:4456] -A cali-to-wl-dispatch -o cali651ff5ba98e -m comment --comment "cali:YabKbKAz1X77ukR7" -g cali-tw-cali651ff5ba98e
+[0:0] -A cali-to-wl-dispatch -o cali88e0f7680da -m comment --comment "cali:yV9m1weoX4kzX8Jy" -g cali-tw-cali88e0f7680da
+[0:0] -A cali-to-wl-dispatch -m comment --comment "cali:WruuO3q_sF0kbymG" -m comment --comment "Unknown interface" -j DROP
+[5107:1048838] -A cali-tw-cali0b35f5e0bfa -m comment --comment "cali:z3us7jQ_jcAr2fyH" -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+[0:0] -A cali-tw-cali0b35f5e0bfa -m comment --comment "cali:Y4i-AD3BsMZt2NBV" -m conntrack --ctstate INVALID -j DROP
+[0:0] -A cali-tw-cali0b35f5e0bfa -m comment --comment "cali:Wo3LvCBDQg0KG2W-" -j MARK --set-xmark 0x0/0x30000
+[0:0] -A cali-tw-cali0b35f5e0bfa -m comment --comment "cali:C-nJCxTDEeuMBNGf" -m comment --comment "Start of tier calico-system" -j MARK --set-xmark 0x0/0x20000
+[0:0] -A cali-tw-cali0b35f5e0bfa -m comment --comment "cali:mR8wCr9GQvLgflY6" -m mark --mark 0x0/0x20000 -j cali-pi-_vdnIkxgfh8_Emv59EWL
+[0:0] -A cali-tw-cali0b35f5e0bfa -m comment --comment "cali:5jzdWvJm9s0qq356" -m comment --comment "Return if policy accepted" -m mark --mark 0x10000/0x10000 -j RETURN
+[0:0] -A cali-tw-cali0b35f5e0bfa -m comment --comment "cali:rvS0ER1fP9QjFz95" -m comment --comment "End of tier calico-system. Drop if no policies passed packet" -m mark --mark 0x0/0x20000 -j DROP
+[0:0] -A cali-tw-cali0b35f5e0bfa -m comment --comment "cali:EYNnHD82jHdQLoNl" -j cali-pri-kns.calico-system
+[0:0] -A cali-tw-cali0b35f5e0bfa -m comment --comment "cali:W2buQL9FP7Dw4tGA" -m comment --comment "Return if profile accepted" -m mark --mark 0x10000/0x10000 -j RETURN
+[0:0] -A cali-tw-cali0b35f5e0bfa -m comment --comment "cali:_2dZg2tpQRSR6QPz" -j cali-pri-_nGWqPw-iaIRRUz-wyj
+[0:0] -A cali-tw-cali0b35f5e0bfa -m comment --comment "cali:ConZxqynkQSKxoZV" -m comment --comment "Return if profile accepted" -m mark --mark 0x10000/0x10000 -j RETURN
+[0:0] -A cali-tw-cali0b35f5e0bfa -m comment --comment "cali:l0iL5Nody9uN37kh" -m comment --comment "Drop if no profiles matched" -j DROP
+[0:0] -A cali-tw-cali2f026170013 -m comment --comment "cali:zY9NaFJ_bGYAhT7o" -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+[0:0] -A cali-tw-cali2f026170013 -m comment --comment "cali:uTi_HumkzhCtB-iH" -m conntrack --ctstate INVALID -j DROP
+[2:120] -A cali-tw-cali2f026170013 -m comment --comment "cali:plm7OxRsQcFMVBBE" -j MARK --set-xmark 0x0/0x30000
+[2:120] -A cali-tw-cali2f026170013 -m comment --comment "cali:MXLR8CYr_yTJvoy3" -m comment --comment "Start of tier default" -j MARK --set-xmark 0x0/0x20000
+[2:120] -A cali-tw-cali2f026170013 -m comment --comment "cali:TuteKU3pvY2BehS3" -m mark --mark 0x0/0x20000 -j cali-pi-_tLi4jLokhxcd6z1A42G
+[2:120] -A cali-tw-cali2f026170013 -m comment --comment "cali:lacOSC_jAV8xB_MT" -m comment --comment "Return if policy accepted" -m mark --mark 0x10000/0x10000 -j RETURN
+[0:0] -A cali-tw-cali2f026170013 -m comment --comment "cali:YowBoxIPiHM2OYy9" -m mark --mark 0x0/0x20000 -j cali-pi-_ONDeB8oTnBLr7kWeYtF
+[0:0] -A cali-tw-cali2f026170013 -m comment --comment "cali:rugP5-oyBy-jgckC" -m comment --comment "Return if policy accepted" -m mark --mark 0x10000/0x10000 -j RETURN
+[0:0] -A cali-tw-cali2f026170013 -m comment --comment "cali:coziFB94cdV2tvj6" -m comment --comment "End of tier default. Drop if no policies passed packet" -m mark --mark 0x0/0x20000 -j DROP
+[0:0] -A cali-tw-cali2f026170013 -m comment --comment "cali:LyNQkp2bSgkbtRYc" -j cali-pri-kns.net-lab
+[0:0] -A cali-tw-cali2f026170013 -m comment --comment "cali:k1LES0llhayp9J0L" -m comment --comment "Return if profile accepted" -m mark --mark 0x10000/0x10000 -j RETURN
+[0:0] -A cali-tw-cali2f026170013 -m comment --comment "cali:VawHYe1GXpesDt9_" -j cali-pri-ksa.net-lab.default
+[0:0] -A cali-tw-cali2f026170013 -m comment --comment "cali:yI-wJqBH9gFGYcxW" -m comment --comment "Return if profile accepted" -m mark --mark 0x10000/0x10000 -j RETURN
+[0:0] -A cali-tw-cali2f026170013 -m comment --comment "cali:CGj7yyFZVWwp8TN4" -m comment --comment "Drop if no profiles matched" -j DROP
+[12:1072] -A cali-tw-cali651ff5ba98e -m comment --comment "cali:4wCuFMxj-O1FThjX" -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+[0:0] -A cali-tw-cali651ff5ba98e -m comment --comment "cali:WHKUrWtdhnW1jWe8" -m conntrack --ctstate INVALID -j DROP
+[0:0] -A cali-tw-cali651ff5ba98e -m comment --comment "cali:hI6n6CWWo4rRUm2Y" -j MARK --set-xmark 0x0/0x30000
+[0:0] -A cali-tw-cali651ff5ba98e -m comment --comment "cali:nP6FZhISHzzF2wwq" -m comment --comment "Start of tier default" -j MARK --set-xmark 0x0/0x20000
+[0:0] -A cali-tw-cali651ff5ba98e -m comment --comment "cali:76H5O-XwUGArJQyR" -m mark --mark 0x0/0x20000 -j cali-pi-_ONDeB8oTnBLr7kWeYtF
+[0:0] -A cali-tw-cali651ff5ba98e -m comment --comment "cali:brCEnDRDDk8hn29G" -m comment --comment "Return if policy accepted" -m mark --mark 0x10000/0x10000 -j RETURN
+[0:0] -A cali-tw-cali651ff5ba98e -m comment --comment "cali:gFttRItjs9bcjFkX" -m comment --comment "End of tier default. Drop if no policies passed packet" -m mark --mark 0x0/0x20000 -j DROP
+[0:0] -A cali-tw-cali651ff5ba98e -m comment --comment "cali:XWxLpNK21sgGziE8" -j cali-pri-kns.net-lab
+[0:0] -A cali-tw-cali651ff5ba98e -m comment --comment "cali:z_rL0fOcbsIp0phD" -m comment --comment "Return if profile accepted" -m mark --mark 0x10000/0x10000 -j RETURN
+[0:0] -A cali-tw-cali651ff5ba98e -m comment --comment "cali:1qBfIpvPVPH9qwk_" -j cali-pri-ksa.net-lab.default
+[0:0] -A cali-tw-cali651ff5ba98e -m comment --comment "cali:9MNGSeyVaSnAMuKv" -m comment --comment "Return if profile accepted" -m mark --mark 0x10000/0x10000 -j RETURN
+[0:0] -A cali-tw-cali651ff5ba98e -m comment --comment "cali:DrjV2eb6LoxyIY1U" -m comment --comment "Drop if no profiles matched" -j DROP
+[0:0] -A cali-tw-cali88e0f7680da -m comment --comment "cali:RKaBV2v94rufCQSx" -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+[0:0] -A cali-tw-cali88e0f7680da -m comment --comment "cali:8tbUkjxQd0wDRakL" -m conntrack --ctstate INVALID -j DROP
+[0:0] -A cali-tw-cali88e0f7680da -m comment --comment "cali:b74h5GbjpHQFLc3Q" -j MARK --set-xmark 0x0/0x30000
+[0:0] -A cali-tw-cali88e0f7680da -m comment --comment "cali:kO2g6lZsOP64cgFS" -m comment --comment "Start of tier calico-system" -j MARK --set-xmark 0x0/0x20000
+[0:0] -A cali-tw-cali88e0f7680da -m comment --comment "cali:rVPhS3_SQrrYKsMe" -m mark --mark 0x0/0x20000 -j cali-pi-_0dPptdegtTXt1D_kwEh
+[0:0] -A cali-tw-cali88e0f7680da -m comment --comment "cali:U8GT05YgR_wk4eBg" -m comment --comment "Return if policy accepted" -m mark --mark 0x10000/0x10000 -j RETURN
+[0:0] -A cali-tw-cali88e0f7680da -m comment --comment "cali:tfGXxPEuPFcooczk" -m comment --comment "End of tier calico-system. Drop if no policies passed packet" -m mark --mark 0x0/0x20000 -j DROP
+[0:0] -A cali-tw-cali88e0f7680da -m comment --comment "cali:zZyQvfMVB3UIzRi3" -j cali-pri-kns.calico-system
+[0:0] -A cali-tw-cali88e0f7680da -m comment --comment "cali:PnNLRckPAUrHAP62" -m comment --comment "Return if profile accepted" -m mark --mark 0x10000/0x10000 -j RETURN
+[0:0] -A cali-tw-cali88e0f7680da -m comment --comment "cali:ZduN8wtV-KS55aQU" -j cali-pri-_ymJUz7yzI6NOKJhG2-
+[0:0] -A cali-tw-cali88e0f7680da -m comment --comment "cali:DdahomosiQGqWXEL" -m comment --comment "Return if profile accepted" -m mark --mark 0x10000/0x10000 -j RETURN
+[0:0] -A cali-tw-cali88e0f7680da -m comment --comment "cali:H2Eeaq3m-0wN1tKY" -m comment --comment "Drop if no profiles matched" -j DROP
+=== relevant Pod IP occurrences ===
+[0:0] -A KUBE-SEP-PIHVHRGJYEGUWQGF -s 10.42.144.131/32 -m comment --comment "net-lab/servers:http" -j KUBE-MARK-MASQ
+[2:120] -A KUBE-SEP-PIHVHRGJYEGUWQGF -p tcp -m comment --comment "net-lab/servers:http" -m tcp -j DNAT --to-destination 10.42.144.131:8080
+[0:0] -A KUBE-SEP-VAMX36KNEDRNEHFI -s 10.42.113.68/32 -m comment --comment "net-lab/servers:http" -j KUBE-MARK-MASQ
+[2:120] -A KUBE-SEP-VAMX36KNEDRNEHFI -p tcp -m comment --comment "net-lab/servers:http" -m tcp -j DNAT --to-destination 10.42.113.68:8080
+[2:120] -A KUBE-SVC-52E5QOXW62TEVVLC -m comment --comment "net-lab/servers:http -> 10.42.113.68:8080" -m statistic --mode random --probability 0.50000000000 -j KUBE-SEP-VAMX36KNEDRNEHFI
+[2:120] -A KUBE-SVC-52E5QOXW62TEVVLC -m comment --comment "net-lab/servers:http -> 10.42.144.131:8080" -j KUBE-SEP-PIHVHRGJYEGUWQGF

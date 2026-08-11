@@ -1,0 +1,359 @@
+tcpdump: data link type LINUX_SLL2
+tcpdump: listening on any, link-type LINUX_SLL2 (Linux cooked v2), snapshot length 262144 bytes
+2026-08-05 19:40:08.400325 cali651ff5ba98e In  ifindex 8 1e:68:8b:6b:61:4f ethertype IPv4 (0x0800), length 80: (tos 0x0, ttl 64, id 42209, offset 0, flags [DF], proto TCP (6), length 60)
+    10.42.113.67.34170 > 10.42.144.131.8080: Flags [S], cksum 0x1649 (incorrect -> 0x5196), seq 399532898, win 64860, options [mss 1410,sackOK,TS val 64405262 ecr 0,nop,wscale 10], length 0
+E..<..@.@...
+*qC
+*...z....cb.......\.I.........
+...........
+
+2026-08-05 19:40:08.400436 vxlan.calico Out ifindex 4 66:65:3a:1d:a2:77 ethertype IPv4 (0x0800), length 80: (tos 0x0, ttl 63, id 42209, offset 0, flags [DF], proto TCP (6), length 60)
+    10.42.113.67.34170 > 10.42.144.131.8080: Flags [S], cksum 0x1649 (incorrect -> 0x5196), seq 399532898, win 64860, options [mss 1410,sackOK,TS val 64405262 ecr 0,nop,wscale 10], length 0
+E..<..@.?...
+*qC
+*...z....cb.......\.I.........
+...........
+
+2026-08-05 19:40:08.400473 eth0  Out ifindex 2 0a:7d:a0:9d:1e:56 ethertype IPv4 (0x0800), length 130: (tos 0x0, ttl 64, id 44845, offset 0, flags [none], proto UDP (17), length 110)
+    172.19.0.3.46517 > 172.19.0.4.4789: [bad udp cksum 0x3e61 -> 0x79ae!] VXLAN, flags [I] (0x08), vni 4096
+66:65:3a:1d:a2:77 > 66:3b:92:06:6b:3d, ethertype IPv4 (0x0800), length 74: (tos 0x0, ttl 63, id 42209, offset 0, flags [DF], proto TCP (6), length 60)
+    10.42.113.67.34170 > 10.42.144.131.8080: Flags [S], cksum 0x1649 (incorrect -> 0x5196), seq 399532898, win 64860, options [mss 1410,sackOK,TS val 64405262 ecr 0,nop,wscale 10], length 0
+E..n.-..@.s$.............Z>a........f;..k=fe:..w..E..<..@.?...
+*qC
+*...z....cb.......\.I.........
+...........
+
+2026-08-05 19:40:08.400776 eth0  In  ifindex 2 36:d5:1e:a1:ac:e9 ethertype IPv4 (0x0800), length 130: (tos 0x0, ttl 64, id 18348, offset 0, flags [none], proto UDP (17), length 110)
+    172.19.0.4.41609 > 172.19.0.3.4789: [bad udp cksum 0x518d -> 0xf199!] VXLAN, flags [I] (0x08), vni 4096
+66:3b:92:06:6b:3d > 66:65:3a:1d:a2:77, ethertype IPv4 (0x0800), length 74: (tos 0x0, ttl 63, id 0, offset 0, flags [DF], proto TCP (6), length 60)
+    10.42.144.131.8080 > 10.42.113.67.34170: Flags [S.], cksum 0x1649 (incorrect -> 0xb655), seq 1576204056, ack 399532899, win 64308, options [mss 1410,sackOK,TS val 3814548718 ecr 64405262,nop,wscale 10], length 0
+E..nG...@................ZQ.........fe:..wf;..k=..E..<..@.?.%.
+*..
+*qC...z].....cc...4.I.........
+.]d........
+
+2026-08-05 19:40:08.400803 vxlan.calico In  ifindex 4 66:3b:92:06:6b:3d ethertype IPv4 (0x0800), length 80: (tos 0x0, ttl 63, id 0, offset 0, flags [DF], proto TCP (6), length 60)
+    10.42.144.131.8080 > 10.42.113.67.34170: Flags [S.], cksum 0x1649 (incorrect -> 0xb655), seq 1576204056, ack 399532899, win 64308, options [mss 1410,sackOK,TS val 3814548718 ecr 64405262,nop,wscale 10], length 0
+E..<..@.?.%.
+*..
+*qC...z].....cc...4.I.........
+.]d........
+
+2026-08-05 19:40:08.400826 cali651ff5ba98e Out ifindex 8 ee:ee:ee:ee:ee:ee ethertype IPv4 (0x0800), length 80: (tos 0x0, ttl 62, id 0, offset 0, flags [DF], proto TCP (6), length 60)
+    10.42.144.131.8080 > 10.42.113.67.34170: Flags [S.], cksum 0x1649 (incorrect -> 0xb655), seq 1576204056, ack 399532899, win 64308, options [mss 1410,sackOK,TS val 3814548718 ecr 64405262,nop,wscale 10], length 0
+E..<..@.>.&.
+*..
+*qC...z].....cc...4.I.........
+.]d........
+
+2026-08-05 19:40:08.400886 cali651ff5ba98e In  ifindex 8 1e:68:8b:6b:61:4f ethertype IPv4 (0x0800), length 72: (tos 0x0, ttl 64, id 42210, offset 0, flags [DF], proto TCP (6), length 52)
+    10.42.113.67.34170 > 10.42.144.131.8080: Flags [.], cksum 0x1641 (incorrect -> 0xdfe6), seq 1, ack 1, win 64, options [nop,nop,TS val 64405263 ecr 3814548718], length 0
+E..4..@.@...
+*qC
+*...z....cc]......@.A.....
+.....]d.
+2026-08-05 19:40:08.400907 vxlan.calico Out ifindex 4 66:65:3a:1d:a2:77 ethertype IPv4 (0x0800), length 72: (tos 0x0, ttl 63, id 42210, offset 0, flags [DF], proto TCP (6), length 52)
+    10.42.113.67.34170 > 10.42.144.131.8080: Flags [.], cksum 0x1641 (incorrect -> 0xdfe6), seq 1, ack 1, win 64, options [nop,nop,TS val 64405263 ecr 3814548718], length 0
+E..4..@.?...
+*qC
+*...z....cc]......@.A.....
+.....]d.
+2026-08-05 19:40:08.400921 eth0  Out ifindex 2 0a:7d:a0:9d:1e:56 ethertype IPv4 (0x0800), length 122: (tos 0x0, ttl 64, id 44846, offset 0, flags [none], proto UDP (17), length 102)
+    172.19.0.3.46517 > 172.19.0.4.4789: [bad udp cksum 0x3e69 -> 0x080f!] VXLAN, flags [I] (0x08), vni 4096
+66:65:3a:1d:a2:77 > 66:3b:92:06:6b:3d, ethertype IPv4 (0x0800), length 66: (tos 0x0, ttl 63, id 42210, offset 0, flags [DF], proto TCP (6), length 52)
+    10.42.113.67.34170 > 10.42.144.131.8080: Flags [.], cksum 0x1641 (incorrect -> 0xdfe6), seq 1, ack 1, win 64, options [nop,nop,TS val 64405263 ecr 3814548718], length 0
+E..f....@.s+.............R>i........f;..k=fe:..w..E..4..@.?...
+*qC
+*...z....cc]......@.A.....
+.....]d.
+2026-08-05 19:40:08.401124 cali651ff5ba98e In  ifindex 8 1e:68:8b:6b:61:4f ethertype IPv4 (0x0800), length 153: (tos 0x0, ttl 64, id 42211, offset 0, flags [DF], proto TCP (6), length 133)
+    10.42.113.67.34170 > 10.42.144.131.8080: Flags [P.], cksum 0x1692 (incorrect -> 0xfdeb), seq 1:82, ack 1, win 64, options [nop,nop,TS val 64405263 ecr 3814548718], length 81: HTTP, length: 81
+	GET / HTTP/1.1
+	Host: 10.42.144.131:8080
+	User-Agent: Wget
+	Connection: close
+	
+E.....@.@..u
+*qC
+*...z....cc]......@.......
+.....]d.GET / HTTP/1.1
+Host: 10.42.144.131:8080
+User-Agent: Wget
+Connection: close
+
+
+2026-08-05 19:40:08.401150 vxlan.calico Out ifindex 4 66:65:3a:1d:a2:77 ethertype IPv4 (0x0800), length 153: (tos 0x0, ttl 63, id 42211, offset 0, flags [DF], proto TCP (6), length 133)
+    10.42.113.67.34170 > 10.42.144.131.8080: Flags [P.], cksum 0x1692 (incorrect -> 0xfdeb), seq 1:82, ack 1, win 64, options [nop,nop,TS val 64405263 ecr 3814548718], length 81: HTTP, length: 81
+	GET / HTTP/1.1
+	Host: 10.42.144.131:8080
+	User-Agent: Wget
+	Connection: close
+	
+E.....@.?..u
+*qC
+*...z....cc]......@.......
+.....]d.GET / HTTP/1.1
+Host: 10.42.144.131:8080
+User-Agent: Wget
+Connection: close
+
+
+2026-08-05 19:40:08.401165 eth0  Out ifindex 2 0a:7d:a0:9d:1e:56 ethertype IPv4 (0x0800), length 203: (tos 0x0, ttl 64, id 44847, offset 0, flags [none], proto UDP (17), length 183)
+    172.19.0.3.46517 > 172.19.0.4.4789: [bad udp cksum 0x3e18 -> 0x2572!] VXLAN, flags [I] (0x08), vni 4096
+66:65:3a:1d:a2:77 > 66:3b:92:06:6b:3d, ethertype IPv4 (0x0800), length 147: (tos 0x0, ttl 63, id 42211, offset 0, flags [DF], proto TCP (6), length 133)
+    10.42.113.67.34170 > 10.42.144.131.8080: Flags [P.], cksum 0x1692 (incorrect -> 0xfdeb), seq 1:82, ack 1, win 64, options [nop,nop,TS val 64405263 ecr 3814548718], length 81: HTTP, length: 81
+	GET / HTTP/1.1
+	Host: 10.42.144.131:8080
+	User-Agent: Wget
+	Connection: close
+	
+E..../..@.r...............>.........f;..k=fe:..w..E.....@.?..u
+*qC
+*...z....cc]......@.......
+.....]d.GET / HTTP/1.1
+Host: 10.42.144.131:8080
+User-Agent: Wget
+Connection: close
+
+
+2026-08-05 19:40:08.401270 eth0  In  ifindex 2 36:d5:1e:a1:ac:e9 ethertype IPv4 (0x0800), length 122: (tos 0x0, ttl 64, id 18349, offset 0, flags [none], proto UDP (17), length 102)
+    172.19.0.4.41609 > 172.19.0.3.4789: [bad udp cksum 0x5195 -> 0x1aeb!] VXLAN, flags [I] (0x08), vni 4096
+66:3b:92:06:6b:3d > 66:65:3a:1d:a2:77, ethertype IPv4 (0x0800), length 66: (tos 0x0, ttl 63, id 21463, offset 0, flags [DF], proto TCP (6), length 52)
+    10.42.144.131.8080 > 10.42.113.67.34170: Flags [.], cksum 0x1641 (incorrect -> 0xdf96), seq 1, ack 82, win 63, options [nop,nop,TS val 3814548718 ecr 64405263], length 0
+E..fG...@................RQ.........fe:..wf;..k=..E..4S.@.?...
+*..
+*qC...z].....c....?.A.....
+.]d.....
+2026-08-05 19:40:08.401284 vxlan.calico In  ifindex 4 66:3b:92:06:6b:3d ethertype IPv4 (0x0800), length 72: (tos 0x0, ttl 63, id 21463, offset 0, flags [DF], proto TCP (6), length 52)
+    10.42.144.131.8080 > 10.42.113.67.34170: Flags [.], cksum 0x1641 (incorrect -> 0xdf96), seq 1, ack 82, win 63, options [nop,nop,TS val 3814548718 ecr 64405263], length 0
+E..4S.@.?...
+*..
+*qC...z].....c....?.A.....
+.]d.....
+2026-08-05 19:40:08.401299 cali651ff5ba98e Out ifindex 8 ee:ee:ee:ee:ee:ee ethertype IPv4 (0x0800), length 72: (tos 0x0, ttl 62, id 21463, offset 0, flags [DF], proto TCP (6), length 52)
+    10.42.144.131.8080 > 10.42.113.67.34170: Flags [.], cksum 0x1641 (incorrect -> 0xdf96), seq 1, ack 82, win 63, options [nop,nop,TS val 3814548718 ecr 64405263], length 0
+E..4S.@.>...
+*..
+*qC...z].....c....?.A.....
+.]d.....
+2026-08-05 19:40:08.402377 eth0  In  ifindex 2 36:d5:1e:a1:ac:e9 ethertype IPv4 (0x0800), length 329: (tos 0x0, ttl 64, id 18350, offset 0, flags [none], proto UDP (17), length 309)
+    172.19.0.4.41609 > 172.19.0.3.4789: [bad udp cksum 0x50c6 -> 0x74bb!] VXLAN, flags [I] (0x08), vni 4096
+66:3b:92:06:6b:3d > 66:65:3a:1d:a2:77, ethertype IPv4 (0x0800), length 273: (tos 0x0, ttl 63, id 21464, offset 0, flags [DF], proto TCP (6), length 259)
+    10.42.144.131.8080 > 10.42.113.67.34170: Flags [P.], cksum 0x1710 (incorrect -> 0x3b05), seq 1:208, ack 82, win 63, options [nop,nop,TS val 3814548719 ecr 64405263], length 207: HTTP, length: 207
+	HTTP/1.1 200 OK
+	Date: Wed, 05 Aug 2026 17:40:08 GMT
+	Connection: close
+	Content-type: text/html
+	Accept-Ranges: bytes
+	Last-Modified: Wed, 05 Aug 2026 17:15:47 GMT
+	ETag: "6a736fc3-9"
+	Content-Length: 9
+	
+E..5G...@................!P.........fe:..wf;..k=..E...S.@.?...
+*..
+*qC...z].....c....?.......
+.]d.....HTTP/1.1 200 OK
+Date: Wed, 05 Aug 2026 17:40:08 GMT
+Connection: close
+Content-type: text/html
+Accept-Ranges: bytes
+Last-Modified: Wed, 05 Aug 2026 17:15:47 GMT
+ETag: "6a736fc3-9"
+Content-Length: 9
+
+
+2026-08-05 19:40:08.402415 vxlan.calico In  ifindex 4 66:3b:92:06:6b:3d ethertype IPv4 (0x0800), length 279: (tos 0x0, ttl 63, id 21464, offset 0, flags [DF], proto TCP (6), length 259)
+    10.42.144.131.8080 > 10.42.113.67.34170: Flags [P.], cksum 0x1710 (incorrect -> 0x3b05), seq 1:208, ack 82, win 63, options [nop,nop,TS val 3814548719 ecr 64405263], length 207: HTTP, length: 207
+	HTTP/1.1 200 OK
+	Date: Wed, 05 Aug 2026 17:40:08 GMT
+	Connection: close
+	Content-type: text/html
+	Accept-Ranges: bytes
+	Last-Modified: Wed, 05 Aug 2026 17:15:47 GMT
+	ETag: "6a736fc3-9"
+	Content-Length: 9
+	
+E...S.@.?...
+*..
+*qC...z].....c....?.......
+.]d.....HTTP/1.1 200 OK
+Date: Wed, 05 Aug 2026 17:40:08 GMT
+Connection: close
+Content-type: text/html
+Accept-Ranges: bytes
+Last-Modified: Wed, 05 Aug 2026 17:15:47 GMT
+ETag: "6a736fc3-9"
+Content-Length: 9
+
+
+2026-08-05 19:40:08.402445 cali651ff5ba98e Out ifindex 8 ee:ee:ee:ee:ee:ee ethertype IPv4 (0x0800), length 279: (tos 0x0, ttl 62, id 21464, offset 0, flags [DF], proto TCP (6), length 259)
+    10.42.144.131.8080 > 10.42.113.67.34170: Flags [P.], cksum 0x1710 (incorrect -> 0x3b05), seq 1:208, ack 82, win 63, options [nop,nop,TS val 3814548719 ecr 64405263], length 207: HTTP, length: 207
+	HTTP/1.1 200 OK
+	Date: Wed, 05 Aug 2026 17:40:08 GMT
+	Connection: close
+	Content-type: text/html
+	Accept-Ranges: bytes
+	Last-Modified: Wed, 05 Aug 2026 17:15:47 GMT
+	ETag: "6a736fc3-9"
+	Content-Length: 9
+	
+E...S.@.>...
+*..
+*qC...z].....c....?.......
+.]d.....HTTP/1.1 200 OK
+Date: Wed, 05 Aug 2026 17:40:08 GMT
+Connection: close
+Content-type: text/html
+Accept-Ranges: bytes
+Last-Modified: Wed, 05 Aug 2026 17:15:47 GMT
+ETag: "6a736fc3-9"
+Content-Length: 9
+
+
+2026-08-05 19:40:08.402481 cali651ff5ba98e In  ifindex 8 1e:68:8b:6b:61:4f ethertype IPv4 (0x0800), length 72: (tos 0x0, ttl 64, id 42212, offset 0, flags [DF], proto TCP (6), length 52)
+    10.42.113.67.34170 > 10.42.144.131.8080: Flags [.], cksum 0x1641 (incorrect -> 0xdec4), seq 82, ack 208, win 64, options [nop,nop,TS val 64405264 ecr 3814548719], length 0
+E..4..@.@...
+*qC
+*...z....c.]......@.A.....
+.....]d.
+2026-08-05 19:40:08.402503 vxlan.calico Out ifindex 4 66:65:3a:1d:a2:77 ethertype IPv4 (0x0800), length 72: (tos 0x0, ttl 63, id 42212, offset 0, flags [DF], proto TCP (6), length 52)
+    10.42.113.67.34170 > 10.42.144.131.8080: Flags [.], cksum 0x1641 (incorrect -> 0xdec4), seq 82, ack 208, win 64, options [nop,nop,TS val 64405264 ecr 3814548719], length 0
+E..4..@.?...
+*qC
+*...z....c.]......@.A.....
+.....]d.
+2026-08-05 19:40:08.402524 eth0  Out ifindex 2 0a:7d:a0:9d:1e:56 ethertype IPv4 (0x0800), length 122: (tos 0x0, ttl 64, id 44848, offset 0, flags [none], proto UDP (17), length 102)
+    172.19.0.3.46517 > 172.19.0.4.4789: [bad udp cksum 0x3e69 -> 0x06ed!] VXLAN, flags [I] (0x08), vni 4096
+66:65:3a:1d:a2:77 > 66:3b:92:06:6b:3d, ethertype IPv4 (0x0800), length 66: (tos 0x0, ttl 63, id 42212, offset 0, flags [DF], proto TCP (6), length 52)
+    10.42.113.67.34170 > 10.42.144.131.8080: Flags [.], cksum 0x1641 (incorrect -> 0xdec4), seq 82, ack 208, win 64, options [nop,nop,TS val 64405264 ecr 3814548719], length 0
+E..f.0..@.s).............R>i........f;..k=fe:..w..E..4..@.?...
+*qC
+*...z....c.]......@.A.....
+.....]d.
+2026-08-05 19:40:08.402766 eth0  In  ifindex 2 36:d5:1e:a1:ac:e9 ethertype IPv4 (0x0800), length 131: (tos 0x0, ttl 64, id 18351, offset 0, flags [none], proto UDP (17), length 111)
+    172.19.0.4.41609 > 172.19.0.3.4789: [bad udp cksum 0x518c -> 0x9745!] VXLAN, flags [I] (0x08), vni 4096
+66:3b:92:06:6b:3d > 66:65:3a:1d:a2:77, ethertype IPv4 (0x0800), length 75: (tos 0x0, ttl 63, id 21465, offset 0, flags [DF], proto TCP (6), length 61)
+    10.42.144.131.8080 > 10.42.113.67.34170: Flags [P.], cksum 0x164a (incorrect -> 0x5c03), seq 208:217, ack 82, win 63, options [nop,nop,TS val 3814548720 ecr 64405264], length 9: HTTP
+E..oG...@................[Q.........fe:..wf;..k=..E..=S.@.?...
+*..
+*qC...z].....c....?.J.....
+.]d.....server-b
+
+2026-08-05 19:40:08.402784 vxlan.calico In  ifindex 4 66:3b:92:06:6b:3d ethertype IPv4 (0x0800), length 81: (tos 0x0, ttl 63, id 21465, offset 0, flags [DF], proto TCP (6), length 61)
+    10.42.144.131.8080 > 10.42.113.67.34170: Flags [P.], cksum 0x164a (incorrect -> 0x5c03), seq 208:217, ack 82, win 63, options [nop,nop,TS val 3814548720 ecr 64405264], length 9: HTTP
+E..=S.@.?...
+*..
+*qC...z].....c....?.J.....
+.]d.....server-b
+
+2026-08-05 19:40:08.402800 cali651ff5ba98e Out ifindex 8 ee:ee:ee:ee:ee:ee ethertype IPv4 (0x0800), length 81: (tos 0x0, ttl 62, id 21465, offset 0, flags [DF], proto TCP (6), length 61)
+    10.42.144.131.8080 > 10.42.113.67.34170: Flags [P.], cksum 0x164a (incorrect -> 0x5c03), seq 208:217, ack 82, win 63, options [nop,nop,TS val 3814548720 ecr 64405264], length 9: HTTP
+E..=S.@.>...
+*..
+*qC...z].....c....?.J.....
+.]d.....server-b
+
+2026-08-05 19:40:08.402821 cali651ff5ba98e In  ifindex 8 1e:68:8b:6b:61:4f ethertype IPv4 (0x0800), length 72: (tos 0x0, ttl 64, id 42213, offset 0, flags [DF], proto TCP (6), length 52)
+    10.42.113.67.34170 > 10.42.144.131.8080: Flags [.], cksum 0x1641 (incorrect -> 0xdeb9), seq 82, ack 217, win 64, options [nop,nop,TS val 64405265 ecr 3814548720], length 0
+E..4..@.@...
+*qC
+*...z....c.]......@.A.....
+.....]d.
+2026-08-05 19:40:08.402836 vxlan.calico Out ifindex 4 66:65:3a:1d:a2:77 ethertype IPv4 (0x0800), length 72: (tos 0x0, ttl 63, id 42213, offset 0, flags [DF], proto TCP (6), length 52)
+    10.42.113.67.34170 > 10.42.144.131.8080: Flags [.], cksum 0x1641 (incorrect -> 0xdeb9), seq 82, ack 217, win 64, options [nop,nop,TS val 64405265 ecr 3814548720], length 0
+E..4..@.?...
+*qC
+*...z....c.]......@.A.....
+.....]d.
+2026-08-05 19:40:08.402848 eth0  Out ifindex 2 0a:7d:a0:9d:1e:56 ethertype IPv4 (0x0800), length 122: (tos 0x0, ttl 64, id 44849, offset 0, flags [none], proto UDP (17), length 102)
+    172.19.0.3.46517 > 172.19.0.4.4789: [bad udp cksum 0x3e69 -> 0x06e2!] VXLAN, flags [I] (0x08), vni 4096
+66:65:3a:1d:a2:77 > 66:3b:92:06:6b:3d, ethertype IPv4 (0x0800), length 66: (tos 0x0, ttl 63, id 42213, offset 0, flags [DF], proto TCP (6), length 52)
+    10.42.113.67.34170 > 10.42.144.131.8080: Flags [.], cksum 0x1641 (incorrect -> 0xdeb9), seq 82, ack 217, win 64, options [nop,nop,TS val 64405265 ecr 3814548720], length 0
+E..f.1..@.s(.............R>i........f;..k=fe:..w..E..4..@.?...
+*qC
+*...z....c.]......@.A.....
+.....]d.
+2026-08-05 19:40:08.402940 cali651ff5ba98e In  ifindex 8 1e:68:8b:6b:61:4f ethertype IPv4 (0x0800), length 72: (tos 0x0, ttl 64, id 42214, offset 0, flags [DF], proto TCP (6), length 52)
+    10.42.113.67.34170 > 10.42.144.131.8080: Flags [F.], cksum 0x1641 (incorrect -> 0xdeb8), seq 82, ack 217, win 64, options [nop,nop,TS val 64405265 ecr 3814548720], length 0
+E..4..@.@...
+*qC
+*...z....c.]......@.A.....
+.....]d.
+2026-08-05 19:40:08.402986 eth0  In  ifindex 2 36:d5:1e:a1:ac:e9 ethertype IPv4 (0x0800), length 122: (tos 0x0, ttl 64, id 18352, offset 0, flags [none], proto UDP (17), length 102)
+    172.19.0.4.41609 > 172.19.0.3.4789: [bad udp cksum 0x5195 -> 0x1a0e!] VXLAN, flags [I] (0x08), vni 4096
+66:3b:92:06:6b:3d > 66:65:3a:1d:a2:77, ethertype IPv4 (0x0800), length 66: (tos 0x0, ttl 63, id 21466, offset 0, flags [DF], proto TCP (6), length 52)
+    10.42.144.131.8080 > 10.42.113.67.34170: Flags [F.], cksum 0x1641 (incorrect -> 0xdeb9), seq 217, ack 82, win 63, options [nop,nop,TS val 3814548720 ecr 64405265], length 0
+E..fG...@................RQ.........fe:..wf;..k=..E..4S.@.?...
+*..
+*qC...z].....c....?.A.....
+.]d.....
+2026-08-05 19:40:08.402994 vxlan.calico Out ifindex 4 66:65:3a:1d:a2:77 ethertype IPv4 (0x0800), length 72: (tos 0x0, ttl 63, id 42214, offset 0, flags [DF], proto TCP (6), length 52)
+    10.42.113.67.34170 > 10.42.144.131.8080: Flags [F.], cksum 0x1641 (incorrect -> 0xdeb8), seq 82, ack 217, win 64, options [nop,nop,TS val 64405265 ecr 3814548720], length 0
+E..4..@.?...
+*qC
+*...z....c.]......@.A.....
+.....]d.
+2026-08-05 19:40:08.403004 vxlan.calico In  ifindex 4 66:3b:92:06:6b:3d ethertype IPv4 (0x0800), length 72: (tos 0x0, ttl 63, id 21466, offset 0, flags [DF], proto TCP (6), length 52)
+    10.42.144.131.8080 > 10.42.113.67.34170: Flags [F.], cksum 0x1641 (incorrect -> 0xdeb9), seq 217, ack 82, win 63, options [nop,nop,TS val 3814548720 ecr 64405265], length 0
+E..4S.@.?...
+*..
+*qC...z].....c....?.A.....
+.]d.....
+2026-08-05 19:40:08.403021 eth0  Out ifindex 2 0a:7d:a0:9d:1e:56 ethertype IPv4 (0x0800), length 122: (tos 0x0, ttl 64, id 44850, offset 0, flags [none], proto UDP (17), length 102)
+    172.19.0.3.46517 > 172.19.0.4.4789: [bad udp cksum 0x3e69 -> 0x06e1!] VXLAN, flags [I] (0x08), vni 4096
+66:65:3a:1d:a2:77 > 66:3b:92:06:6b:3d, ethertype IPv4 (0x0800), length 66: (tos 0x0, ttl 63, id 42214, offset 0, flags [DF], proto TCP (6), length 52)
+    10.42.113.67.34170 > 10.42.144.131.8080: Flags [F.], cksum 0x1641 (incorrect -> 0xdeb8), seq 82, ack 217, win 64, options [nop,nop,TS val 64405265 ecr 3814548720], length 0
+E..f.2..@.s'.............R>i........f;..k=fe:..w..E..4..@.?...
+*qC
+*...z....c.]......@.A.....
+.....]d.
+2026-08-05 19:40:08.403026 cali651ff5ba98e Out ifindex 8 ee:ee:ee:ee:ee:ee ethertype IPv4 (0x0800), length 72: (tos 0x0, ttl 62, id 21466, offset 0, flags [DF], proto TCP (6), length 52)
+    10.42.144.131.8080 > 10.42.113.67.34170: Flags [F.], cksum 0x1641 (incorrect -> 0xdeb9), seq 217, ack 82, win 63, options [nop,nop,TS val 3814548720 ecr 64405265], length 0
+E..4S.@.>...
+*..
+*qC...z].....c....?.A.....
+.]d.....
+2026-08-05 19:40:08.403207 eth0  In  ifindex 2 36:d5:1e:a1:ac:e9 ethertype IPv4 (0x0800), length 122: (tos 0x0, ttl 64, id 18353, offset 0, flags [none], proto UDP (17), length 102)
+    172.19.0.4.41609 > 172.19.0.3.4789: [bad udp cksum 0x5195 -> 0x1a0d!] VXLAN, flags [I] (0x08), vni 4096
+66:3b:92:06:6b:3d > 66:65:3a:1d:a2:77, ethertype IPv4 (0x0800), length 66: (tos 0x0, ttl 63, id 21467, offset 0, flags [DF], proto TCP (6), length 52)
+    10.42.144.131.8080 > 10.42.113.67.34170: Flags [.], cksum 0x1641 (incorrect -> 0xdeb8), seq 218, ack 83, win 63, options [nop,nop,TS val 3814548720 ecr 64405265], length 0
+E..fG...@................RQ.........fe:..wf;..k=..E..4S.@.?...
+*..
+*qC...z].....c....?.A.....
+.]d.....
+2026-08-05 19:40:08.403227 vxlan.calico In  ifindex 4 66:3b:92:06:6b:3d ethertype IPv4 (0x0800), length 72: (tos 0x0, ttl 63, id 21467, offset 0, flags [DF], proto TCP (6), length 52)
+    10.42.144.131.8080 > 10.42.113.67.34170: Flags [.], cksum 0x1641 (incorrect -> 0xdeb8), seq 218, ack 83, win 63, options [nop,nop,TS val 3814548720 ecr 64405265], length 0
+E..4S.@.?...
+*..
+*qC...z].....c....?.A.....
+.]d.....
+2026-08-05 19:40:08.403245 cali651ff5ba98e Out ifindex 8 ee:ee:ee:ee:ee:ee ethertype IPv4 (0x0800), length 72: (tos 0x0, ttl 62, id 21467, offset 0, flags [DF], proto TCP (6), length 52)
+    10.42.144.131.8080 > 10.42.113.67.34170: Flags [.], cksum 0x1641 (incorrect -> 0xdeb8), seq 218, ack 83, win 63, options [nop,nop,TS val 3814548720 ecr 64405265], length 0
+E..4S.@.>...
+*..
+*qC...z].....c....?.A.....
+.]d.....
+2026-08-05 19:40:08.403276 cali651ff5ba98e In  ifindex 8 1e:68:8b:6b:61:4f ethertype IPv4 (0x0800), length 72: (tos 0x0, ttl 64, id 42215, offset 0, flags [DF], proto TCP (6), length 52)
+    10.42.113.67.34170 > 10.42.144.131.8080: Flags [.], cksum 0x1641 (incorrect -> 0xdeb7), seq 83, ack 218, win 64, options [nop,nop,TS val 64405265 ecr 3814548720], length 0
+E..4..@.@...
+*qC
+*...z....c.]......@.A.....
+.....]d.
+2026-08-05 19:40:08.403291 vxlan.calico Out ifindex 4 66:65:3a:1d:a2:77 ethertype IPv4 (0x0800), length 72: (tos 0x0, ttl 63, id 42215, offset 0, flags [DF], proto TCP (6), length 52)
+    10.42.113.67.34170 > 10.42.144.131.8080: Flags [.], cksum 0x1641 (incorrect -> 0xdeb7), seq 83, ack 218, win 64, options [nop,nop,TS val 64405265 ecr 3814548720], length 0
+E..4..@.?...
+*qC
+*...z....c.]......@.A.....
+.....]d.
+2026-08-05 19:40:08.403304 eth0  Out ifindex 2 0a:7d:a0:9d:1e:56 ethertype IPv4 (0x0800), length 122: (tos 0x0, ttl 64, id 44851, offset 0, flags [none], proto UDP (17), length 102)
+    172.19.0.3.46517 > 172.19.0.4.4789: [bad udp cksum 0x3e69 -> 0x06e0!] VXLAN, flags [I] (0x08), vni 4096
+66:65:3a:1d:a2:77 > 66:3b:92:06:6b:3d, ethertype IPv4 (0x0800), length 66: (tos 0x0, ttl 63, id 42215, offset 0, flags [DF], proto TCP (6), length 52)
+    10.42.113.67.34170 > 10.42.144.131.8080: Flags [.], cksum 0x1641 (incorrect -> 0xdeb7), seq 83, ack 218, win 64, options [nop,nop,TS val 64405265 ecr 3814548720], length 0
+E..f.3..@.s&.............R>i........f;..k=fe:..w..E..4..@.?...
+*qC
+*...z....c.]......@.A.....
+.....]d.
+
+39 packets captured
+39 packets received by filter
+0 packets dropped by kernel

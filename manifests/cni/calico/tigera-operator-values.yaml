@@ -1,0 +1,16 @@
+installation:
+  enabled: false
+
+apiServer:
+  enabled: true
+
+goldmane:
+  enabled: false
+
+whisker:
+  enabled: false
+
+tigeraOperator:
+  registry: quay.io
+  image: tigera/operator
+  version: v1.42.3

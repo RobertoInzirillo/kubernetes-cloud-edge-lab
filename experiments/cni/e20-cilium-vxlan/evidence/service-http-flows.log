@@ -1,0 +1,2 @@
+attempt=1 timestamp=2026-08-09T17:17:38,309975953+02:00 response=server-a exit=0
+attempt=2 timestamp=2026-08-09T17:17:38,689241352+02:00 response=server-b exit=0

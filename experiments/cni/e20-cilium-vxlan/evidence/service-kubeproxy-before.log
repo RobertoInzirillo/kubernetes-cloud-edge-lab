@@ -1,0 +1,10 @@
+timestamp=2026-08-09T17:17:36,610450633+02:00
+iptables v1.8.11 (nf_tables)
+[0:0] -A KUBE-SEP-ATKFPN7UBKLE6WVO -s 10.42.0.76/32 -m comment --comment "net-lab/servers:http" -j KUBE-MARK-MASQ
+[0:0] -A KUBE-SEP-ATKFPN7UBKLE6WVO -p tcp -m comment --comment "net-lab/servers:http" -m tcp -j DNAT --to-destination 10.42.0.76:8080
+[0:0] -A KUBE-SEP-VM3MCDUYQ66OAKZI -s 10.42.1.199/32 -m comment --comment "net-lab/servers:http" -j KUBE-MARK-MASQ
+[0:0] -A KUBE-SEP-VM3MCDUYQ66OAKZI -p tcp -m comment --comment "net-lab/servers:http" -m tcp -j DNAT --to-destination 10.42.1.199:8080
+[0:0] -A KUBE-SERVICES -d 10.43.59.99/32 -p tcp -m comment --comment "net-lab/servers:http cluster IP" -m tcp --dport 8080 -j KUBE-SVC-52E5QOXW62TEVVLC
+[0:0] -A KUBE-SVC-52E5QOXW62TEVVLC ! -s 10.42.0.0/16 -d 10.43.59.99/32 -p tcp -m comment --comment "net-lab/servers:http cluster IP" -m tcp --dport 8080 -j KUBE-MARK-MASQ
+[0:0] -A KUBE-SVC-52E5QOXW62TEVVLC -m comment --comment "net-lab/servers:http -> 10.42.0.76:8080" -m statistic --mode random --probability 0.50000000000 -j KUBE-SEP-ATKFPN7UBKLE6WVO
+[0:0] -A KUBE-SVC-52E5QOXW62TEVVLC -m comment --comment "net-lab/servers:http -> 10.42.1.199:8080" -j KUBE-SEP-VM3MCDUYQ66OAKZI

@@ -1,0 +1,19 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-client-to-http-servers
+  namespace: net-lab
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: http-server
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: network-client
+      ports:
+        - protocol: TCP
+          port: 8080

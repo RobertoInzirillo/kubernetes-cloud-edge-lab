@@ -1,0 +1,635 @@
+=== IPPOOL ===
+apiVersion: v1
+items:
+- apiVersion: crd.projectcalico.org/v1
+  kind: IPPool
+  metadata:
+    annotations:
+      projectcalico.org/metadata: '{"generation":1,"creationTimestamp":"2026-08-05T16:28:24Z","labels":{"app.kubernetes.io/managed-by":"tigera-operator"}}'
+    creationTimestamp: "2026-08-05T16:28:24Z"
+    generation: 1
+    name: default-ipv4-ippool
+    resourceVersion: "2478"
+    uid: 5343a510-a45a-4ead-b684-5059bd1f6850
+  spec:
+    allowedUses:
+    - Workload
+    - Tunnel
+    assignmentMode: Automatic
+    blockSize: 26
+    cidr: 10.42.0.0/16
+    ipipMode: Never
+    natOutgoing: true
+    nodeSelector: all()
+    vxlanMode: Always
+kind: List
+metadata:
+  resourceVersion: ""
+=== BLOCK AFFINITIES ===
+apiVersion: v1
+items:
+- apiVersion: crd.projectcalico.org/v1
+  kind: BlockAffinity
+  metadata:
+    annotations:
+      projectcalico.org/metadata: '{"creationTimestamp":null,"labels":{"projectcalico.org/affinity-type":"host","projectcalico.org/hostname-hash":"ERP5VV4VS4OJYZ2TDBFOJJ36OVROPXCDGBGAQN2QZHCNEFZTOOQA","projectcalico.org/ip-version":"4"}}'
+    creationTimestamp: "2026-08-05T16:31:16Z"
+    generation: 2
+    labels:
+      projectcalico.org/affinity-type: host
+      projectcalico.org/hostname-hash: ERP5VV4VS4OJYZ2TDBFOJJ36OVROPXCDGBGAQN2QZHCNEFZTOOQA
+      projectcalico.org/ip-version: "4"
+    name: k3d-tesi-e10-calico-vxlan-agent-0-10-42-113-64-26
+    resourceVersion: "1354"
+    uid: 9b114b0b-63c9-4117-aa30-9a2fa5669944
+  spec:
+    cidr: 10.42.113.64/26
+    deleted: "false"
+    node: k3d-tesi-e10-calico-vxlan-agent-0
+    state: confirmed
+    type: host
+- apiVersion: crd.projectcalico.org/v1
+  kind: BlockAffinity
+  metadata:
+    annotations:
+      projectcalico.org/metadata: '{"creationTimestamp":null,"labels":{"projectcalico.org/affinity-type":"host","projectcalico.org/hostname-hash":"2BNRQ354RIX76N7QGPKRESP7VWSNP7AHKW2RGCCE6UOWYAXMVTBA","projectcalico.org/ip-version":"4"}}'
+    creationTimestamp: "2026-08-05T16:31:21Z"
+    generation: 2
+    labels:
+      projectcalico.org/affinity-type: host
+      projectcalico.org/hostname-hash: 2BNRQ354RIX76N7QGPKRESP7VWSNP7AHKW2RGCCE6UOWYAXMVTBA
+      projectcalico.org/ip-version: "4"
+    name: k3d-tesi-e10-calico-vxlan-agent-1-10-42-144-128-26
+    resourceVersion: "1427"
+    uid: 6da2840d-8d63-42af-952a-5c07ece954e1
+  spec:
+    cidr: 10.42.144.128/26
+    deleted: "false"
+    node: k3d-tesi-e10-calico-vxlan-agent-1
+    state: confirmed
+    type: host
+- apiVersion: crd.projectcalico.org/v1
+  kind: BlockAffinity
+  metadata:
+    annotations:
+      projectcalico.org/metadata: '{"creationTimestamp":null,"labels":{"projectcalico.org/affinity-type":"host","projectcalico.org/hostname-hash":"Z6GHHXSX42EJACKA7OISPLHWD533NUACIZDAQMJXK2EBSAPHOIAA","projectcalico.org/ip-version":"4"}}'
+    creationTimestamp: "2026-08-05T16:31:19Z"
+    generation: 2
+    labels:
+      projectcalico.org/affinity-type: host
+      projectcalico.org/hostname-hash: Z6GHHXSX42EJACKA7OISPLHWD533NUACIZDAQMJXK2EBSAPHOIAA
+      projectcalico.org/ip-version: "4"
+    name: k3d-tesi-e10-calico-vxlan-server-0-10-42-219-192-26
+    resourceVersion: "1383"
+    uid: effa6881-e953-45e9-bb7c-1c14a3af756b
+  spec:
+    cidr: 10.42.219.192/26
+    deleted: "false"
+    node: k3d-tesi-e10-calico-vxlan-server-0
+    state: confirmed
+    type: host
+kind: List
+metadata:
+  resourceVersion: ""
+=== IPAM BLOCKS ===
+apiVersion: v1
+items:
+- apiVersion: crd.projectcalico.org/v1
+  kind: IPAMBlock
+  metadata:
+    annotations:
+      projectcalico.org/metadata: '{"creationTimestamp":null}'
+    creationTimestamp: "2026-08-05T16:31:16Z"
+    generation: 6
+    name: 10-42-113-64-26
+    resourceVersion: "4372"
+    uid: 3bcb2933-f212-4651-bd3d-2c4500b76af8
+  spec:
+    affinity: host:k3d-tesi-e10-calico-vxlan-agent-0
+    affinityClaimTime: "2026-08-05T16:31:16Z"
+    allocations:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    attributes:
+    - handle_id: vxlan-tunnel-addr-k3d-tesi-e10-calico-vxlan-agent-0
+      secondary:
+        node: k3d-tesi-e10-calico-vxlan-agent-0
+        type: vxlanTunnelAddress
+    - handle_id: k8s-pod-network.e4bfdf7c72043dd9eb82f435a7222f785358a750149f28b2789cc286a6faa105
+      secondary:
+        namespace: calico-system
+        node: k3d-tesi-e10-calico-vxlan-agent-0
+        pod: csi-node-driver-29mv6
+        timestamp: 2026-08-05 16:31:16.336669362 +0000 UTC
+    - handle_id: k8s-pod-network.493c78d7142b527ed79117666e0a87801cb707ab98607bf73862d6c6fecba227
+      secondary:
+        namespace: calico-system
+        node: k3d-tesi-e10-calico-vxlan-agent-0
+        pod: calico-apiserver-5fd586f869-9dclt
+        timestamp: 2026-08-05 16:44:08.558697171 +0000 UTC
+    - handle_id: k8s-pod-network.4133bd53f9e3b8a68d9bd0de08d14b79842190f47f5a1371bbd97e4c44cf7733
+      secondary:
+        namespace: net-lab
+        node: k3d-tesi-e10-calico-vxlan-agent-0
+        pod: client
+        timestamp: 2026-08-05 17:15:38.270348251 +0000 UTC
+    - handle_id: k8s-pod-network.84cea32d4baa3b6148a694a4745a8a95a34e3e3bf0ca143ca76809d8397904eb
+      secondary:
+        namespace: net-lab
+        node: k3d-tesi-e10-calico-vxlan-agent-0
+        pod: server-a
+        timestamp: 2026-08-05 17:15:38.278833509 +0000 UTC
+    cidr: 10.42.113.64/26
+    deleted: false
+    sequenceNumber: 1785947476231460647
+    sequenceNumberForAllocation:
+      "0": 1785947476231460642
+      "1": 1785947476231460643
+      "2": 1785947476231460644
+      "3": 1785947476231460645
+      "4": 1785947476231460646
+    strictAffinity: false
+    unallocated:
+    - 5
+    - 6
+    - 7
+    - 8
+    - 9
+    - 10
+    - 11
+    - 12
+    - 13
+    - 14
+    - 15
+    - 16
+    - 17
+    - 18
+    - 19
+    - 20
+    - 21
+    - 22
+    - 23
+    - 24
+    - 25
+    - 26
+    - 27
+    - 28
+    - 29
+    - 30
+    - 31
+    - 32
+    - 33
+    - 34
+    - 35
+    - 36
+    - 37
+    - 38
+    - 39
+    - 40
+    - 41
+    - 42
+    - 43
+    - 44
+    - 45
+    - 46
+    - 47
+    - 48
+    - 49
+    - 50
+    - 51
+    - 52
+    - 53
+    - 54
+    - 55
+    - 56
+    - 57
+    - 58
+    - 59
+    - 60
+    - 61
+    - 62
+    - 63
+- apiVersion: crd.projectcalico.org/v1
+  kind: IPAMBlock
+  metadata:
+    annotations:
+      projectcalico.org/metadata: '{"creationTimestamp":null}'
+    creationTimestamp: "2026-08-05T16:31:21Z"
+    generation: 5
+    name: 10-42-144-128-26
+    resourceVersion: "4375"
+    uid: ca47de11-2f2b-4050-8351-f823134f39bd
+  spec:
+    affinity: host:k3d-tesi-e10-calico-vxlan-agent-1
+    affinityClaimTime: "2026-08-05T16:31:21Z"
+    allocations:
+    - 0
+    - 1
+    - 2
+    - 3
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    attributes:
+    - handle_id: vxlan-tunnel-addr-k3d-tesi-e10-calico-vxlan-agent-1
+      secondary:
+        node: k3d-tesi-e10-calico-vxlan-agent-1
+        type: vxlanTunnelAddress
+    - handle_id: k8s-pod-network.d8f466d71d94faadec4c4b5d8bb14f981df209a6d21fcff3bc752ecf282cafc9
+      secondary:
+        namespace: calico-system
+        node: k3d-tesi-e10-calico-vxlan-agent-1
+        pod: csi-node-driver-dqr8f
+        timestamp: 2026-08-05 16:31:22.282179827 +0000 UTC
+    - handle_id: k8s-pod-network.f6945dc17a21dcda6f4201f90352f548099b938ead735e1a95062b0baaead774
+      secondary:
+        namespace: calico-system
+        node: k3d-tesi-e10-calico-vxlan-agent-1
+        pod: calico-apiserver-5fd586f869-v4gmh
+        timestamp: 2026-08-05 16:44:08.557327583 +0000 UTC
+    - handle_id: k8s-pod-network.8c95e25c9de8d52893c8eab5a1b87b4e500055941a3bce8bdd04c2facff8316b
+      secondary:
+        namespace: net-lab
+        node: k3d-tesi-e10-calico-vxlan-agent-1
+        pod: server-b
+        timestamp: 2026-08-05 17:15:38.961779221 +0000 UTC
+    cidr: 10.42.144.128/26
+    deleted: false
+    sequenceNumber: 1785947481673206468
+    sequenceNumberForAllocation:
+      "0": 1785947481673206464
+      "1": 1785947481673206465
+      "2": 1785947481673206466
+      "3": 1785947481673206467
+    strictAffinity: false
+    unallocated:
+    - 4
+    - 5
+    - 6
+    - 7
+    - 8
+    - 9
+    - 10
+    - 11
+    - 12
+    - 13
+    - 14
+    - 15
+    - 16
+    - 17
+    - 18
+    - 19
+    - 20
+    - 21
+    - 22
+    - 23
+    - 24
+    - 25
+    - 26
+    - 27
+    - 28
+    - 29
+    - 30
+    - 31
+    - 32
+    - 33
+    - 34
+    - 35
+    - 36
+    - 37
+    - 38
+    - 39
+    - 40
+    - 41
+    - 42
+    - 43
+    - 44
+    - 45
+    - 46
+    - 47
+    - 48
+    - 49
+    - 50
+    - 51
+    - 52
+    - 53
+    - 54
+    - 55
+    - 56
+    - 57
+    - 58
+    - 59
+    - 60
+    - 61
+    - 62
+    - 63
+- apiVersion: crd.projectcalico.org/v1
+  kind: IPAMBlock
+  metadata:
+    annotations:
+      projectcalico.org/metadata: '{"creationTimestamp":null}'
+    creationTimestamp: "2026-08-05T16:31:19Z"
+    generation: 7
+    name: 10-42-219-192-26
+    resourceVersion: "1459"
+    uid: b6eff480-8270-419b-99d0-d19ae4a477d9
+  spec:
+    affinity: host:k3d-tesi-e10-calico-vxlan-server-0
+    affinityClaimTime: "2026-08-05T16:31:19Z"
+    allocations:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    - null
+    attributes:
+    - handle_id: vxlan-tunnel-addr-k3d-tesi-e10-calico-vxlan-server-0
+      secondary:
+        node: k3d-tesi-e10-calico-vxlan-server-0
+        type: vxlanTunnelAddress
+    - handle_id: k8s-pod-network.2763f8fcc8e4990d05fc3640d302108ac7da755e5219b022350eae74abfe03b2
+      secondary:
+        namespace: calico-system
+        node: k3d-tesi-e10-calico-vxlan-server-0
+        pod: csi-node-driver-n4xrj
+        timestamp: 2026-08-05 16:31:19.11319169 +0000 UTC
+    - handle_id: k8s-pod-network.77097340cb3a4c6a6b5ac4953d711e01e8179f4314e2115e8321b029cffefa1d
+      secondary:
+        namespace: kube-system
+        node: k3d-tesi-e10-calico-vxlan-server-0
+        pod: metrics-server-c8774f4f4-lpwwk
+        timestamp: 2026-08-05 16:31:21.671185272 +0000 UTC
+    - handle_id: k8s-pod-network.84c555f49e7362e1b737aec32bee8c235e0df067208b60a058804e8f0b356dfd
+      secondary:
+        namespace: kube-system
+        node: k3d-tesi-e10-calico-vxlan-server-0
+        pod: local-path-provisioner-5db9d5cbbb-skxjd
+        timestamp: 2026-08-05 16:31:21.707483281 +0000 UTC
+    - handle_id: k8s-pod-network.b17e9d3761a9d2795a15bd188f9aeebe252e127fe42a68210f02c9cb4830fd97
+      secondary:
+        namespace: kube-system
+        node: k3d-tesi-e10-calico-vxlan-server-0
+        pod: coredns-768dc8cf9b-2ccl9
+        timestamp: 2026-08-05 16:31:21.733453581 +0000 UTC
+    - handle_id: k8s-pod-network.e5d7f790f8a2ad753f9206407a6d29b0578afad9674f719a9c8c08075cd071c7
+      secondary:
+        namespace: calico-system
+        node: k3d-tesi-e10-calico-vxlan-server-0
+        pod: calico-kube-controllers-68985d8865-5gnws
+        timestamp: 2026-08-05 16:31:21.733482916 +0000 UTC
+    cidr: 10.42.219.192/26
+    deleted: false
+    sequenceNumber: 1785947479475498334
+    sequenceNumberForAllocation:
+      "0": 1785947479475498328
+      "1": 1785947479475498329
+      "2": 1785947479475498330
+      "3": 1785947479475498331
+      "4": 1785947479475498332
+      "5": 1785947479475498333
+    strictAffinity: false
+    unallocated:
+    - 6
+    - 7
+    - 8
+    - 9
+    - 10
+    - 11
+    - 12
+    - 13
+    - 14
+    - 15
+    - 16
+    - 17
+    - 18
+    - 19
+    - 20
+    - 21
+    - 22
+    - 23
+    - 24
+    - 25
+    - 26
+    - 27
+    - 28
+    - 29
+    - 30
+    - 31
+    - 32
+    - 33
+    - 34
+    - 35
+    - 36
+    - 37
+    - 38
+    - 39
+    - 40
+    - 41
+    - 42
+    - 43
+    - 44
+    - 45
+    - 46
+    - 47
+    - 48
+    - 49
+    - 50
+    - 51
+    - 52
+    - 53
+    - 54
+    - 55
+    - 56
+    - 57
+    - 58
+    - 59
+    - 60
+    - 61
+    - 62
+    - 63
+kind: List
+metadata:
+  resourceVersion: ""
+=== POD CIDR (context only) ===
+NAME                                 PODCIDR
+k3d-tesi-e10-calico-vxlan-agent-0    10.42.0.0/24
+k3d-tesi-e10-calico-vxlan-agent-1    10.42.1.0/24
+k3d-tesi-e10-calico-vxlan-server-0   10.42.2.0/24

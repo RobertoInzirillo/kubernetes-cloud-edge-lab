@@ -1,0 +1,495 @@
+timestamp=2026-08-09T16:52:26,907223507+02:00 node=k3d-tesi-e20-cilium-vxlan-agent-0 cilium_pod=cilium-sdlx7
+client_ip=10.42.0.169 client_endpoint_id=393 client_veth=lxc713e3fb92fbd
+server_a_ip=10.42.0.76 server_a_endpoint_id=472 server_a_veth=lxcae4bfb430853
+=== CiliumEndpoint API identity/state ===
+NAME       LOCAL_ID   IDENTITY   IP            NODE         STATE
+client     393        21766      10.42.0.169   172.19.0.4   ready
+server-a   472        1647       10.42.0.76    172.19.0.4   ready
+=== local endpoint details ===
+[
+  {
+    "id": 393,
+    "spec": {
+      "label-configuration": {},
+      "options": {
+        "ConntrackAccounting": "Disabled",
+        "Debug": "Disabled",
+        "DebugLB": "Disabled",
+        "DebugPolicy": "Disabled",
+        "DropNotification": "Enabled",
+        "MonitorAggregationLevel": "Medium",
+        "PolicyAccounting": "Enabled",
+        "PolicyAuditMode": "Disabled",
+        "PolicyVerdictNotification": "Enabled",
+        "SourceIPVerification": "Enabled",
+        "TraceNotification": "Enabled"
+      }
+    },
+    "status": {
+      "controllers": [
+        {
+          "configuration": {
+            "error-retry": true,
+            "error-retry-base": "2s",
+            "interval": "1s"
+          },
+          "name": "endpoint-393-regeneration-recovery",
+          "status": {
+            "last-failure-timestamp": "0001-01-01T00:00:00.000Z",
+            "last-success-timestamp": "0001-01-01T00:00:00.000Z"
+          },
+          "uuid": "4831ac49-a19e-4262-931f-adf979adc80d"
+        },
+        {
+          "configuration": {
+            "error-retry": true,
+            "interval": "5m0s"
+          },
+          "name": "resolve-identity-393",
+          "status": {
+            "last-failure-timestamp": "0001-01-01T00:00:00.000Z",
+            "last-success-timestamp": "2026-08-09T14:51:46.381Z",
+            "success-count": 8
+          },
+          "uuid": "4584aeaf-37bf-4b0b-8430-635f8e06e153"
+        },
+        {
+          "configuration": {
+            "error-retry": true
+          },
+          "name": "resolve-labels-net-lab/client",
+          "status": {
+            "last-failure-timestamp": "0001-01-01T00:00:00.000Z",
+            "last-success-timestamp": "2026-08-09T14:16:46.374Z",
+            "success-count": 1
+          },
+          "uuid": "b013cf77-2731-489a-b18a-f7da7ae927b8"
+        },
+        {
+          "configuration": {
+            "error-retry": true,
+            "interval": "15m0s"
+          },
+          "name": "sync-policymap-393",
+          "status": {
+            "last-failure-timestamp": "0001-01-01T00:00:00.000Z",
+            "last-success-timestamp": "2026-08-09T14:46:46.708Z",
+            "success-count": 3
+          },
+          "uuid": "a4be87a0-4394-4ea3-a8f1-b581659182ce"
+        },
+        {
+          "configuration": {
+            "error-retry": true,
+            "interval": "10s"
+          },
+          "name": "sync-to-k8s-ciliumendpoint (393)",
+          "status": {
+            "last-failure-timestamp": "0001-01-01T00:00:00.000Z",
+            "last-success-timestamp": "2026-08-09T14:52:26.586Z",
+            "success-count": 216
+          },
+          "uuid": "68811bb8-1c90-49d6-b408-5dfdbb02799a"
+        }
+      ],
+      "external-identifiers": {
+        "cni-attachment-id": "f7f4d1c809c9c8aaa6de03b91d8513cd687ec0021ce190dabd9f4e0ac0032f02:eth0",
+        "container-id": "f7f4d1c809c9c8aaa6de03b91d8513cd687ec0021ce190dabd9f4e0ac0032f02",
+        "k8s-namespace": "net-lab",
+        "k8s-pod-name": "client",
+        "pod-name": "net-lab/client"
+      },
+      "health": {
+        "bpf": "OK",
+        "connected": true,
+        "overallHealth": "OK",
+        "policy": "OK"
+      },
+      "identity": {
+        "id": 21766,
+        "labels": [
+          "k8s:app.kubernetes.io/instance=client",
+          "k8s:app.kubernetes.io/name=network-client",
+          "k8s:app.kubernetes.io/part-of=e01-network-baseline",
+          "k8s:io.cilium.k8s.namespace.labels.app.kubernetes.io/part-of=e01-network-baseline",
+          "k8s:io.cilium.k8s.namespace.labels.kubernetes.io/metadata.name=net-lab",
+          "k8s:io.cilium.k8s.policy.cluster=default",
+          "k8s:io.cilium.k8s.policy.serviceaccount=default",
+          "k8s:io.kubernetes.pod.namespace=net-lab"
+        ]
+      },
+      "labels": {
+        "realized": {},
+        "security-relevant": [
+          "k8s:app.kubernetes.io/instance=client",
+          "k8s:app.kubernetes.io/name=network-client",
+          "k8s:app.kubernetes.io/part-of=e01-network-baseline",
+          "k8s:io.cilium.k8s.namespace.labels.app.kubernetes.io/part-of=e01-network-baseline",
+          "k8s:io.cilium.k8s.namespace.labels.kubernetes.io/metadata.name=net-lab",
+          "k8s:io.cilium.k8s.policy.cluster=default",
+          "k8s:io.cilium.k8s.policy.serviceaccount=default",
+          "k8s:io.kubernetes.pod.namespace=net-lab"
+        ]
+      },
+      "log": [
+        {
+          "code": "OK",
+          "message": "Successfully regenerated endpoint program (Reason: periodic endpoint regeneration)",
+          "state": "ready",
+          "timestamp": "2026-08-09T14:51:57Z"
+        }
+      ],
+      "networking": {
+        "addressing": [
+          {
+            "ipv4": "10.42.0.169",
+            "ipv4-pool-name": "default"
+          }
+        ],
+        "container-interface-name": "eth0",
+        "host-mac": "2e:28:35:9b:68:3f",
+        "interface-index": 9,
+        "interface-name": "lxc713e3fb92fbd",
+        "mac": "6e:b9:0e:cf:3d:c8"
+      },
+      "policy": {
+        "proxy-policy-revision": 1,
+        "proxy-statistics": [],
+        "realized": {
+          "allowed-egress-identities": [
+            0
+          ],
+          "allowed-ingress-identities": [
+            0,
+            1
+          ],
+          "build": 1,
+          "denied-egress-identities": null,
+          "denied-ingress-identities": null,
+          "id": 21766,
+          "l4": {
+            "egress": [],
+            "ingress": []
+          },
+          "policy-enabled": "none",
+          "policy-revision": 1
+        },
+        "spec": {
+          "allowed-egress-identities": [
+            0
+          ],
+          "allowed-ingress-identities": [
+            0,
+            1
+          ],
+          "build": 1,
+          "denied-egress-identities": null,
+          "denied-ingress-identities": null,
+          "id": 21766,
+          "l4": {
+            "egress": [],
+            "ingress": []
+          },
+          "policy-enabled": "none",
+          "policy-revision": 1
+        }
+      },
+      "realized": {
+        "label-configuration": {},
+        "options": {
+          "ConntrackAccounting": "Disabled",
+          "Debug": "Disabled",
+          "DebugLB": "Disabled",
+          "DebugPolicy": "Disabled",
+          "DropNotification": "Enabled",
+          "MonitorAggregationLevel": "Medium",
+          "PolicyAccounting": "Enabled",
+          "PolicyAuditMode": "Disabled",
+          "PolicyVerdictNotification": "Enabled",
+          "SourceIPVerification": "Enabled",
+          "TraceNotification": "Enabled"
+        }
+      },
+      "state": "ready"
+    }
+  }
+]
+[
+  {
+    "id": 472,
+    "spec": {
+      "label-configuration": {},
+      "options": {
+        "ConntrackAccounting": "Disabled",
+        "Debug": "Disabled",
+        "DebugLB": "Disabled",
+        "DebugPolicy": "Disabled",
+        "DropNotification": "Enabled",
+        "MonitorAggregationLevel": "Medium",
+        "PolicyAccounting": "Enabled",
+        "PolicyAuditMode": "Disabled",
+        "PolicyVerdictNotification": "Enabled",
+        "SourceIPVerification": "Enabled",
+        "TraceNotification": "Enabled"
+      }
+    },
+    "status": {
+      "controllers": [
+        {
+          "configuration": {
+            "error-retry": true,
+            "error-retry-base": "2s",
+            "interval": "1s"
+          },
+          "name": "endpoint-472-regeneration-recovery",
+          "status": {
+            "last-failure-timestamp": "0001-01-01T00:00:00.000Z",
+            "last-success-timestamp": "0001-01-01T00:00:00.000Z"
+          },
+          "uuid": "8ef48f24-4d25-4e2f-b6bd-80e0e96a952a"
+        },
+        {
+          "configuration": {
+            "error-retry": true,
+            "interval": "5m0s"
+          },
+          "name": "resolve-identity-472",
+          "status": {
+            "last-failure-timestamp": "0001-01-01T00:00:00.000Z",
+            "last-success-timestamp": "2026-08-09T14:51:46.400Z",
+            "success-count": 8
+          },
+          "uuid": "7347f5a8-e39c-4447-8186-cee227b34907"
+        },
+        {
+          "configuration": {
+            "error-retry": true
+          },
+          "name": "resolve-labels-net-lab/server-a",
+          "status": {
+            "last-failure-timestamp": "0001-01-01T00:00:00.000Z",
+            "last-success-timestamp": "2026-08-09T14:16:46.395Z",
+            "success-count": 1
+          },
+          "uuid": "5549baa4-c80c-4703-8dff-cff20a1f26b6"
+        },
+        {
+          "configuration": {
+            "error-retry": true,
+            "interval": "15m0s"
+          },
+          "name": "sync-policymap-472",
+          "status": {
+            "last-failure-timestamp": "0001-01-01T00:00:00.000Z",
+            "last-success-timestamp": "2026-08-09T14:46:46.719Z",
+            "success-count": 3
+          },
+          "uuid": "09c4e4ba-33f0-43a6-b14f-fcb9ef4139c9"
+        },
+        {
+          "configuration": {
+            "error-retry": true,
+            "interval": "10s"
+          },
+          "name": "sync-to-k8s-ciliumendpoint (472)",
+          "status": {
+            "last-failure-timestamp": "0001-01-01T00:00:00.000Z",
+            "last-success-timestamp": "2026-08-09T14:52:26.605Z",
+            "success-count": 216
+          },
+          "uuid": "bb51610a-5723-479f-87aa-49a015249e1d"
+        }
+      ],
+      "external-identifiers": {
+        "cni-attachment-id": "b9d587ea07cc2c1c4a82c7fcf604a06e78c6ef19b182018dfb2b835fb174f6e9:eth0",
+        "container-id": "b9d587ea07cc2c1c4a82c7fcf604a06e78c6ef19b182018dfb2b835fb174f6e9",
+        "k8s-namespace": "net-lab",
+        "k8s-pod-name": "server-a",
+        "pod-name": "net-lab/server-a"
+      },
+      "health": {
+        "bpf": "OK",
+        "connected": true,
+        "overallHealth": "OK",
+        "policy": "OK"
+      },
+      "identity": {
+        "id": 1647,
+        "labels": [
+          "k8s:app.kubernetes.io/instance=server-a",
+          "k8s:app.kubernetes.io/name=http-server",
+          "k8s:app.kubernetes.io/part-of=e01-network-baseline",
+          "k8s:io.cilium.k8s.namespace.labels.app.kubernetes.io/part-of=e01-network-baseline",
+          "k8s:io.cilium.k8s.namespace.labels.kubernetes.io/metadata.name=net-lab",
+          "k8s:io.cilium.k8s.policy.cluster=default",
+          "k8s:io.cilium.k8s.policy.serviceaccount=default",
+          "k8s:io.kubernetes.pod.namespace=net-lab"
+        ]
+      },
+      "labels": {
+        "realized": {},
+        "security-relevant": [
+          "k8s:app.kubernetes.io/instance=server-a",
+          "k8s:app.kubernetes.io/name=http-server",
+          "k8s:app.kubernetes.io/part-of=e01-network-baseline",
+          "k8s:io.cilium.k8s.namespace.labels.app.kubernetes.io/part-of=e01-network-baseline",
+          "k8s:io.cilium.k8s.namespace.labels.kubernetes.io/metadata.name=net-lab",
+          "k8s:io.cilium.k8s.policy.cluster=default",
+          "k8s:io.cilium.k8s.policy.serviceaccount=default",
+          "k8s:io.kubernetes.pod.namespace=net-lab"
+        ]
+      },
+      "log": [
+        {
+          "code": "OK",
+          "message": "Successfully regenerated endpoint program (Reason: periodic endpoint regeneration)",
+          "state": "ready",
+          "timestamp": "2026-08-09T14:51:57Z"
+        }
+      ],
+      "namedPorts": [
+        {
+          "name": "http",
+          "port": 8080,
+          "protocol": "TCP"
+        }
+      ],
+      "networking": {
+        "addressing": [
+          {
+            "ipv4": "10.42.0.76",
+            "ipv4-pool-name": "default"
+          }
+        ],
+        "container-interface-name": "eth0",
+        "host-mac": "82:9c:01:88:bf:bc",
+        "interface-index": 11,
+        "interface-name": "lxcae4bfb430853",
+        "mac": "1e:07:16:03:8e:97"
+      },
+      "policy": {
+        "proxy-policy-revision": 1,
+        "proxy-statistics": [],
+        "realized": {
+          "allowed-egress-identities": [
+            0
+          ],
+          "allowed-ingress-identities": [
+            0,
+            1
+          ],
+          "build": 1,
+          "denied-egress-identities": null,
+          "denied-ingress-identities": null,
+          "id": 1647,
+          "l4": {
+            "egress": [],
+            "ingress": []
+          },
+          "policy-enabled": "none",
+          "policy-revision": 1
+        },
+        "spec": {
+          "allowed-egress-identities": [
+            0
+          ],
+          "allowed-ingress-identities": [
+            0,
+            1
+          ],
+          "build": 1,
+          "denied-egress-identities": null,
+          "denied-ingress-identities": null,
+          "id": 1647,
+          "l4": {
+            "egress": [],
+            "ingress": []
+          },
+          "policy-enabled": "none",
+          "policy-revision": 1
+        }
+      },
+      "realized": {
+        "label-configuration": {},
+        "options": {
+          "ConntrackAccounting": "Disabled",
+          "Debug": "Disabled",
+          "DebugLB": "Disabled",
+          "DebugPolicy": "Disabled",
+          "DropNotification": "Enabled",
+          "MonitorAggregationLevel": "Medium",
+          "PolicyAccounting": "Enabled",
+          "PolicyAuditMode": "Disabled",
+          "PolicyVerdictNotification": "Enabled",
+          "SourceIPVerification": "Enabled",
+          "TraceNotification": "Enabled"
+        }
+      },
+      "state": "ready"
+    }
+  }
+]
+=== container routes ===
+--- client ---
+default via 10.42.0.119 dev eth0 
+10.42.0.119 dev eth0 scope link 
+--- server-a ---
+default via 10.42.0.119 dev eth0 
+10.42.0.119 dev eth0 scope link 
+=== node route decisions ===
+10.42.0.169 dev cilium_host src 10.42.0.119 uid 0 
+    cache 
+10.42.0.76 dev cilium_host src 10.42.0.119 uid 0 
+    cache 
+10.42.0.0/24 via 10.42.0.119 dev cilium_host proto kernel src 10.42.0.119 
+10.42.0.119 dev cilium_host proto kernel scope link 
+10.42.1.0/24 via 10.42.0.119 dev cilium_host proto kernel src 10.42.0.119 mtu 1450 
+10.42.2.0/24 via 10.42.0.119 dev cilium_host proto kernel src 10.42.0.119 mtu 1450 
+=== host endpoint veth ===
+--- lxc713e3fb92fbd ---
+9: lxc713e3fb92fbd@if8: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP mode DEFAULT group default qlen 1000
+    link/ether 2e:28:35:9b:68:3f brd ff:ff:ff:ff:ff:ff link-netnsid 2 promiscuity 0  allmulti 0 minmtu 68 maxmtu 65535 
+    veth addrgenmode eui64 numtxqueues 8 numrxqueues 8 gso_max_size 65536 gso_max_segs 65535 tso_max_size 524280 tso_max_segs 65535 gro_max_size 65536 
+xdp:
+
+tc:
+lxc713e3fb92fbd(9) tcx/ingress cil_from_container prog_id 911 link_id 29 
+
+flow_dissector:
+
+netfilter:
+
+--- lxcae4bfb430853 ---
+11: lxcae4bfb430853@if10: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP mode DEFAULT group default qlen 1000
+    link/ether 82:9c:01:88:bf:bc brd ff:ff:ff:ff:ff:ff link-netnsid 3 promiscuity 0  allmulti 0 minmtu 68 maxmtu 65535 
+    veth addrgenmode eui64 numtxqueues 8 numrxqueues 8 gso_max_size 65536 gso_max_segs 65535 tso_max_size 524280 tso_max_segs 65535 gro_max_size 65536 
+xdp:
+
+tc:
+lxcae4bfb430853(11) tcx/ingress cil_from_container prog_id 920 link_id 30 
+
+flow_dissector:
+
+netfilter:
+
+=== endpoint and IP cache maps ===
+IP ADDRESS      LOCAL ENDPOINT INFO
+10.42.0.76:0    id=472   sec_id=1647  flags=0x0000 ifindex=11  mac=1E:07:16:03:8E:97 nodemac=82:9C:01:88:BF:BC parent_ifindex=0     
+10.42.0.169:0   id=393   sec_id=21766 flags=0x0000 ifindex=9   mac=6E:B9:0E:CF:3D:C8 nodemac=2E:28:35:9B:68:3F parent_ifindex=0     
+10.42.0.169/32      identity=21766 encryptkey=0 tunnelendpoint=0.0.0.0 flags=<none>         
+10.42.0.76/32       identity=1647 encryptkey=0 tunnelendpoint=0.0.0.0 flags=<none>          
+=== relevant Cilium interfaces ===
+cilium_net@cilium_host UP             36:95:8d:73:79:5e <BROADCAST,MULTICAST,NOARP,UP,LOWER_UP> 
+cilium_host@cilium_net UP             ee:dd:3f:dc:98:14 <BROADCAST,MULTICAST,NOARP,UP,LOWER_UP> 
+cilium_vxlan     UNKNOWN        8a:1c:8a:17:2c:92 <BROADCAST,MULTICAST,UP,LOWER_UP> 
+lxc_health@if6   UP             12:cf:71:ec:27:69 <BROADCAST,MULTICAST,UP,LOWER_UP> 
+lxc713e3fb92fbd@if8 UP             2e:28:35:9b:68:3f <BROADCAST,MULTICAST,UP,LOWER_UP> 
+lxcae4bfb430853@if10 UP             82:9c:01:88:bf:bc <BROADCAST,MULTICAST,UP,LOWER_UP> 
+=== single functional HTTP flow ===
+flow_timestamp=2026-08-09T16:52:29,953866578+02:00
+response=server-a exit=0
+=== endpoint stability ===
+NAME       READY   RESTARTS
+client     true    0
+server-a   true    0
+intra_node_path_gate=PASS

@@ -1,0 +1,233 @@
+timestamp=2026-08-07T16:58:30,193691858+02:00
+reason=use_cilium_hostpath_reported_by_agent
+=== node CNI, bpffs and VXLAN ===
+--- k3d-tesi-e20-cilium-vxlan-server-0 ---
+bpffs=bpf_fs
+bpf /sys/fs/bpf bpf rw,relatime 0 0
+cgroup=cgroup2fs
+cni_directories:
+drwx------ 2 root root 4096 Aug  7 14:55 /etc/cni/net.d
+/etc/cni/net.d/05-cilium.conflist
+cilium_conflist:
+
+{
+  "cniVersion": "0.3.1",
+  "name": "cilium",
+  "plugins": [
+    {
+       "type": "cilium-cni",
+       "enable-debug": false,
+       "log-file": "/var/run/cilium/cilium-cni.log"
+    }
+  ]
+}
+cilium_vxlan:
+5: cilium_vxlan: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UNKNOWN mode DEFAULT group default 
+    link/ether b6:16:f2:37:b5:c8 brd ff:ff:ff:ff:ff:ff promiscuity 0 allmulti 0 minmtu 68 maxmtu 65535 
+    vxlan id 0 srcport 0 0 dstport 8472 ttl auto ageing 300 reserved_bits 0xf7ffffff000000ff external nolearning addrgenmode eui64 numtxqueues 1 numrxqueues 1 gso_max_size 65536 gso_max_segs 65535 tso_max_size 65536 tso_max_segs 65535 gro_max_size 65536 gso_ipv4_max_size 65536 gro_ipv4_max_size 65536 
+cilium_vxlan     UNKNOWN        fe80::b416:f2ff:fe37:b5c8/64 
+selected_routes:
+10.42.0.0/24 via 10.42.2.197 dev cilium_host proto kernel src 10.42.2.197 mtu 1450 
+10.42.1.0/24 via 10.42.2.197 dev cilium_host proto kernel src 10.42.2.197 mtu 1450 
+10.42.2.0/24 via 10.42.2.197 dev cilium_host proto kernel src 10.42.2.197 
+10.42.2.197 dev cilium_host proto kernel scope link 
+bpf_pinned_top_level:
+/sys/fs/bpf/cilium
+/sys/fs/bpf/cilium/devices
+/sys/fs/bpf/cilium/endpoints
+/sys/fs/bpf/tc
+/sys/fs/bpf/tc/globals
+bpf_pinned_entries=55
+--- k3d-tesi-e20-cilium-vxlan-agent-0 ---
+bpffs=bpf_fs
+bpf /sys/fs/bpf bpf rw,relatime 0 0
+cgroup=cgroup2fs
+cni_directories:
+drwx------ 2 root root 4096 Aug  7 14:54 /etc/cni/net.d
+/etc/cni/net.d/05-cilium.conflist
+cilium_conflist:
+
+{
+  "cniVersion": "0.3.1",
+  "name": "cilium",
+  "plugins": [
+    {
+       "type": "cilium-cni",
+       "enable-debug": false,
+       "log-file": "/var/run/cilium/cilium-cni.log"
+    }
+  ]
+}
+cilium_vxlan:
+5: cilium_vxlan: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UNKNOWN mode DEFAULT group default 
+    link/ether 0e:de:3a:21:47:6c brd ff:ff:ff:ff:ff:ff promiscuity 0 allmulti 0 minmtu 68 maxmtu 65535 
+    vxlan id 0 srcport 0 0 dstport 8472 ttl auto ageing 300 reserved_bits 0xf7ffffff000000ff external nolearning addrgenmode eui64 numtxqueues 1 numrxqueues 1 gso_max_size 65536 gso_max_segs 65535 tso_max_size 65536 tso_max_segs 65535 gro_max_size 65536 gso_ipv4_max_size 65536 gro_ipv4_max_size 65536 
+cilium_vxlan     UNKNOWN        fe80::cde:3aff:fe21:476c/64 
+selected_routes:
+10.42.0.0/24 via 10.42.0.119 dev cilium_host proto kernel src 10.42.0.119 
+10.42.0.119 dev cilium_host proto kernel scope link 
+10.42.1.0/24 via 10.42.0.119 dev cilium_host proto kernel src 10.42.0.119 mtu 1450 
+10.42.2.0/24 via 10.42.0.119 dev cilium_host proto kernel src 10.42.0.119 mtu 1450 
+bpf_pinned_top_level:
+/sys/fs/bpf/cilium
+/sys/fs/bpf/cilium/devices
+/sys/fs/bpf/cilium/endpoints
+/sys/fs/bpf/tc
+/sys/fs/bpf/tc/globals
+bpf_pinned_entries=55
+--- k3d-tesi-e20-cilium-vxlan-agent-1 ---
+bpffs=bpf_fs
+bpf /sys/fs/bpf bpf rw,relatime 0 0
+cgroup=cgroup2fs
+cni_directories:
+drwx------ 2 root root 4096 Aug  7 14:54 /etc/cni/net.d
+/etc/cni/net.d/05-cilium.conflist
+cilium_conflist:
+
+{
+  "cniVersion": "0.3.1",
+  "name": "cilium",
+  "plugins": [
+    {
+       "type": "cilium-cni",
+       "enable-debug": false,
+       "log-file": "/var/run/cilium/cilium-cni.log"
+    }
+  ]
+}
+cilium_vxlan:
+5: cilium_vxlan: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UNKNOWN mode DEFAULT group default 
+    link/ether 5a:32:0e:cc:09:75 brd ff:ff:ff:ff:ff:ff promiscuity 0 allmulti 0 minmtu 68 maxmtu 65535 
+    vxlan id 0 srcport 0 0 dstport 8472 ttl auto ageing 300 reserved_bits 0xf7ffffff000000ff external nolearning addrgenmode eui64 numtxqueues 1 numrxqueues 1 gso_max_size 65536 gso_max_segs 65535 tso_max_size 65536 tso_max_segs 65535 gro_max_size 65536 gso_ipv4_max_size 65536 gro_ipv4_max_size 65536 
+cilium_vxlan     UNKNOWN        fe80::5832:eff:fecc:975/64 
+selected_routes:
+10.42.0.0/24 via 10.42.1.188 dev cilium_host proto kernel src 10.42.1.188 mtu 1450 
+10.42.1.0/24 via 10.42.1.188 dev cilium_host proto kernel src 10.42.1.188 
+10.42.1.188 dev cilium_host proto kernel scope link 
+10.42.2.0/24 via 10.42.1.188 dev cilium_host proto kernel src 10.42.1.188 mtu 1450 
+bpf_pinned_top_level:
+/sys/fs/bpf/cilium
+/sys/fs/bpf/cilium/devices
+/sys/fs/bpf/cilium/endpoints
+/sys/fs/bpf/tc
+/sys/fs/bpf/tc/globals
+bpf_pinned_entries=70
+=== attached programs/maps per Cilium agent ===
+--- pod/cilium-rcb5j node=k3d-tesi-e20-cilium-vxlan-server-0 ---
+xdp:
+
+tc:
+eth0(2) tcx/ingress cil_from_netdev prog_id 811 link_id 22 
+cilium_net(3) tcx/ingress cil_to_host prog_id 803 link_id 21 
+cilium_host(4) tcx/ingress cil_to_host prog_id 794 link_id 19 
+cilium_host(4) tcx/egress cil_from_host prog_id 798 link_id 20 
+cilium_vxlan(5) tcx/ingress cil_from_overlay prog_id 791 link_id 17 
+cilium_vxlan(5) tcx/egress cil_to_overlay prog_id 792 link_id 18 
+lxc_health(7) tcx/ingress cil_from_container prog_id 895 link_id 27 
+
+flow_dissector:
+
+netfilter:
+
+pinned_global_maps=33
+cilium_calls_01983
+cilium_calls_hostns_02500
+cilium_calls_netdev_00002
+cilium_calls_netdev_00003
+cilium_calls_overlay_2
+cilium_ct4_global
+cilium_ct_any4_global
+cilium_ipcache_v2
+cilium_lb4_affinity
+cilium_lb4_backends_v3
+cilium_lb4_reverse_nat
+cilium_lb4_reverse_sk
+cilium_lb4_services_v2
+cilium_lb4_source_range
+cilium_lb_affinity_match
+cilium_metrics
+cilium_policy_v2_01983
+cilium_policy_v2_02500
+cilium_policystats
+--- pod/cilium-sdlx7 node=k3d-tesi-e20-cilium-vxlan-agent-0 ---
+xdp:
+
+tc:
+eth0(2) tcx/ingress cil_from_netdev prog_id 630 link_id 7 
+cilium_net(3) tcx/ingress cil_to_host prog_id 620 link_id 6 
+cilium_host(4) tcx/ingress cil_to_host prog_id 610 link_id 4 
+cilium_host(4) tcx/egress cil_from_host prog_id 608 link_id 5 
+cilium_vxlan(5) tcx/ingress cil_from_overlay prog_id 553 link_id 2 
+cilium_vxlan(5) tcx/egress cil_to_overlay prog_id 554 link_id 3 
+lxc_health(7) tcx/ingress cil_from_container prog_id 750 link_id 9 
+
+flow_dissector:
+
+netfilter:
+
+pinned_global_maps=33
+cilium_calls_02007
+cilium_calls_hostns_01090
+cilium_calls_netdev_00002
+cilium_calls_netdev_00003
+cilium_calls_overlay_2
+cilium_ct4_global
+cilium_ct_any4_global
+cilium_ipcache_v2
+cilium_lb4_affinity
+cilium_lb4_backends_v3
+cilium_lb4_reverse_nat
+cilium_lb4_reverse_sk
+cilium_lb4_services_v2
+cilium_lb4_source_range
+cilium_lb_affinity_match
+cilium_metrics
+cilium_policy_v2_01090
+cilium_policy_v2_02007
+cilium_policystats
+--- pod/cilium-ww6f2 node=k3d-tesi-e20-cilium-vxlan-agent-1 ---
+xdp:
+
+tc:
+eth0(2) tcx/ingress cil_from_netdev prog_id 884 link_id 16 
+cilium_net(3) tcx/ingress cil_to_host prog_id 876 link_id 15 
+cilium_host(4) tcx/ingress cil_to_host prog_id 870 link_id 13 
+cilium_host(4) tcx/egress cil_from_host prog_id 868 link_id 14 
+cilium_vxlan(5) tcx/ingress cil_from_overlay prog_id 783 link_id 10 
+cilium_vxlan(5) tcx/egress cil_to_overlay prog_id 784 link_id 11 
+lxc_health(7) tcx/ingress cil_from_container prog_id 851 link_id 24 
+lxca651fcccb6a5(9) tcx/ingress cil_from_container prog_id 836 link_id 23 
+lxc4137699bc5a8(11) tcx/ingress cil_from_container prog_id 825 link_id 26 
+lxc12a0f81e7445(13) tcx/ingress cil_from_container prog_id 849 link_id 25 
+
+flow_dissector:
+
+netfilter:
+
+pinned_global_maps=39
+cilium_calls_00001
+cilium_calls_01009
+cilium_calls_01828
+cilium_calls_03643
+cilium_calls_hostns_01904
+cilium_calls_netdev_00002
+cilium_calls_netdev_00003
+cilium_calls_overlay_2
+cilium_ct4_global
+cilium_ct_any4_global
+cilium_ipcache_v2
+cilium_lb4_affinity
+cilium_lb4_backends_v3
+cilium_lb4_reverse_nat
+cilium_lb4_reverse_sk
+cilium_lb4_services_v2
+cilium_lb4_source_range
+cilium_lb_affinity_match
+cilium_metrics
+cilium_policy_v2_00001
+cilium_policy_v2_01009
+cilium_policy_v2_01828
+cilium_policy_v2_01904
+cilium_policy_v2_03643
+cilium_policystats
+cni_bpf_datapath_gate=PASS

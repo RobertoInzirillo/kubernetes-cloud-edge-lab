@@ -1,0 +1,14 @@
+timestamp=2026-08-07T17:01:47,326948602+02:00
+=== optional custom resources (robust empty/not-served handling) ===
+ciliumbgpclusterconfigs.cilium.io served=no instances=0
+ciliumbgppeerconfigs.cilium.io served=no instances=0
+ciliumbgpadvertisements.cilium.io served=no instances=0
+ciliumclusterwideenvoyconfigs.cilium.io served=no instances=0
+ciliumenvoyconfigs.cilium.io served=no instances=0
+ciliuml2announcementpolicies.cilium.io served=yes instances=0
+ciliumloadbalancerippools.cilium.io served=yes instances=0
+ciliumnodeconfigs.cilium.io served=yes instances=0
+ciliumegressgatewaypolicies.cilium.io served=no instances=0
+optional_api_instance_count=0
+=== ingress/gateway classes ===
+optional_api_gate=PASS
