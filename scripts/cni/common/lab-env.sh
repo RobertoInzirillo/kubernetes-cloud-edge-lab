@@ -45,6 +45,8 @@ check_experiment_preflight() {
   local api_port="$2"
   local blocked=0
   local cluster_list
+  local port_list
+  local pgrep_rc
 
   if ! command -v k3d >/dev/null || ! command -v ss >/dev/null || \
       ! command -v pgrep >/dev/null; then
@@ -64,17 +66,36 @@ check_experiment_preflight() {
     blocked=1
   fi
 
-  if ss -H -ltn "sport = :${api_port}" | grep -q .; then
+  if ! port_list="$(ss -H -ltn "sport = :${api_port}")"; then
+    printf 'STOP: impossibile verificare la porta API %s con ss.\n' \
+      "$api_port" >&2
+    return 1
+  fi
+
+  if [[ -n "$port_list" ]]; then
     printf 'STOP: la porta API %s è già in ascolto.\n' "$api_port" >&2
     ss -H -ltnp "sport = :${api_port}" || true
     blocked=1
   fi
 
   if pgrep -x tcpdump >/dev/null; then
-    printf 'STOP: sono presenti processi tcpdump; verificarne la provenienza.\n' >&2
-    pgrep -a -x tcpdump >&2 || true
-    blocked=1
+    pgrep_rc=0
+  else
+    pgrep_rc=$?
   fi
+  case "$pgrep_rc" in
+    0)
+      printf 'STOP: sono presenti processi tcpdump; verificarne la provenienza.\n' >&2
+      pgrep -a -x tcpdump >&2 || true
+      blocked=1
+      ;;
+    1) ;;
+    *)
+      printf 'STOP: impossibile verificare i processi tcpdump (pgrep rc=%s).\n' \
+        "$pgrep_rc" >&2
+      return 1
+      ;;
+  esac
 
   if [[ "$blocked" -ne 0 ]]; then
     printf '%s\n' \
@@ -85,6 +106,38 @@ check_experiment_preflight() {
 
   printf 'PASS preflight: cluster=%s porta_api=%s tcpdump_residui=0\n' \
     "$cluster_name" "$api_port"
+}
+
+verify_no_tcpdump_processes() {
+  local pgrep_rc
+
+  if ! command -v pgrep >/dev/null; then
+    printf 'ERROR: pgrep non disponibile; impossibile verificare tcpdump.\n' >&2
+    return 1
+  fi
+
+  if pgrep -x tcpdump >/dev/null; then
+    pgrep_rc=0
+  else
+    pgrep_rc=$?
+  fi
+
+  case "$pgrep_rc" in
+    0)
+      printf 'FAIL: tcpdump residuo.\n' >&2
+      pgrep -a -x tcpdump >&2 || true
+      return 1
+      ;;
+    1)
+      printf 'PASS: nessun tcpdump residuo.\n'
+      return 0
+      ;;
+    *)
+      printf 'ERROR: verifica tcpdump fallita (pgrep rc=%s).\n' \
+        "$pgrep_rc" >&2
+      return 1
+      ;;
+  esac
 }
 
 deploy_common_workload() {
@@ -106,14 +159,19 @@ deploy_common_workload() {
 }
 
 verify_service_backends() {
-  _tesi_require_context || return 1
+  if ! _tesi_require_context; then
+    printf 'ERROR: contesto Service non definito.\n' >&2
+    return 1
+  fi
 
   local endpoints
   local backend
-  endpoints="$(kubectl --context "$TESI_CONTEXT" get endpointslice \
+  if ! endpoints="$(kubectl --context "$TESI_CONTEXT" get endpointslice \
     -n net-lab -l kubernetes.io/service-name=servers \
-    -o jsonpath='{range .items[*].endpoints[*]}{.targetRef.name}{"\t"}{.conditions.ready}{"\n"}{end}')" || \
+    -o jsonpath='{range .items[*].endpoints[*]}{.targetRef.name}{"\t"}{.conditions.ready}{"\n"}{end}')"; then
+    printf 'ERROR: lettura EndpointSlice del Service fallita.\n' >&2
     return 1
+  fi
   printf '%s\n' "$endpoints"
 
   for backend in server-a server-b; do
@@ -127,28 +185,144 @@ verify_service_backends() {
   printf 'PASS backend Ready: server-a server-b\n'
 }
 
+_tesi_wget_probe() {
+  if [[ "$#" -lt 3 || "$#" -gt 4 ]]; then
+    printf 'ERROR: uso interno probe POD URL BODY_ATTESO_1 [BODY_ATTESO_2].\n' >&2
+    return 70
+  fi
+
+  local source_pod="$1"
+  local target_url="$2"
+  local expected_body_1="$3"
+  local expected_body_2="${4:-}"
+  local exec_output
+  local exec_rc
+  local line
+  local wget_rc=''
+  local response_body=''
+  local saw_body=0
+  local saw_done=0
+
+  if exec_output="$(kubectl --context "$TESI_CONTEXT" exec -n net-lab \
+      "$source_pod" -- sh -c '
+        target_url="$1"
+        body="$(wget -qO- -T 3 "$target_url")"
+        wget_rc=$?
+        printf "TESI_WGET_RC=%s\n" "$wget_rc"
+        printf "TESI_RESPONSE_BODY=%s\n" "$body"
+        printf "TESI_PROBE_DONE=1\n"
+        exit 0
+      ' sh "$target_url")"; then
+    exec_rc=0
+  else
+    exec_rc=$?
+  fi
+
+  if [[ "$exec_rc" -ne 0 ]]; then
+    printf 'ERROR kind=kubectl-exec source=%s rc=%s\n' \
+      "$source_pod" "$exec_rc" >&2
+    return 71
+  fi
+
+  while IFS= read -r line; do
+    case "$line" in
+      TESI_WGET_RC=*) wget_rc="${line#TESI_WGET_RC=}" ;;
+      TESI_RESPONSE_BODY=*)
+        response_body="${line#TESI_RESPONSE_BODY=}"
+        saw_body=1
+        ;;
+      TESI_PROBE_DONE=1) saw_done=1 ;;
+      '') ;;
+      *)
+        printf 'ERROR kind=remote-probe-output source=%s line=%q\n' \
+          "$source_pod" "$line" >&2
+        return 72
+        ;;
+    esac
+  done <<< "$exec_output"
+
+  if [[ "$saw_done" -ne 1 || "$saw_body" -ne 1 || \
+        ! "$wget_rc" =~ ^[0-9]+$ ]]; then
+    printf 'ERROR kind=remote-probe-malformed source=%s\n' "$source_pod" >&2
+    return 72
+  fi
+
+  printf 'response=%s\nexit_code=%s\n' "$response_body" "$wget_rc"
+
+  case "$wget_rc" in
+    0)
+      if [[ "$response_body" == "$expected_body_1" || \
+            ( -n "$expected_body_2" && "$response_body" == "$expected_body_2" ) ]]; then
+        return 0
+      fi
+      printf 'ERROR kind=unexpected-body source=%s expected=%s' \
+        "$source_pod" "$expected_body_1" >&2
+      if [[ -n "$expected_body_2" ]]; then
+        printf '|%s' "$expected_body_2" >&2
+      fi
+      printf ' actual=%q\n' "$response_body" >&2
+      return 20
+      ;;
+    1)
+      return 10
+      ;;
+    *)
+      printf 'ERROR kind=remote-wget source=%s rc=%s\n' \
+        "$source_pod" "$wget_rc" >&2
+      return 72
+      ;;
+  esac
+}
+
 http_flow() {
-  _tesi_require_context || return 1
+  if ! _tesi_require_context; then
+    printf 'ERROR kind=local-context\n' >&2
+    return 70
+  fi
   if [[ "$#" -ne 2 ]]; then
     printf 'Uso: http_flow POD_SORGENTE POD_DESTINAZIONE\n' >&2
-    return 2
+    return 70
   fi
 
   local source_pod="$1"
   local destination_pod="$2"
   local destination_ip
-  destination_ip="$(kubectl --context "$TESI_CONTEXT" get pod \
-    -n net-lab "$destination_pod" \
-    -o jsonpath='{.status.podIP}')" || return 1
+  local probe_rc
+  local denial_control
+  local denial_control_rc
+  if ! destination_ip="$(kubectl --context "$TESI_CONTEXT" get pod \
+      -n net-lab "$destination_pod" \
+      -o jsonpath='{.status.podIP}')"; then
+    printf 'ERROR kind=kubectl-api pod=%s\n' "$destination_pod" >&2
+    return 70
+  fi
+  if [[ -z "$destination_ip" ]]; then
+    printf 'ERROR kind=missing-pod-ip pod=%s\n' "$destination_pod" >&2
+    return 70
+  fi
 
-  kubectl --context "$TESI_CONTEXT" exec -n net-lab \
-    "$source_pod" -- sh -c '
-      destination_ip="$1"
-      body="$(wget -qO- -T 3 "http://${destination_ip}:8080/")"
-      rc=$?
-      printf "response=%s\nexit_code=%s\n" "$body" "$rc"
-      exit "$rc"
-    ' sh "$destination_ip"
+  if _tesi_wget_probe "$source_pod" \
+      "http://${destination_ip}:8080/" "$destination_pod"; then
+    return 0
+  else
+    probe_rc=$?
+  fi
+
+  if [[ "$probe_rc" -ne 10 ]]; then
+    return "$probe_rc"
+  fi
+
+  if denial_control="$(_tesi_wget_probe "$destination_pod" \
+      'http://127.0.0.1:8080/' "$destination_pod")"; then
+    printf 'deny_control=PASS destination=%s\n' "$destination_pod"
+    return 10
+  else
+    denial_control_rc=$?
+  fi
+
+  printf 'ERROR kind=deny-control destination=%s rc=%s\n%s\n' \
+    "$destination_pod" "$denial_control_rc" "$denial_control" >&2
+  return 73
 }
 
 _tesi_expect() {
@@ -164,7 +338,7 @@ _tesi_expect() {
   fi
 
   if [[ "$expected" == ALLOW && "$rc" -eq 0 ]] || \
-      [[ "$expected" == DENY && "$rc" -ne 0 ]]; then
+      [[ "$expected" == DENY && "$rc" -eq 10 ]]; then
     printf 'PASS expected=%s flow=%s->%s rc=%s\n' \
       "$expected" "$source_pod" "$destination_pod" "$rc"
     return 0
@@ -251,7 +425,10 @@ EOF
 }
 
 service_http_flows() {
-  _tesi_require_context || return 1
+  if ! _tesi_require_context; then
+    printf 'ERROR: contesto Service non definito.\n' >&2
+    return 1
+  fi
 
   local attempts="${1:-6}"
   local service_ip
@@ -265,21 +442,77 @@ service_http_flows() {
     return 2
   fi
 
-  service_ip="$(kubectl --context "$TESI_CONTEXT" get service -n net-lab \
-    servers -o jsonpath='{.spec.clusterIP}')" || return 1
+  if ! service_ip="$(kubectl --context "$TESI_CONTEXT" get service -n net-lab \
+      servers -o jsonpath='{.spec.clusterIP}')"; then
+    printf 'ERROR: lettura ClusterIP del Service fallita.\n' >&2
+    return 1
+  fi
+  if [[ -z "$service_ip" || "$service_ip" == None ]]; then
+    printf 'ERROR: ClusterIP del Service non valido: %q.\n' "$service_ip" >&2
+    return 1
+  fi
 
   for ((attempt = 1; attempt <= attempts; attempt++)); do
-    if body="$(kubectl --context "$TESI_CONTEXT" exec -n net-lab client -- \
-      wget -qO- -T 5 "http://${service_ip}:8080/")"; then
+    if body="$(_tesi_wget_probe client \
+        "http://${service_ip}:8080/" server-a server-b)"; then
       rc=0
     else
       rc=$?
       failed=$((failed + 1))
     fi
-    printf 'attempt=%s response=%s exit_code=%s\n' "$attempt" "$body" "$rc"
+    printf 'attempt=%s probe_rc=%s\n%s\n' "$attempt" "$rc" "$body"
   done
 
   [[ "$failed" -eq 0 ]]
+}
+
+capture_service_iptables_snapshot() {
+  if [[ "$#" -ne 3 ]]; then
+    printf 'Uso: capture_service_iptables_snapshot NODO FILE_COMPLETO FILE_FILTRATO\n' >&2
+    return 2
+  fi
+
+  local node_name="$1"
+  local full_output="$2"
+  local filtered_output="$3"
+  local grep_rc
+
+  if ! docker exec "$node_name" /bin/aux/iptables-save -c -t nat \
+      >"$full_output"; then
+    printf 'ERROR: acquisizione iptables fallita sul nodo %s.\n' \
+      "$node_name" >&2
+    return 1
+  fi
+  if [[ ! -s "$full_output" ]]; then
+    printf 'ERROR: snapshot iptables completo vuoto sul nodo %s.\n' \
+      "$node_name" >&2
+    return 1
+  fi
+
+  if grep -F 'net-lab/servers:http' "$full_output" >"$filtered_output"; then
+    grep_rc=0
+  else
+    grep_rc=$?
+  fi
+  case "$grep_rc" in
+    0) ;;
+    1)
+      printf 'ERROR: regole Service net-lab/servers:http non trovate sul nodo %s.\n' \
+        "$node_name" >&2
+      return 1
+      ;;
+    *)
+      printf 'ERROR: filtro dello snapshot iptables fallito (grep rc=%s).\n' \
+        "$grep_rc" >&2
+      return 1
+      ;;
+  esac
+
+  if [[ ! -s "$filtered_output" ]]; then
+    printf 'ERROR: snapshot iptables filtrato vuoto sul nodo %s.\n' \
+      "$node_name" >&2
+    return 1
+  fi
 }
 
 printf 'Ambiente comune caricato: repo=%s\n' "$TESI_REPO_ROOT"

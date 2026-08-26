@@ -207,13 +207,41 @@ controllare senza rimuovere nulla se sono installati pacchetti che la
 documentazione Docker considera confliggenti:
 
 ```bash
-dpkg-query -W -f='${binary:Package}\t${db:Status-Abbrev}\n' \
-  docker.io docker-compose docker-compose-v2 docker-doc docker-buildx \
-  podman-docker containerd runc 2>/dev/null | \
-  awk '$2 ~ /^ii/ { found=1; print } END { exit found ? 1 : 0 }'
+DPKG_PREFLIGHT_RC=0
+if DPKG_INVENTORY="$(dpkg-query -W \
+    -f='${binary:Package}\t${db:Status-Abbrev}\n' 2>&1)"
+then
+  DPKG_CONFLICTS="$(awk '
+    $1 ~ /^(docker\.io|docker-compose|docker-compose-v2|docker-doc|docker-buildx|podman-docker|containerd|runc)(:[^[:space:]]+)?$/ &&
+    $2 ~ /^ii/ { print }
+  ' <<<"$DPKG_INVENTORY")"
+  if [[ -n "$DPKG_CONFLICTS" ]]
+  then
+    printf '%s\n' "$DPKG_CONFLICTS"
+    printf 'STOP: pacchetti Docker confliggenti installati.\n' >&2
+    DPKG_PREFLIGHT_RC=1
+  else
+    printf 'PASS: nessun pacchetto Docker confliggente installato.\n'
+  fi
+else
+  DPKG_RC=$?
+  printf 'ERROR: interrogazione dpkg fallita (rc=%s):\n%s\n' \
+    "$DPKG_RC" "$DPKG_INVENTORY" >&2
+  DPKG_PREFLIGHT_RC=1
+fi
+unset DPKG_INVENTORY DPKG_CONFLICTS DPKG_RC
+if [[ "$DPKG_PREFLIGHT_RC" -ne 0 ]]
+then
+  unset DPKG_PREFLIGHT_RC
+  false
+else
+  unset DPKG_PREFLIGHT_RC
+fi
 ```
 
-L'output vuoto e il codice zero sono l'esito atteso. Se compaiono pacchetti,
+L'esito atteso è `PASS: nessun pacchetto Docker confliggente installato` con
+codice zero. Un inventario non leggibile produce `ERROR`; la presenza di uno
+o più pacchetti elencati produce `STOP` e codice non-zero. In entrambi i casi
 fermarsi prima dell'installazione: valutarne consapevolmente rimozione e dati
 associati seguendo la documentazione Docker, senza cancellarli come effetto
 automatico di questa guida.
@@ -612,16 +640,22 @@ il Service, `verify_service_backends` controlla separatamente che `server-a` e
 genera invece `N` nuove connessioni e registra il backend realmente osservato,
 senza imporre una distribuzione probabilistica.
 
-Per le connessioni dirette fra Pod, `http_flow` conserva il return code
-applicativo. Le matrici usano `expect_allow` ed `expect_deny`: un deny atteso
-viene registrato come `PASS`, mentre la funzione restituisce non-zero soltanto
-se l'esito diverge dall'atteso. Eseguire una delle tre forme:
+Per le connessioni dirette fra Pod, `http_flow` distingue gli errori locali e
+di `kubectl exec` dall'esito di `wget`, e verifica che un flusso consentito
+restituisca il nome del Pod destinazione. Le matrici usano `expect_allow` ed
+`expect_deny`: un deny atteso viene registrato come `PASS` soltanto quando il
+probe remoto è completo, `wget` restituisce il fallimento applicativo previsto
+e un probe locale nel Pod destinazione conferma che il server HTTP è sano.
+Scegliere una sola modalità per lo stato di policy corrente:
 
-```bash
-run_policy_matrix allow-all
-run_policy_matrix deny-all
-run_policy_matrix selective-allow
+```text
+run_policy_matrix MODALITA
 ```
+
+Sostituire `MODALITA` con `allow-all`, `deny-all` oppure `selective-allow` in
+base allo stato esplicitamente indicato nella sezione dell'esperimento. Le tre
+modalità sono alternative e non vanno eseguite consecutivamente sullo stesso
+stato.
 
 Ogni matrice esegue due volte `client → server-a`, `client → server-b` e
 `server-a → server-b`, poi stampa sei esiti e un riepilogo. Le forme
@@ -834,8 +868,7 @@ limitata in primo piano:
 sudo -v
 (
   sleep 2
-  kubectl --context "$TESI_CONTEXT" exec -n net-lab client -- \
-    wget -qO- -T 5 "http://${SERVER_B_IP}:8080/"
+  http_flow client server-b
 ) >"$CAPTURE_DIR/http-client.log" 2>&1 &
 export HTTP_JOB=$!
 
@@ -852,21 +885,36 @@ else
   export CAPTURE_RC=$?
 fi
 printf 'capture_exit=%s\n' "$CAPTURE_RC"
+if wait "$HTTP_JOB"
+then
+  export HTTP_RC=0
+else
+  export HTTP_RC=$?
+fi
+printf 'http_exit=%s\n' "$HTTP_RC"
+
+export CAPTURE_FAILED=0
 case "$CAPTURE_RC" in
   0|124|143) ;;
-  *) printf 'FAIL: terminazione inattesa della cattura\n' >&2; false ;;
+  *) printf 'FAIL: terminazione inattesa della cattura\n' >&2; CAPTURE_FAILED=1 ;;
 esac
-
-wait "$HTTP_JOB"
-sed -n '1,260p' "$CAPTURE_DIR/flannel-inter-node.log"
-cat "$CAPTURE_DIR/http-client.log"
-if pgrep -x tcpdump >/dev/null
+if [[ "$HTTP_RC" -ne 0 ]]
 then
-  printf 'FAIL: tcpdump residuo\n' >&2
-  pgrep -a -x tcpdump >&2
+  printf 'FAIL: richiesta HTTP della cattura fallita\n' >&2
+  CAPTURE_FAILED=1
+fi
+if ! verify_no_tcpdump_processes
+then
+  CAPTURE_FAILED=1
+fi
+
+if [[ "$CAPTURE_FAILED" -ne 0 ]]
+then
+  printf 'STOP: cattura E01 non valida; nessuna analisi successiva eseguita.\n' >&2
   false
 else
-  printf 'PASS: nessun tcpdump residuo\n'
+  sed -n '1,260p' "$CAPTURE_DIR/flannel-inter-node.log" &&
+    cat "$CAPTURE_DIR/http-client.log"
 fi
 ```
 
@@ -1225,12 +1273,29 @@ do
     'ls -la /var/lib/rancher/k3s/agent/etc/cni/net.d; sed -n "1,240p" /var/lib/rancher/k3s/agent/etc/cni/net.d/*calico*.conflist'
 done
 
-if docker exec k3d-tesi-e10-calico-vxlan-agent-0 ip link show cni0
+if ! docker exec k3d-tesi-e10-calico-vxlan-agent-0 true
 then
-  printf 'FAIL: cni0 non atteso in E10\n' >&2
+  printf 'ERROR: nodo E10 non accessibile; impossibile verificare cni0.\n' >&2
   false
 else
-  printf 'PASS: cni0 assente come atteso\n'
+  if docker exec k3d-tesi-e10-calico-vxlan-agent-0 \
+      test -e /sys/class/net/cni0
+  then
+    printf 'FAIL: cni0 non atteso in E10\n' >&2
+    false
+  else
+    CNI0_RC=$?
+    if [[ "$CNI0_RC" -eq 1 ]]
+    then
+      unset CNI0_RC
+      printf 'PASS: cni0 assente come atteso\n'
+    else
+      printf 'ERROR: verifica cni0 fallita (docker exec rc=%s).\n' \
+        "$CNI0_RC" >&2
+      unset CNI0_RC
+      false
+    fi
+  fi
 fi
 ```
 
@@ -1276,8 +1341,7 @@ export CAPTURE_DIR="$(mktemp -d)"
 sudo -v
 (
   sleep 2
-  kubectl --context "$TESI_CONTEXT" exec -n net-lab client -- \
-    wget -qO- -T 5 "http://${SERVER_B_IP}:8080/"
+  http_flow client server-b
 ) >"$CAPTURE_DIR/http-client.log" 2>&1 &
 export HTTP_JOB=$!
 
@@ -1293,21 +1357,36 @@ else
   export CAPTURE_RC=$?
 fi
 printf 'capture_exit=%s\n' "$CAPTURE_RC"
+if wait "$HTTP_JOB"
+then
+  export HTTP_RC=0
+else
+  export HTTP_RC=$?
+fi
+printf 'http_exit=%s\n' "$HTTP_RC"
+
+export CAPTURE_FAILED=0
 case "$CAPTURE_RC" in
   0|124|143) ;;
-  *) printf 'FAIL: terminazione inattesa della cattura\n' >&2; false ;;
+  *) printf 'FAIL: terminazione inattesa della cattura\n' >&2; CAPTURE_FAILED=1 ;;
 esac
-
-wait "$HTTP_JOB"
-sed -n '1,260p' "$CAPTURE_DIR/calico-inter-node.log"
-cat "$CAPTURE_DIR/http-client.log"
-if pgrep -x tcpdump >/dev/null
+if [[ "$HTTP_RC" -ne 0 ]]
 then
-  printf 'FAIL: tcpdump residuo\n' >&2
-  pgrep -a -x tcpdump >&2
+  printf 'FAIL: richiesta HTTP della cattura fallita\n' >&2
+  CAPTURE_FAILED=1
+fi
+if ! verify_no_tcpdump_processes
+then
+  CAPTURE_FAILED=1
+fi
+
+if [[ "$CAPTURE_FAILED" -ne 0 ]]
+then
+  printf 'STOP: cattura E10 non valida; nessuna analisi successiva eseguita.\n' >&2
   false
 else
-  printf 'PASS: nessun tcpdump residuo\n'
+  sed -n '1,260p' "$CAPTURE_DIR/calico-inter-node.log" &&
+    cat "$CAPTURE_DIR/http-client.log"
 fi
 ```
 
@@ -1328,23 +1407,53 @@ ClusterIP.
 export CALICO_AGENT0='k3d-tesi-e10-calico-vxlan-agent-0'
 export SERVICE_DIR="$(mktemp -d)"
 
-verify_service_backends
+run_e10_service_attribution() {
+  local GREP_RC
 
-docker logs "$CALICO_AGENT0" 2>&1 | \
-  grep -E 'kube-proxy|Using iptables Proxier' \
-  >"$SERVICE_DIR/kube-proxy.log" || true
-docker exec "$CALICO_AGENT0" /bin/aux/iptables-save -c -t nat | \
-  grep -F 'net-lab/servers:http' \
-  >"$SERVICE_DIR/iptables-before.log" || true
+  verify_service_backends || return 1
 
-service_http_flows 6 >"$SERVICE_DIR/http-flows.log"
-cat "$SERVICE_DIR/http-flows.log"
+  if ! docker logs "$CALICO_AGENT0" \
+      >"$SERVICE_DIR/kube-proxy-full.log" 2>&1
+  then
+    printf 'ERROR: acquisizione log kube-proxy fallita.\n' >&2
+    return 1
+  fi
+  if grep -E 'kube-proxy|Using iptables Proxier' \
+      "$SERVICE_DIR/kube-proxy-full.log" \
+      >"$SERVICE_DIR/kube-proxy.log"
+  then
+    :
+  else
+    GREP_RC=$?
+    if [[ "$GREP_RC" -gt 1 ]]
+    then
+      printf 'ERROR: filtro log kube-proxy fallito (grep rc=%s).\n' \
+        "$GREP_RC" >&2
+      return 1
+    fi
+    printf 'INFO: nessuna riga kube-proxy trovata nel log; il file non viene usato come gate.\n'
+  fi
 
-docker exec "$CALICO_AGENT0" /bin/aux/iptables-save -c -t nat | \
-  grep -F 'net-lab/servers:http' \
-  >"$SERVICE_DIR/iptables-after.log" || true
-diff -u "$SERVICE_DIR/iptables-before.log" \
-  "$SERVICE_DIR/iptables-after.log" || true
+  capture_service_iptables_snapshot "$CALICO_AGENT0" \
+    "$SERVICE_DIR/iptables-before-full.log" \
+    "$SERVICE_DIR/iptables-before.log" || return 1
+
+  if ! service_http_flows 6 >"$SERVICE_DIR/http-flows.log"
+  then
+    printf 'ERROR: almeno un flusso Service E10 è fallito; snapshot successivo non acquisito.\n' >&2
+    return 1
+  fi
+
+  capture_service_iptables_snapshot "$CALICO_AGENT0" \
+    "$SERVICE_DIR/iptables-after-full.log" \
+    "$SERVICE_DIR/iptables-after.log" || return 1
+
+  cat "$SERVICE_DIR/http-flows.log" || return 1
+  diff -u "$SERVICE_DIR/iptables-before.log" \
+    "$SERVICE_DIR/iptables-after.log" || true
+}
+
+run_e10_service_attribution
 ```
 
 La distribuzione delle risposte fra i backend non è un criterio di successo.
@@ -1601,8 +1710,7 @@ sudo /usr/bin/nsenter --target "$SOURCE_PID" --net \
 sudo -v
 (
   sleep 2
-  kubectl --context "$TESI_CONTEXT" exec -n net-lab client -- \
-    wget -qO- -T 5 "http://${SERVER_B_IP}:8080/"
+  http_flow client server-b
 ) >"$CAPTURE_DIR/http-client.log" 2>&1 &
 export HTTP_JOB=$!
 
@@ -1619,21 +1727,36 @@ else
   export CAPTURE_RC=$?
 fi
 printf 'capture_exit=%s\n' "$CAPTURE_RC"
+if wait "$HTTP_JOB"
+then
+  export HTTP_RC=0
+else
+  export HTTP_RC=$?
+fi
+printf 'http_exit=%s\n' "$HTTP_RC"
+
+export CAPTURE_FAILED=0
 case "$CAPTURE_RC" in
   0|124|143) ;;
-  *) printf 'FAIL: terminazione inattesa della cattura\n' >&2; false ;;
+  *) printf 'FAIL: terminazione inattesa della cattura\n' >&2; CAPTURE_FAILED=1 ;;
 esac
-
-wait "$HTTP_JOB"
-sed -n '1,360p' "$CAPTURE_DIR/cilium-inter-node.log"
-cat "$CAPTURE_DIR/http-client.log"
-if pgrep -x tcpdump >/dev/null
+if [[ "$HTTP_RC" -ne 0 ]]
 then
-  printf 'FAIL: tcpdump residuo\n' >&2
-  pgrep -a -x tcpdump >&2
+  printf 'FAIL: richiesta HTTP della cattura fallita\n' >&2
+  CAPTURE_FAILED=1
+fi
+if ! verify_no_tcpdump_processes
+then
+  CAPTURE_FAILED=1
+fi
+
+if [[ "$CAPTURE_FAILED" -ne 0 ]]
+then
+  printf 'STOP: cattura E20 non valida; nessuna analisi successiva eseguita.\n' >&2
   false
 else
-  printf 'PASS: nessun tcpdump residuo\n'
+  sed -n '1,360p' "$CAPTURE_DIR/cilium-inter-node.log" &&
+    cat "$CAPTURE_DIR/http-client.log"
 fi
 ```
 
@@ -1665,51 +1788,86 @@ kube-proxy ed eBPF prima di nuove connessioni:
 ```bash
 export CILIUM_NODE='k3d-tesi-e20-cilium-vxlan-agent-0'
 export SERVICE_DIR="$(mktemp -d)"
-export START_UTC="$(date -u --iso-8601=seconds)"
 
-verify_service_backends
+run_e20_service_attribution() {
+  local START_UTC
+  local END_UTC
+  local required_file
 
-docker exec "$CILIUM_NODE" /bin/aux/iptables-save -c -t nat | \
-  grep -F 'net-lab/servers:http' \
-  >"$SERVICE_DIR/kube-proxy-before.log" || true
-kubectl --context "$TESI_CONTEXT" exec -n kube-system \
-  "$CILIUM_AGENT0" -- cilium-dbg bpf lb list --frontends \
-  >"$SERVICE_DIR/lb-frontends-before.log"
-kubectl --context "$TESI_CONTEXT" exec -n kube-system \
-  "$CILIUM_AGENT0" -- cilium-dbg bpf lb list --backends \
-  >"$SERVICE_DIR/lb-backends-before.log"
-kubectl --context "$TESI_CONTEXT" exec -n kube-system \
-  "$CILIUM_AGENT0" -- cilium-dbg bpf lb list --revnat \
-  >"$SERVICE_DIR/lb-revnat-before.log"
-kubectl --context "$TESI_CONTEXT" exec -n kube-system \
-  "$CILIUM_AGENT0" -- cilium-dbg bpf ct list global \
-  >"$SERVICE_DIR/ct-before.log"
+  verify_service_backends || return 1
+  START_UTC="$(date -u --iso-8601=seconds)" || return 1
 
-service_http_flows 6 >"$SERVICE_DIR/http-flows.log"
-cat "$SERVICE_DIR/http-flows.log"
-export END_UTC="$(date -u --iso-8601=seconds)"
-```
+  capture_service_iptables_snapshot "$CILIUM_NODE" \
+    "$SERVICE_DIR/kube-proxy-before-full.log" \
+    "$SERVICE_DIR/kube-proxy-before.log" || return 1
+  kubectl --context "$TESI_CONTEXT" exec -n kube-system \
+    "$CILIUM_AGENT0" -- cilium-dbg bpf lb list --frontends \
+    >"$SERVICE_DIR/lb-frontends-before.log" || return 1
+  kubectl --context "$TESI_CONTEXT" exec -n kube-system \
+    "$CILIUM_AGENT0" -- cilium-dbg bpf lb list --backends \
+    >"$SERVICE_DIR/lb-backends-before.log" || return 1
+  kubectl --context "$TESI_CONTEXT" exec -n kube-system \
+    "$CILIUM_AGENT0" -- cilium-dbg bpf lb list --revnat \
+    >"$SERVICE_DIR/lb-revnat-before.log" || return 1
+  kubectl --context "$TESI_CONTEXT" exec -n kube-system \
+    "$CILIUM_AGENT0" -- cilium-dbg bpf ct list global \
+    >"$SERVICE_DIR/ct-before.log" || return 1
 
-Acquisire gli stessi artefatti dopo i flussi:
+  for required_file in \
+    "$SERVICE_DIR/lb-frontends-before.log" \
+    "$SERVICE_DIR/lb-backends-before.log" \
+    "$SERVICE_DIR/lb-revnat-before.log" \
+    "$SERVICE_DIR/ct-before.log"
+  do
+    if [[ ! -s "$required_file" ]]
+    then
+      printf 'ERROR: output Cilium richiesto vuoto: %s\n' \
+        "$required_file" >&2
+      return 1
+    fi
+  done
 
-```bash
-docker exec "$CILIUM_NODE" /bin/aux/iptables-save -c -t nat | \
-  grep -F 'net-lab/servers:http' \
-  >"$SERVICE_DIR/kube-proxy-after.log" || true
-kubectl --context "$TESI_CONTEXT" exec -n kube-system \
-  "$CILIUM_AGENT0" -- cilium-dbg bpf ct list global \
-  >"$SERVICE_DIR/ct-after.log"
-kubectl --context "$TESI_CONTEXT" exec -n kube-system \
-  "$CILIUM_AGENT0" -- hubble observe \
-  --server unix:///var/run/cilium/hubble.sock \
-  --since "$START_UTC" --until "$END_UTC" \
-  --from-pod net-lab/client --port 8080 -o jsonpb \
-  >"$SERVICE_DIR/hubble-service.json"
+  if ! service_http_flows 6 >"$SERVICE_DIR/http-flows.log"
+  then
+    printf 'ERROR: almeno un flusso Service E20 è fallito; snapshot successivi non acquisiti.\n' >&2
+    return 1
+  fi
+  END_UTC="$(date -u --iso-8601=seconds)" || return 1
 
-diff -u "$SERVICE_DIR/kube-proxy-before.log" \
-  "$SERVICE_DIR/kube-proxy-after.log" || true
-diff -u "$SERVICE_DIR/ct-before.log" \
-  "$SERVICE_DIR/ct-after.log" || true
+  capture_service_iptables_snapshot "$CILIUM_NODE" \
+    "$SERVICE_DIR/kube-proxy-after-full.log" \
+    "$SERVICE_DIR/kube-proxy-after.log" || return 1
+  kubectl --context "$TESI_CONTEXT" exec -n kube-system \
+    "$CILIUM_AGENT0" -- cilium-dbg bpf ct list global \
+    >"$SERVICE_DIR/ct-after.log" || return 1
+  kubectl --context "$TESI_CONTEXT" exec -n kube-system \
+    "$CILIUM_AGENT0" -- hubble observe \
+    --server unix:///var/run/cilium/hubble.sock \
+    --since "$START_UTC" --until "$END_UTC" \
+    --from-pod net-lab/client --port 8080 -o jsonpb \
+    >"$SERVICE_DIR/hubble-service.json" || return 1
+
+  for required_file in \
+    "$SERVICE_DIR/http-flows.log" \
+    "$SERVICE_DIR/ct-after.log" \
+    "$SERVICE_DIR/hubble-service.json"
+  do
+    if [[ ! -s "$required_file" ]]
+    then
+      printf 'ERROR: output Service E20 richiesto vuoto: %s\n' \
+        "$required_file" >&2
+      return 1
+    fi
+  done
+
+  cat "$SERVICE_DIR/http-flows.log" || return 1
+  diff -u "$SERVICE_DIR/kube-proxy-before.log" \
+    "$SERVICE_DIR/kube-proxy-after.log" || true
+  diff -u "$SERVICE_DIR/ct-before.log" \
+    "$SERVICE_DIR/ct-after.log" || true
+}
+
+run_e20_service_attribution
 ```
 
 La distribuzione delle risposte fra i backend non è un criterio di successo.
@@ -1740,24 +1898,39 @@ capture_cilium_policy_state() {
   local POLICY_EXPECTATION="$2"
   local POLICY_SINCE
   local POLICY_UNTIL
-  POLICY_SINCE="$(date -u --iso-8601=seconds)"
-  run_policy_matrix "$POLICY_EXPECTATION"
-  POLICY_UNTIL="$(date -u --iso-8601=seconds)"
+  local REQUIRED_FILE
+  POLICY_SINCE="$(date -u --iso-8601=seconds)" || return 1
+  run_policy_matrix "$POLICY_EXPECTATION" || return 1
+  POLICY_UNTIL="$(date -u --iso-8601=seconds)" || return 1
 
   kubectl --context "$TESI_CONTEXT" get networkpolicy -n net-lab -o yaml \
-    >"$POLICY_DIR/${POLICY_STATE}-networkpolicy.yaml"
+    >"$POLICY_DIR/${POLICY_STATE}-networkpolicy.yaml" || return 1
   kubectl --context "$TESI_CONTEXT" get ciliumendpoint \
     -n net-lab client server-a server-b -o yaml \
-    >"$POLICY_DIR/${POLICY_STATE}-endpoints.yaml"
+    >"$POLICY_DIR/${POLICY_STATE}-endpoints.yaml" || return 1
   kubectl --context "$TESI_CONTEXT" exec -n kube-system \
     "$CILIUM_AGENT0" -- cilium-dbg bpf policy get --all \
-    >"$POLICY_DIR/${POLICY_STATE}-bpf-policy.log"
+    >"$POLICY_DIR/${POLICY_STATE}-bpf-policy.log" || return 1
   kubectl --context "$TESI_CONTEXT" exec -n kube-system \
     "$CILIUM_AGENT0" -- hubble observe \
     --server unix:///var/run/cilium/hubble.sock \
     --since "$POLICY_SINCE" --until "$POLICY_UNTIL" \
     --namespace net-lab --port 8080 -o jsonpb \
-    >"$POLICY_DIR/${POLICY_STATE}-hubble.json"
+    >"$POLICY_DIR/${POLICY_STATE}-hubble.json" || return 1
+
+  for REQUIRED_FILE in \
+    "$POLICY_DIR/${POLICY_STATE}-networkpolicy.yaml" \
+    "$POLICY_DIR/${POLICY_STATE}-endpoints.yaml" \
+    "$POLICY_DIR/${POLICY_STATE}-bpf-policy.log" \
+    "$POLICY_DIR/${POLICY_STATE}-hubble.json"
+  do
+    if [[ ! -s "$REQUIRED_FILE" ]]
+    then
+      printf 'ERROR: output policy E20 richiesto vuoto: %s\n' \
+        "$REQUIRED_FILE" >&2
+      return 1
+    fi
+  done
 }
 ```
 
@@ -1850,19 +2023,56 @@ Dopo avere eliminato l'ultimo cluster, verificare che non restino i cluster,
 i container nodo o i listener API creati dalla guida:
 
 ```bash
-k3d cluster list
-docker ps --filter 'name=k3d-tesi-' \
-  --format 'table {{.Names}}\t{{.Image}}\t{{.Status}}'
-kubectl config get-contexts
-ss -ltn 'sport = :6445 or sport = :6446 or sport = :6447 or sport = :6448 or sport = :6449'
-if pgrep -x tcpdump >/dev/null
-then
-  printf 'FAIL: tcpdump residuo\n' >&2
-  pgrep -a -x tcpdump >&2
-  false
-else
-  printf 'PASS: nessun tcpdump residuo\n'
-fi
+run_final_host_check() {
+  local cluster_list
+  local container_list
+  local listener_list
+
+  if ! cluster_list="$(k3d cluster list)"
+  then
+    printf 'ERROR: inventario finale k3d non leggibile.\n' >&2
+    return 1
+  fi
+  printf '%s\n' "$cluster_list"
+  if awk '$1 ~ /^tesi-/ { found=1 } END { exit !found }' \
+      <<<"$cluster_list"
+  then
+    printf 'FAIL: sono ancora presenti cluster tesi.\n' >&2
+    return 1
+  fi
+
+  if ! container_list="$(docker ps --filter 'name=k3d-tesi-' \
+      --format '{{.Names}}\t{{.Image}}\t{{.Status}}')"
+  then
+    printf 'ERROR: inventario finale dei container non leggibile.\n' >&2
+    return 1
+  fi
+  printf '%s\n' "$container_list"
+  if [[ -n "$container_list" ]]
+  then
+    printf 'FAIL: sono ancora presenti container nodo tesi.\n' >&2
+    return 1
+  fi
+
+  kubectl config get-contexts || return 1
+  if ! listener_list="$(ss -H -ltn \
+      'sport = :6445 or sport = :6446 or sport = :6447 or sport = :6448 or sport = :6449')"
+  then
+    printf 'ERROR: inventario finale dei listener API non leggibile.\n' >&2
+    return 1
+  fi
+  if [[ -n "$listener_list" ]]
+  then
+    printf 'FAIL: sono ancora presenti listener API del laboratorio:\n%s\n' \
+      "$listener_list" >&2
+    return 1
+  fi
+
+  verify_no_tcpdump_processes || return 1
+  printf 'PASS: nessun cluster, container nodo, listener API o tcpdump residuo.\n'
+}
+
+run_final_host_check
 ```
 
 L'elenco non deve contenere i cluster E01, E02, E10 o E20. Non rimuovere

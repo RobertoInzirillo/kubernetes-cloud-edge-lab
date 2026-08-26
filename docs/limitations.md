@@ -35,9 +35,11 @@ il confronto non è quindi byte-identico a livello di runtime host.
 
 ## Ambito delle prove Service e NetworkPolicy
 
-E01 ha verificato il ClusterIP e la selezione dei due endpoint, senza isolare
-causalmente il componente Service. E10 ha attribuito i flussi osservati a
-kube-proxy iptables. In E20 due nuove connessioni ClusterIP hanno prodotto
+La procedura E01 comprende il controllo del ClusterIP e dei due backend, ma la
+selezione pubblica non conserva output autonomi di tali test e non ne sostiene
+una dimostrazione pubblica; E01 non isola causalmente il componente Service.
+E10 ha attribuito i flussi osservati a kube-proxy iptables. In E20 due nuove
+connessioni ClusterIP hanno prodotto
 stato conntrack eBPF coerente, mentre i contatori kube-proxy pertinenti sono
 rimasti invariati. Quest'ultima conclusione vale soltanto per quei flussi dal
 Pod client; kube-proxy era ancora installato.

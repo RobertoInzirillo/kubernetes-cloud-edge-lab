@@ -155,8 +155,9 @@ telemetria riferita alle connessioni generate.
 
 Nel laboratorio:
 
-- E01 ha verificato raggiungibilità del ClusterIP e di entrambi gli endpoint,
-  senza un'attribuzione causale equivalente ai casi successivi;
+- la procedura E01 comprende il controllo del ClusterIP e dei due backend, ma
+  la selezione pubblica E01 non conserva output autonomi di questi test e non
+  li presenta quindi come risultati pubblicamente dimostrati;
 - E10 ha attribuito i flussi osservati a kube-proxy iptables;
 - E20 ha attribuito due connessioni controllate al data plane eBPF Cilium,
   pur mantenendo kube-proxy installato.

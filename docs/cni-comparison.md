@@ -60,8 +60,8 @@ La matrice usa inoltre User Datagram Protocol (UDP), Virtual Tunnel Endpoint
 | Natura e dimensione | Flannel VXLAN nello stack K3s | Calico OSS 3.32.1, VXLAN, Linux iptables | Cilium 1.19.6, VXLAN, veth/eBPF |
 |---|---|---|---|
 | **I — ruolo** | rete Pod essenziale e trasporto L3 inter-node; policy e Service separati | CNI, IPAM, raggiungibilità e policy integrati; Service delegato | CNI, IPAM, raggiungibilità, policy, load balancing e osservabilità eBPF; kube-proxy mantenuto |
-| **O — CNI** | `10-flannel.conflist`: `flannel`, `portmap`, `bandwidth` | CNI Calico e `calico-ipam`; Flannel assente | `05-cilium.conflist`; Cilium primario esclusivo; Flannel assente |
-| **O/I — IPAM** | subnet `/24`; allocazione `host-local` delegata nello stack | IPPool `10.42.0.0/16`, blocchi `/26` e affinità Calico | Cluster Pool IPAM e blocchi `/24` in `CiliumNode` |
+| **O — CNI** | concatenazione `flannel`, `portmap`, `bandwidth` osservata nel laboratorio, ma non documentata da un output autonomo nella selezione pubblica E01 | CNI Calico e `calico-ipam`; Flannel assente | `05-cilium.conflist`; Cilium primario esclusivo; Flannel assente |
+| **O/I — IPAM** | subnet `/24` e delega `host-local` osservate nel laboratorio, ma non documentate da un output autonomo nella selezione pubblica E01 | IPPool `10.42.0.0/16`, blocchi `/26` e affinità Calico | Cluster Pool IPAM e blocchi `/24` in `CiliumNode` |
 | **O — Pod–nodo** | veth collegate al bridge `cni0` | veth `cali*` e routing L3, senza `cni0` | veth `lxc*`, route tramite `cilium_host` e hook eBPF TCX, senza `cni0` |
 | **O/I — intra-node** | veth → `cni0` → veth | route L3 diretta fra veth `cali*` | veth e route L3 Cilium con programmi e mappe eBPF; nessun tunnel locale |
 | **O — inter-node** | veth → `cni0` → `flannel.1` → `eth0` | veth `cali*` → `vxlan.calico` → `eth0` | veth `lxc*` → `cilium_vxlan` → `eth0` |
@@ -70,7 +70,7 @@ La matrice usa inoltre User Datagram Protocol (UDP), Virtual Tunnel Endpoint
 | **O/I — VNI/tunnel ID** | VNI fisso `1` | VNI fisso `4096` | `21766` in andata e `16090` al ritorno, coincidenti con l'identità della sorgente |
 | **O/I — stato di raggiungibilità** | subnet manager, annotazioni Flannel, route e vicini VTEP nel kernel | IPPool, blocchi/affinità, WorkloadEndpoint e stato Felix; BGP disabilitato | `CiliumNode`, IP cache, endpoint e security identity |
 | **I — data plane** | bridge, routing e VXLAN del kernel Linux configurati da CNI/Flannel | routing, netfilter/iptables, IPSet e VXLAN del kernel programmati da Felix | programmi e mappe eBPF su veth/TCX, routing e VXLAN del kernel |
-| **O/I — Service** | ClusterIP ed entrambi gli endpoint verificati; attribuzione causale non isolata come negli altri casi | kube-proxy iptables: catene `KUBE-SVC`/`KUBE-SEP`, Destination Network Address Translation e delta dei contatori | per due flussi: load balancing, reverse NAT e conntrack `TCP SVC` eBPF; regole kube-proxy presenti ma senza delta |
+| **O/I — Service** | controllo incluso nella procedura, ma non documentato da output autonomi nella selezione pubblica E01; attribuzione causale non isolata | kube-proxy iptables: catene `KUBE-SVC`/`KUBE-SEP`, Destination Network Address Translation e delta dei contatori | per due flussi: load balancing, reverse NAT e conntrack `TCP SVC` eBPF; regole kube-proxy presenti ma senza delta |
 | **O/I — NetworkPolicy** | enforcement del controller K3s separato quando attivo, non di Flannel | calculation graph e Felix traducono e programmano la policy | Cilium associa policy e identità agli endpoint e applica la decisione in eBPF |
 | **O — artefatti policy** | catene/ipset policy-specifici `KUBE-*` e contatori soltanto nel controllo ON | WorkloadEndpoint, selector, IPSet e catene iptables con riferimenti alle policy | policy revision, policy map eBPF, contatori e verdetti Hubble |
 | **O — osservabilità usata** | file CNI, route, bridge, netfilter, log K3s e `tcpdump` | risorse Calico, log Felix, IPSet/iptables, route e `tcpdump` | `CiliumEndpoint`, identità, mappe/programmi eBPF, `cilium-dbg`, Hubble e `tcpdump` |
@@ -104,10 +104,13 @@ Indirizzo, raggiungibilità e identità di sicurezza non sono lo stesso dato:
 
 ## Service
 
-E01 dimostra che il ClusterIP raggiunge entrambi gli endpoint, ma non isola
-causalmente il componente che seleziona il backend e applica la traduzione.
-L'architettura dello stack assegna normalmente questa responsabilità a
-kube-proxy, ma E01 non viene presentato come una prova causale.
+La procedura E01 controlla che il ClusterIP raggiunga backend Ready, ma la
+selezione pubblica E01 non contiene output autonomi del Service e non sostiene
+quindi questo punto come risultato pubblicamente dimostrato. E01 non isola
+comunque in modo causale il componente che seleziona il backend e applica la
+traduzione. L'architettura dello stack assegna normalmente questa
+responsabilità a kube-proxy, ma E01 non viene presentato come una prova
+causale.
 
 In E10, regole, Destination Network Address Translation (DNAT) e delta dei
 contatori attribuiscono a kube-proxy iptables le connessioni osservate. In
