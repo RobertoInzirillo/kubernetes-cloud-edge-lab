@@ -211,25 +211,38 @@ DPKG_PREFLIGHT_RC=0
 if DPKG_INVENTORY="$(dpkg-query -W \
     -f='${binary:Package}\t${db:Status-Abbrev}\n' 2>&1)"
 then
-  DPKG_CONFLICTS="$(awk '
+  if DPKG_CONFLICTS="$(awk '
     $1 ~ /^(docker\.io|docker-compose|docker-compose-v2|docker-doc|docker-buildx|podman-docker|containerd|runc)(:[^[:space:]]+)?$/ &&
-    $2 ~ /^ii/ { print }
+    $2 ~ /^ii/ { print; found=1 }
+    END { exit !found }
   ' <<<"$DPKG_INVENTORY")"
-  if [[ -n "$DPKG_CONFLICTS" ]]
   then
-    printf '%s\n' "$DPKG_CONFLICTS"
-    printf 'STOP: pacchetti Docker confliggenti installati.\n' >&2
-    DPKG_PREFLIGHT_RC=1
+    DPKG_FILTER_RC=0
   else
-    printf 'PASS: nessun pacchetto Docker confliggente installato.\n'
+    DPKG_FILTER_RC=$?
   fi
+  case "$DPKG_FILTER_RC" in
+    0)
+      printf '%s\n' "$DPKG_CONFLICTS"
+      printf 'STOP: pacchetti Docker confliggenti installati.\n' >&2
+      DPKG_PREFLIGHT_RC=1
+      ;;
+    1)
+      printf 'PASS: nessun pacchetto Docker confliggente installato.\n'
+      ;;
+    *)
+      printf 'ERROR: filtro inventario dpkg fallito (awk rc=%s).\n' \
+        "$DPKG_FILTER_RC" >&2
+      DPKG_PREFLIGHT_RC=1
+      ;;
+  esac
 else
   DPKG_RC=$?
   printf 'ERROR: interrogazione dpkg fallita (rc=%s):\n%s\n' \
     "$DPKG_RC" "$DPKG_INVENTORY" >&2
   DPKG_PREFLIGHT_RC=1
 fi
-unset DPKG_INVENTORY DPKG_CONFLICTS DPKG_RC
+unset DPKG_INVENTORY DPKG_CONFLICTS DPKG_FILTER_RC DPKG_RC
 if [[ "$DPKG_PREFLIGHT_RC" -ne 0 ]]
 then
   unset DPKG_PREFLIGHT_RC
@@ -716,22 +729,36 @@ tunnel. Questi dati descrivono il data plane predisposto, ma non dimostrano
 ancora il percorso di uno specifico pacchetto.
 
 ```bash
+NODE_INVENTORY_FAILED=0
 for NODE in \
   k3d-tesi-flannel-vxlan-server-0 \
   k3d-tesi-flannel-vxlan-agent-0 \
   k3d-tesi-flannel-vxlan-agent-1
 do
   docker exec "$NODE" sh -c \
-    'hostname; ls -la /var/lib/rancher/k3s/agent/etc/cni/net.d /run/flannel'
+    'hostname; ls -la /var/lib/rancher/k3s/agent/etc/cni/net.d /run/flannel' || \
+    NODE_INVENTORY_FAILED=1
   docker exec "$NODE" sh -c \
-    'hostname; sed -n "1,240p" /var/lib/rancher/k3s/agent/etc/cni/net.d/10-flannel.conflist; sed -n "1,120p" /run/flannel/subnet.env'
-  docker exec "$NODE" ip -details address
-  docker exec "$NODE" ip -details link show flannel.1
+    'hostname; sed -n "1,240p" /var/lib/rancher/k3s/agent/etc/cni/net.d/10-flannel.conflist; sed -n "1,120p" /run/flannel/subnet.env' || \
+    NODE_INVENTORY_FAILED=1
+  docker exec "$NODE" ip -details address || NODE_INVENTORY_FAILED=1
+  docker exec "$NODE" ip -details link show flannel.1 || \
+    NODE_INVENTORY_FAILED=1
   docker exec "$NODE" sh -c \
-    'hostname; ip route; ip neigh show dev flannel.1'
+    'hostname; ip route; ip neigh show dev flannel.1' || \
+    NODE_INVENTORY_FAILED=1
 done
 
-kubectl --context "$TESI_CONTEXT" get nodes -o jsonpath='{range .items[*]}{.metadata.name}{" | backend="}{.metadata.annotations.flannel\.alpha\.coreos\.com/backend-type}{" | backend-data="}{.metadata.annotations.flannel\.alpha\.coreos\.com/backend-data}{" | public-ip="}{.metadata.annotations.flannel\.alpha\.coreos\.com/public-ip}{" | podCIDR="}{.spec.podCIDR}{"\n"}{end}'
+kubectl --context "$TESI_CONTEXT" get nodes -o jsonpath='{range .items[*]}{.metadata.name}{" | backend="}{.metadata.annotations.flannel\.alpha\.coreos\.com/backend-type}{" | backend-data="}{.metadata.annotations.flannel\.alpha\.coreos\.com/backend-data}{" | public-ip="}{.metadata.annotations.flannel\.alpha\.coreos\.com/public-ip}{" | podCIDR="}{.spec.podCIDR}{"\n"}{end}' || \
+  NODE_INVENTORY_FAILED=1
+if [[ "$NODE_INVENTORY_FAILED" -ne 0 ]]
+then
+  printf 'ERROR: inventario data plane E01 incompleto.\n' >&2
+  unset NODE_INVENTORY_FAILED
+  false
+else
+  unset NODE_INVENTORY_FAILED
+fi
 ```
 
 Controllare `cni0`, `flannel.1`, route verso le subnet remote e backend
@@ -744,11 +771,15 @@ Con i valori già impostati, applicare il workload comune e rileggere gli
 indirizzi:
 
 ```bash
-deploy_common_workload
-export CLIENT_IP="$(kubectl --context "$TESI_CONTEXT" -n net-lab get pod client -o jsonpath='{.status.podIP}')"
-export SERVER_A_IP="$(kubectl --context "$TESI_CONTEXT" -n net-lab get pod server-a -o jsonpath='{.status.podIP}')"
-export SERVER_B_IP="$(kubectl --context "$TESI_CONTEXT" -n net-lab get pod server-b -o jsonpath='{.status.podIP}')"
-export SERVICE_IP="$(kubectl --context "$TESI_CONTEXT" -n net-lab get svc servers -o jsonpath='{.spec.clusterIP}')"
+deploy_common_workload &&
+_tesi_export_runtime CLIENT_IP ipv4 kubectl --context "$TESI_CONTEXT" \
+  -n net-lab get pod client -o jsonpath='{.status.podIP}' &&
+_tesi_export_runtime SERVER_A_IP ipv4 kubectl --context "$TESI_CONTEXT" \
+  -n net-lab get pod server-a -o jsonpath='{.status.podIP}' &&
+_tesi_export_runtime SERVER_B_IP ipv4 kubectl --context "$TESI_CONTEXT" \
+  -n net-lab get pod server-b -o jsonpath='{.status.podIP}' &&
+_tesi_export_runtime SERVICE_IP ipv4 kubectl --context "$TESI_CONTEXT" \
+  -n net-lab get svc servers -o jsonpath='{.spec.clusterIP}' &&
 printf 'client=%s server-a=%s server-b=%s service=%s\n' \
   "$CLIENT_IP" "$SERVER_A_IP" "$SERVER_B_IP" "$SERVICE_IP"
 ```
@@ -759,8 +790,8 @@ inter-node:
 ```bash
 kubectl --context "$TESI_CONTEXT" exec -n net-lab client -- sh -c \
   'ping -c 3 -W 2 "$1"; rc=$?; printf "exit_code=%s\n" "$rc"; exit "$rc"' \
-  sh "$SERVER_A_IP"
-http_flow client server-a
+  sh "$SERVER_A_IP" &&
+http_flow client server-a &&
 http_flow client server-b
 ```
 
@@ -770,7 +801,7 @@ richiesto che un numero finito di connessioni li selezioni entrambi. L'esito
 prova il ClusterIP nei flussi osservati, ma non isola causalmente kube-proxy:
 
 ```bash
-verify_service_backends
+verify_service_backends &&
 service_http_flows 6
 ```
 
@@ -779,7 +810,7 @@ dell'host alteri la risoluzione:
 
 ```bash
 kubectl --context "$TESI_CONTEXT" exec -n net-lab client -- \
-  nslookup servers.net-lab.svc.cluster.local.
+  nslookup servers.net-lab.svc.cluster.local. &&
 kubectl --context "$TESI_CONTEXT" exec -n net-lab client -- \
   wget -qO- -T 5 http://servers.net-lab.svc.cluster.local.:8080/
 ```
@@ -791,44 +822,122 @@ provato; non costituisce un'analisi generale del DNS del cluster.
 
 Prima della cattura ricostruiamo l'associazione Pod–veth. La procedura individua
 la sandbox tramite Container Runtime Interface (CRI) ed estrae il PID runtime
-soltanto dopo il campo `netNamespaceClosed`, così da non confonderlo con altri
-valori numerici precedenti. Entra quindi nel namespace e usa l'ifindex peer di
-`eth0` per trovare la veth nel nodo.
+dalla chiave JSON esatta `pid`, così da non confonderlo con altri valori
+numerici. Entra quindi nel namespace e usa l'ifindex peer di `eth0` per trovare
+la veth nel nodo.
 
 ```bash
 map_pod_veth() {
-  POD_NAME="$1"
-  NODE_NAME="$2"
+  if [[ "$#" -ne 2 ]]; then
+    printf 'Uso: map_pod_veth POD NODO.\n' >&2
+    return 2
+  fi
+
+  local POD_NAME="$1"
+  local NODE_NAME="$2"
+  local SANDBOX_IDS
+  local SANDBOX_COUNT
+  local SANDBOX_ID
+  local SANDBOX_INSPECT
+  local SANDBOX_PID
+  local POD_IP
+  local PEER_IFINDEX
+  local POD_LINK
+  local POD_LINK_IP_RC
+  local NODE_LINKS
+  local VETH_MATCHES
+  local VETH_COUNT
 
   SANDBOX_IDS="$(docker exec "$NODE_NAME" crictl pods \
-    --name "$POD_NAME" -q)"
-  test "$(printf '%s\n' "$SANDBOX_IDS" | sed '/^$/d' | wc -l)" -eq 1
-  SANDBOX_ID="$SANDBOX_IDS"
+    --name "^${POD_NAME}$" -q)" || return 1
+  SANDBOX_COUNT="$(awk 'NF { count++ } END { print count + 0 }' \
+    <<<"$SANDBOX_IDS")" || return 1
+  if [[ "$SANDBOX_COUNT" -ne 1 ]]; then
+    printf 'ERROR: attesa una sandbox per %s, trovate %s.\n' \
+      "$POD_NAME" "$SANDBOX_COUNT" >&2
+    return 1
+  fi
+  SANDBOX_ID="$(sed -n '/[^[:space:]]/p' <<<"$SANDBOX_IDS")" || return 1
+  if [[ -z "$SANDBOX_ID" || "$SANDBOX_ID" == *$'\n'* || \
+        ! "$SANDBOX_ID" =~ ^[[:alnum:]_.-]+$ ]]; then
+    printf 'ERROR: sandbox ID non valido per %s.\n' "$POD_NAME" >&2
+    return 1
+  fi
 
-  SANDBOX_PID="$(docker exec "$NODE_NAME" sh -c '
-    crictl inspectp "$1" |
-      sed -n "/\"netNamespaceClosed\"/,\$p" |
-      sed -n "s/[^0-9]*\([0-9][0-9]*\).*/\1/p" |
-      head -n 1
-  ' sh "$SANDBOX_ID")"
-  test -n "$SANDBOX_PID"
+  SANDBOX_INSPECT="$(docker exec "$NODE_NAME" crictl inspectp \
+    "$SANDBOX_ID")" || return 1
+  SANDBOX_PID="$(sed -n '
+    s/^[[:space:]]*"pid"[[:space:]]*:[[:space:]]*\([0-9][0-9]*\)[[:space:]]*,\{0,1\}[[:space:]]*$/\1/p
+  ' <<<"$SANDBOX_INSPECT")" || return 1
+  if [[ ! "$SANDBOX_PID" =~ ^[1-9][0-9]*$ ]]; then
+    printf 'ERROR: PID sandbox non valido per %s: %q.\n' \
+      "$POD_NAME" "$SANDBOX_PID" >&2
+    return 1
+  fi
 
   POD_IP="$(kubectl --context "$TESI_CONTEXT" get pod \
-    -n net-lab "$POD_NAME" -o jsonpath='{.status.podIP}')"
+    -n net-lab "$POD_NAME" -o jsonpath='{.status.podIP}')" || return 1
+  if ! _tesi_is_ipv4 "$POD_IP"; then
+    printf 'ERROR: Pod IP non valido per %s: %q.\n' "$POD_NAME" "$POD_IP" >&2
+    return 1
+  fi
   PEER_IFINDEX="$(docker exec "$NODE_NAME" nsenter \
-    -t "$SANDBOX_PID" -n cat /sys/class/net/eth0/iflink)"
+    -t "$SANDBOX_PID" -n cat /sys/class/net/eth0/iflink)" || return 1
+  if [[ ! "$PEER_IFINDEX" =~ ^[1-9][0-9]*$ ]]; then
+    printf 'ERROR: ifindex peer non valido per %s: %q.\n' \
+      "$POD_NAME" "$PEER_IFINDEX" >&2
+    return 1
+  fi
+
+  POD_LINK="$(docker exec "$NODE_NAME" nsenter -t "$SANDBOX_PID" -n \
+    ip -br address show eth0)" || return 1
+  if awk -v expected="$POD_IP" '
+      {
+        for (field=1; field<=NF; field++) {
+          split($field, address, "/")
+          if (address[1] == expected) { found=1 }
+        }
+      }
+      END { exit !found }
+    ' <<<"$POD_LINK"
+  then
+    POD_LINK_IP_RC=0
+  else
+    POD_LINK_IP_RC=$?
+  fi
+  case "$POD_LINK_IP_RC" in
+    0) ;;
+    1)
+      printf 'ERROR: eth0 di %s non contiene il Pod IP %s.\n' \
+        "$POD_NAME" "$POD_IP" >&2
+      return 1
+      ;;
+    *)
+      printf 'ERROR: parser indirizzi eth0 fallito per %s (awk rc=%s).\n' \
+        "$POD_NAME" "$POD_LINK_IP_RC" >&2
+      return 1
+      ;;
+  esac
+  NODE_LINKS="$(docker exec "$NODE_NAME" ip -o link show)" || return 1
+  VETH_MATCHES="$(awk -F': ' -v peer="$PEER_IFINDEX" \
+    '$1 + 0 == peer { print }' <<<"$NODE_LINKS")" || return 1
+  VETH_COUNT="$(awk 'NF { count++ } END { print count + 0 }' \
+    <<<"$VETH_MATCHES")" || return 1
+  if [[ "$VETH_COUNT" -ne 1 || \
+        ! "$VETH_MATCHES" =~ ^[[:space:]]*[0-9]+:[[:space:]]+veth ]]; then
+    printf 'ERROR: attesa una veth per %s/ifindex %s, trovate %s.\n' \
+      "$POD_NAME" "$PEER_IFINDEX" "$VETH_COUNT" >&2
+    return 1
+  fi
 
   printf 'pod=%s node=%s pod_ip=%s sandbox=%s sandbox_pid=%s peer_ifindex=%s\n' \
     "$POD_NAME" "$NODE_NAME" "$POD_IP" "$SANDBOX_ID" \
     "$SANDBOX_PID" "$PEER_IFINDEX"
-  docker exec "$NODE_NAME" nsenter -t "$SANDBOX_PID" -n \
-    ip -br address show eth0
-  docker exec "$NODE_NAME" ip -o link show | \
-    awk -F': ' -v peer="$PEER_IFINDEX" '$1 + 0 == peer {print}'
+  printf '%s\n%s\n' "$POD_LINK" "$VETH_MATCHES"
 }
 
-map_pod_veth client k3d-tesi-flannel-vxlan-agent-0
-map_pod_veth server-a k3d-tesi-flannel-vxlan-agent-0
+map_pod_veth client k3d-tesi-flannel-vxlan-agent-0 &&
+map_pod_veth server-a k3d-tesi-flannel-vxlan-agent-0 &&
 map_pod_veth server-b k3d-tesi-flannel-vxlan-agent-1
 ```
 
@@ -842,15 +951,20 @@ host dei nodi e indirizzi underlay correnti:
 ```bash
 export SOURCE_NODE='k3d-tesi-flannel-vxlan-agent-0'
 export DESTINATION_NODE='k3d-tesi-flannel-vxlan-agent-1'
-export SOURCE_PID="$(docker inspect -f '{{.State.Pid}}' "$SOURCE_NODE")"
-export SOURCE_UNDERLAY="$(docker inspect -f '{{with index .NetworkSettings.Networks "k3d-tesi-flannel-vxlan"}}{{.IPAddress}}{{end}}' "$SOURCE_NODE")"
-export DESTINATION_UNDERLAY="$(docker inspect -f '{{with index .NetworkSettings.Networks "k3d-tesi-flannel-vxlan"}}{{.IPAddress}}{{end}}' "$DESTINATION_NODE")"
-export CAPTURE_DIR="$(mktemp -d)"
+_tesi_export_runtime SOURCE_PID positive-integer docker inspect \
+  -f '{{.State.Pid}}' "$SOURCE_NODE" &&
+_tesi_export_runtime SOURCE_UNDERLAY ipv4 docker inspect \
+  -f '{{with index .NetworkSettings.Networks "k3d-tesi-flannel-vxlan"}}{{.IPAddress}}{{end}}' \
+  "$SOURCE_NODE" &&
+_tesi_export_runtime DESTINATION_UNDERLAY ipv4 docker inspect \
+  -f '{{with index .NetworkSettings.Networks "k3d-tesi-flannel-vxlan"}}{{.IPAddress}}{{end}}' \
+  "$DESTINATION_NODE" &&
+export CAPTURE_DIR="$(mktemp -d)" &&
 printf 'pid=%s source_underlay=%s destination_underlay=%s capture_dir=%s\n' \
-  "$SOURCE_PID" "$SOURCE_UNDERLAY" "$DESTINATION_UNDERLAY" "$CAPTURE_DIR"
+  "$SOURCE_PID" "$SOURCE_UNDERLAY" "$DESTINATION_UNDERLAY" "$CAPTURE_DIR" &&
 
 sudo /usr/bin/nsenter --target "$SOURCE_PID" --net \
-  /usr/sbin/bridge -d link show master cni0
+  /usr/sbin/bridge -d link show master cni0 &&
 sudo /usr/bin/nsenter --target "$SOURCE_PID" --net /usr/sbin/ip -br link
 ```
 
@@ -904,6 +1018,13 @@ then
   CAPTURE_FAILED=1
 fi
 if ! verify_no_tcpdump_processes
+then
+  CAPTURE_FAILED=1
+fi
+if ! verify_dual_view_capture \
+    "$CAPTURE_DIR/flannel-inter-node.log" \
+    "$CLIENT_IP" "$SERVER_B_IP" \
+    "$SOURCE_UNDERLAY" "$DESTINATION_UNDERLAY" 8472
 then
   CAPTURE_FAILED=1
 fi
@@ -961,20 +1082,83 @@ La funzione usa il prefisso nodo del cluster corrente:
 
 ```bash
 inspect_k3s_policy_plane() {
+  local FAILED=0
+  local FILTER_RC
+  local IPSET_OUTPUT
+  local IPTABLES_OUTPUT
+  local LOG_OUTPUT
+
   for NODE in \
     "${TESI_NODE_PREFIX}-server-0" \
     "${TESI_NODE_PREFIX}-agent-0" \
     "${TESI_NODE_PREFIX}-agent-1"
   do
-    docker logs "$NODE" 2>&1 | \
-      /usr/bin/grep -E 'Starting network policy controller|network_policy_controller' || true
-    docker exec "$NODE" /bin/aux/iptables --version
-    docker exec "$NODE" /bin/ipset --version
-    docker exec "$NODE" sh -c \
-      '/bin/aux/iptables-save -c | /bin/grep -E "KUBE-(NWPLCY|POD-FW|ROUTER)" || true'
-    docker exec "$NODE" sh -c \
-      '/bin/ipset save | /bin/grep -E "KUBE-" || true'
+    if LOG_OUTPUT="$(docker logs "$NODE" 2>&1)"
+    then
+      if /usr/bin/grep -E \
+          'Starting network policy controller|network_policy_controller' \
+          <<<"$LOG_OUTPUT"
+      then
+        FILTER_RC=0
+      else
+        FILTER_RC=$?
+      fi
+      case "$FILTER_RC" in
+        0) ;;
+        1) printf 'INFO: marker controller policy assente su %s.\n' "$NODE" ;;
+        *) printf 'ERROR: filtro log policy fallito su %s (grep rc=%s).\n' \
+             "$NODE" "$FILTER_RC" >&2; FAILED=1 ;;
+      esac
+    else
+      printf 'ERROR: acquisizione log policy fallita su %s.\n' "$NODE" >&2
+      FAILED=1
+    fi
+
+    docker exec "$NODE" /bin/aux/iptables --version || FAILED=1
+    docker exec "$NODE" /bin/ipset --version || FAILED=1
+
+    if IPTABLES_OUTPUT="$(docker exec "$NODE" \
+        /bin/aux/iptables-save -c)"
+    then
+      if /usr/bin/grep -E 'KUBE-(NWPLCY|POD-FW|ROUTER)' \
+          <<<"$IPTABLES_OUTPUT"
+      then
+        FILTER_RC=0
+      else
+        FILTER_RC=$?
+      fi
+      case "$FILTER_RC" in
+        0) ;;
+        1) printf 'INFO: catene policy KUBE assenti su %s.\n' "$NODE" ;;
+        *) printf 'ERROR: filtro iptables fallito su %s (grep rc=%s).\n' \
+             "$NODE" "$FILTER_RC" >&2; FAILED=1 ;;
+      esac
+    else
+      printf 'ERROR: acquisizione iptables fallita su %s.\n' "$NODE" >&2
+      FAILED=1
+    fi
+
+    if IPSET_OUTPUT="$(docker exec "$NODE" /bin/ipset save)"
+    then
+      if /usr/bin/grep -E 'KUBE-' <<<"$IPSET_OUTPUT"
+      then
+        FILTER_RC=0
+      else
+        FILTER_RC=$?
+      fi
+      case "$FILTER_RC" in
+        0) ;;
+        1) printf 'INFO: IPSet policy KUBE assenti su %s.\n' "$NODE" ;;
+        *) printf 'ERROR: filtro IPSet fallito su %s (grep rc=%s).\n' \
+             "$NODE" "$FILTER_RC" >&2; FAILED=1 ;;
+      esac
+    else
+      printf 'ERROR: acquisizione IPSet fallita su %s.\n' "$NODE" >&2
+      FAILED=1
+    fi
   done
+
+  [[ "$FAILED" -eq 0 ]]
 }
 ```
 
@@ -999,8 +1183,8 @@ Applicare il workload con il blocco della sezione 7.1. La baseline, senza
 NetworkPolicy, deve consentire tutte le sei connessioni:
 
 ```bash
-deploy_common_workload
-run_policy_matrix allow-all
+deploy_common_workload &&
+run_policy_matrix allow-all &&
 inspect_k3s_policy_plane
 ```
 
@@ -1009,10 +1193,10 @@ matrice:
 
 ```bash
 kubectl --context "$TESI_CONTEXT" apply \
-  -f manifests/cni/common/default-deny-ingress.yaml
+  -f manifests/cni/common/default-deny-ingress.yaml &&
 kubectl --context "$TESI_CONTEXT" get networkpolicy \
-  default-deny-ingress -n net-lab -o yaml
-run_policy_matrix deny-all
+  default-deny-ingress -n net-lab -o yaml &&
+run_policy_matrix deny-all &&
 inspect_k3s_policy_plane
 ```
 
@@ -1023,15 +1207,29 @@ Applicare quindi l'allow mirata e ripetere la matrice:
 
 ```bash
 kubectl --context "$TESI_CONTEXT" apply \
-  -f manifests/cni/common/allow-client-to-http-servers.yaml
-kubectl --context "$TESI_CONTEXT" get networkpolicy -n net-lab -o yaml
-run_policy_matrix selective-allow
+  -f manifests/cni/common/allow-client-to-http-servers.yaml &&
+kubectl --context "$TESI_CONTEXT" get networkpolicy -n net-lab -o yaml &&
+run_policy_matrix selective-allow &&
 inspect_k3s_policy_plane
 ```
 
 Devono riuscire quattro richieste dal client e fallire le due da `server-a`.
-Gli artefatti kernel devono essere coerenti con l'allow selettiva. Terminare
-il controllo ON:
+Gli artefatti kernel devono essere coerenti con l'allow selettiva. Rimuovere
+quindi entrambe le policy e richiedere il ripristino della matrice baseline:
+
+```bash
+kubectl --context "$TESI_CONTEXT" delete \
+  -f manifests/cni/common/allow-client-to-http-servers.yaml \
+  --ignore-not-found &&
+kubectl --context "$TESI_CONTEXT" delete \
+  -f manifests/cni/common/default-deny-ingress.yaml \
+  --ignore-not-found &&
+run_policy_matrix allow-all &&
+inspect_k3s_policy_plane
+```
+
+Il controllo ON è causalmente valido soltanto se anche questo ripristino
+riesce. Terminare quindi il cluster:
 
 ```bash
 kubectl --context "$TESI_CONTEXT" get pods -n net-lab -o wide
@@ -1060,25 +1258,25 @@ Applicare il workload con la sezione 7.1. Poiché il controller è disabilitato,
 in tutti e tre gli stati l'esito atteso resta `allow-all`:
 
 ```bash
-deploy_common_workload
+deploy_common_workload &&
 
 # Baseline senza policy
-run_policy_matrix allow-all
-inspect_k3s_policy_plane
+run_policy_matrix allow-all &&
+inspect_k3s_policy_plane &&
 
 # Default deny dichiarato nell'API
 kubectl --context "$TESI_CONTEXT" apply \
-  -f manifests/cni/common/default-deny-ingress.yaml
+  -f manifests/cni/common/default-deny-ingress.yaml &&
 kubectl --context "$TESI_CONTEXT" get networkpolicy \
-  default-deny-ingress -n net-lab -o yaml
-run_policy_matrix allow-all
-inspect_k3s_policy_plane
+  default-deny-ingress -n net-lab -o yaml &&
+run_policy_matrix allow-all &&
+inspect_k3s_policy_plane &&
 
 # Default deny più allow selettiva
 kubectl --context "$TESI_CONTEXT" apply \
-  -f manifests/cni/common/allow-client-to-http-servers.yaml
-kubectl --context "$TESI_CONTEXT" get networkpolicy -n net-lab -o yaml
-run_policy_matrix allow-all
+  -f manifests/cni/common/allow-client-to-http-servers.yaml &&
+kubectl --context "$TESI_CONTEXT" get networkpolicy -n net-lab -o yaml &&
+run_policy_matrix allow-all &&
 inspect_k3s_policy_plane
 ```
 
@@ -1091,8 +1289,21 @@ Flannel.
 
 Per rendere confrontabili gli snapshot dei tre stati, salvare integralmente
 gli output dei comandi mostrati e documentare qualunque normalizzazione dei
-campi effimeri prima di usare un confronto byte per byte. La rimozione elimina
-le due NetworkPolicy insieme al cluster dedicato.
+campi effimeri prima di usare un confronto byte per byte. Prima del cleanup,
+rimuovere le due NetworkPolicy e verificare nuovamente `allow-all`:
+
+```bash
+kubectl --context "$TESI_CONTEXT" delete \
+  -f manifests/cni/common/allow-client-to-http-servers.yaml \
+  --ignore-not-found &&
+kubectl --context "$TESI_CONTEXT" delete \
+  -f manifests/cni/common/default-deny-ingress.yaml \
+  --ignore-not-found &&
+run_policy_matrix allow-all &&
+inspect_k3s_policy_plane
+```
+
+La rimozione successiva elimina il cluster dedicato.
 
 ```bash
 k3d cluster delete tesi-e02-flannel-netpol-off
@@ -1160,16 +1371,41 @@ operator.
 
 ```bash
 export CALICO_RENDER_DIR="$(mktemp -d)"
-helm template calico-crds "$CALICO_CRD_CHART" \
-  --output-dir "$CALICO_RENDER_DIR"
-helm template calico "$CALICO_OPERATOR_CHART" \
-  --namespace tigera-operator \
-  --values manifests/cni/calico/tigera-operator-values.yaml \
-  --no-hooks \
-  --post-renderer scripts/cni/calico/pin-tigera-operator-image.sh \
-  --output-dir "$CALICO_RENDER_DIR"
-grep -R -n -E 'latest|goldmane|whisker|quay.io/tigera/operator' \
-  "$CALICO_RENDER_DIR" || true
+if helm template calico-crds "$CALICO_CRD_CHART" \
+    --output-dir "$CALICO_RENDER_DIR" && \
+    helm template calico "$CALICO_OPERATOR_CHART" \
+      --namespace tigera-operator \
+      --values manifests/cni/calico/tigera-operator-values.yaml \
+      --no-hooks \
+      --post-renderer scripts/cni/calico/pin-tigera-operator-image.sh \
+      --output-dir "$CALICO_RENDER_DIR"
+then
+  RENDER_FILTER_FAILED=0
+  if grep -R -n -E 'latest|goldmane|whisker|quay.io/tigera/operator' \
+      "$CALICO_RENDER_DIR"
+  then
+    RENDER_FILTER_RC=0
+  else
+    RENDER_FILTER_RC=$?
+  fi
+  case "$RENDER_FILTER_RC" in
+    0) ;;
+    1) printf 'INFO: nessun marker del filtro trovato nel rendering Calico.\n' ;;
+    *) printf 'ERROR: filtro rendering Calico fallito (grep rc=%s).\n' \
+         "$RENDER_FILTER_RC" >&2; RENDER_FILTER_FAILED=1 ;;
+  esac
+  unset RENDER_FILTER_RC
+  if [[ "$RENDER_FILTER_FAILED" -ne 0 ]]
+  then
+    unset RENDER_FILTER_FAILED
+    false
+  else
+    unset RENDER_FILTER_FAILED
+  fi
+else
+  printf 'ERROR: rendering statico Calico fallito.\n' >&2
+  false
+fi
 ```
 
 Non devono esserci tag `latest` né workload Goldmane o Whisker. Il
@@ -1261,23 +1497,33 @@ immagini per digest.
 Ispezionare i tre namespace nodo:
 
 ```bash
+NODE_INVENTORY_FAILED=0
 for NODE in \
   k3d-tesi-e10-calico-vxlan-server-0 \
   k3d-tesi-e10-calico-vxlan-agent-0 \
   k3d-tesi-e10-calico-vxlan-agent-1
 do
-  docker exec "$NODE" ip -br link
-  docker exec "$NODE" ip route
-  docker exec "$NODE" ip -details link show vxlan.calico
+  docker exec "$NODE" ip -br link || NODE_INVENTORY_FAILED=1
+  docker exec "$NODE" ip route || NODE_INVENTORY_FAILED=1
+  docker exec "$NODE" ip -details link show vxlan.calico || \
+    NODE_INVENTORY_FAILED=1
   docker exec "$NODE" sh -c \
-    'ls -la /var/lib/rancher/k3s/agent/etc/cni/net.d; sed -n "1,240p" /var/lib/rancher/k3s/agent/etc/cni/net.d/*calico*.conflist'
+    'ls -la /var/lib/rancher/k3s/agent/etc/cni/net.d; sed -n "1,240p" /var/lib/rancher/k3s/agent/etc/cni/net.d/*calico*.conflist' || \
+    NODE_INVENTORY_FAILED=1
 done
 
-if ! docker exec k3d-tesi-e10-calico-vxlan-agent-0 true
+if [[ "$NODE_INVENTORY_FAILED" -ne 0 ]]
 then
+  printf 'ERROR: inventario data plane E10 incompleto.\n' >&2
+  unset NODE_INVENTORY_FAILED
+  false
+elif ! docker exec k3d-tesi-e10-calico-vxlan-agent-0 true
+then
+  unset NODE_INVENTORY_FAILED
   printf 'ERROR: nodo E10 non accessibile; impossibile verificare cni0.\n' >&2
   false
 else
+  unset NODE_INVENTORY_FAILED
   if docker exec k3d-tesi-e10-calico-vxlan-agent-0 \
       test -e /sys/class/net/cni0
   then
@@ -1308,17 +1554,21 @@ Applicare il workload comune, eseguire la matrice baseline e rileggere gli
 indirizzi:
 
 ```bash
-deploy_common_workload
-run_policy_matrix allow-all
-export CLIENT_IP="$(kubectl --context "$TESI_CONTEXT" -n net-lab get pod client -o jsonpath='{.status.podIP}')"
-export SERVER_A_IP="$(kubectl --context "$TESI_CONTEXT" -n net-lab get pod server-a -o jsonpath='{.status.podIP}')"
-export SERVER_B_IP="$(kubectl --context "$TESI_CONTEXT" -n net-lab get pod server-b -o jsonpath='{.status.podIP}')"
-export SERVICE_IP="$(kubectl --context "$TESI_CONTEXT" -n net-lab get svc servers -o jsonpath='{.spec.clusterIP}')"
+deploy_common_workload &&
+run_policy_matrix allow-all &&
+_tesi_export_runtime CLIENT_IP ipv4 kubectl --context "$TESI_CONTEXT" \
+  -n net-lab get pod client -o jsonpath='{.status.podIP}' &&
+_tesi_export_runtime SERVER_A_IP ipv4 kubectl --context "$TESI_CONTEXT" \
+  -n net-lab get pod server-a -o jsonpath='{.status.podIP}' &&
+_tesi_export_runtime SERVER_B_IP ipv4 kubectl --context "$TESI_CONTEXT" \
+  -n net-lab get pod server-b -o jsonpath='{.status.podIP}' &&
+_tesi_export_runtime SERVICE_IP ipv4 kubectl --context "$TESI_CONTEXT" \
+  -n net-lab get svc servers -o jsonpath='{.spec.clusterIP}' &&
 kubectl --context "$TESI_CONTEXT" get \
-  workloadendpoints.projectcalico.org -A -o wide
-docker exec k3d-tesi-e10-calico-vxlan-agent-0 ip -br link
-docker exec k3d-tesi-e10-calico-vxlan-agent-0 ip route
-docker exec k3d-tesi-e10-calico-vxlan-agent-1 ip -br link
+  workloadendpoints.projectcalico.org -A -o wide &&
+docker exec k3d-tesi-e10-calico-vxlan-agent-0 ip -br link &&
+docker exec k3d-tesi-e10-calico-vxlan-agent-0 ip route &&
+docker exec k3d-tesi-e10-calico-vxlan-agent-1 ip -br link &&
 docker exec k3d-tesi-e10-calico-vxlan-agent-1 ip route
 ```
 
@@ -1333,12 +1583,16 @@ Come in E01, entriamo nel namespace del nodo sorgente perché contiene
 ```bash
 export SOURCE_NODE='k3d-tesi-e10-calico-vxlan-agent-0'
 export DESTINATION_NODE='k3d-tesi-e10-calico-vxlan-agent-1'
-export SOURCE_PID="$(docker inspect -f '{{.State.Pid}}' "$SOURCE_NODE")"
-export SOURCE_UNDERLAY="$(docker inspect -f '{{with index .NetworkSettings.Networks "k3d-tesi-e10-calico-vxlan"}}{{.IPAddress}}{{end}}' "$SOURCE_NODE")"
-export DESTINATION_UNDERLAY="$(docker inspect -f '{{with index .NetworkSettings.Networks "k3d-tesi-e10-calico-vxlan"}}{{.IPAddress}}{{end}}' "$DESTINATION_NODE")"
-export CAPTURE_DIR="$(mktemp -d)"
-
-sudo -v
+_tesi_export_runtime SOURCE_PID positive-integer docker inspect \
+  -f '{{.State.Pid}}' "$SOURCE_NODE" &&
+_tesi_export_runtime SOURCE_UNDERLAY ipv4 docker inspect \
+  -f '{{with index .NetworkSettings.Networks "k3d-tesi-e10-calico-vxlan"}}{{.IPAddress}}{{end}}' \
+  "$SOURCE_NODE" &&
+_tesi_export_runtime DESTINATION_UNDERLAY ipv4 docker inspect \
+  -f '{{with index .NetworkSettings.Networks "k3d-tesi-e10-calico-vxlan"}}{{.IPAddress}}{{end}}' \
+  "$DESTINATION_NODE" &&
+export CAPTURE_DIR="$(mktemp -d)" &&
+sudo -v && {
 (
   sleep 2
   http_flow client server-b
@@ -1379,6 +1633,13 @@ if ! verify_no_tcpdump_processes
 then
   CAPTURE_FAILED=1
 fi
+if ! verify_dual_view_capture \
+    "$CAPTURE_DIR/calico-inter-node.log" \
+    "$CLIENT_IP" "$SERVER_B_IP" \
+    "$SOURCE_UNDERLAY" "$DESTINATION_UNDERLAY" 4789
+then
+  CAPTURE_FAILED=1
+fi
 
 if [[ "$CAPTURE_FAILED" -ne 0 ]]
 then
@@ -1388,6 +1649,7 @@ else
   sed -n '1,260p' "$CAPTURE_DIR/calico-inter-node.log" &&
     cat "$CAPTURE_DIR/http-client.log"
 fi
+}
 ```
 
 Correlare gli IP dei Pod all'interno e gli IP underlay all'esterno; cercare
@@ -1449,8 +1711,8 @@ run_e10_service_attribution() {
     "$SERVICE_DIR/iptables-after.log" || return 1
 
   cat "$SERVICE_DIR/http-flows.log" || return 1
-  diff -u "$SERVICE_DIR/iptables-before.log" \
-    "$SERVICE_DIR/iptables-after.log" || true
+  show_informative_diff "$SERVICE_DIR/iptables-before.log" \
+    "$SERVICE_DIR/iptables-after.log" || return 1
 }
 
 run_e10_service_attribution
@@ -1470,22 +1732,97 @@ il controllo una volta:
 
 ```bash
 inspect_calico_policy_plane() {
-  kubectl --context "$TESI_CONTEXT" get networkpolicy -n net-lab -o yaml
-  kubectl --context "$TESI_CONTEXT" get \
-    workloadendpoints.projectcalico.org -A -o yaml
-  kubectl --context "$TESI_CONTEXT" logs -n calico-system \
-    daemonset/calico-node -c calico-node --tail=300 | \
-    grep -E 'Policy|selector|IPSet|iptables' || true
+  local FAILED=0
+  local FILTER_RC
+  local IPSET_OUTPUT
+  local IPTABLES_OUTPUT
+  local LOG_OUTPUT
+  local POLICY_OUTPUT
+  local WEP_OUTPUT
+
+  if POLICY_OUTPUT="$(kubectl --context "$TESI_CONTEXT" get \
+      networkpolicy -n net-lab -o yaml)"
+  then
+    printf '%s\n' "$POLICY_OUTPUT"
+  else
+    printf 'ERROR: acquisizione NetworkPolicy Calico fallita.\n' >&2
+    FAILED=1
+  fi
+  if WEP_OUTPUT="$(kubectl --context "$TESI_CONTEXT" get \
+      workloadendpoints.projectcalico.org -A -o yaml)"
+  then
+    printf '%s\n' "$WEP_OUTPUT"
+  else
+    printf 'ERROR: acquisizione WorkloadEndpoint Calico fallita.\n' >&2
+    FAILED=1
+  fi
+  if LOG_OUTPUT="$(kubectl --context "$TESI_CONTEXT" logs -n calico-system \
+      daemonset/calico-node -c calico-node --tail=300)"
+  then
+    if grep -E 'Policy|selector|IPSet|iptables' <<<"$LOG_OUTPUT"
+    then
+      FILTER_RC=0
+    else
+      FILTER_RC=$?
+    fi
+    case "$FILTER_RC" in
+      0) ;;
+      1) printf 'INFO: marker policy assenti nei log Calico.\n' ;;
+      *) printf 'ERROR: filtro log Calico fallito (grep rc=%s).\n' \
+           "$FILTER_RC" >&2; FAILED=1 ;;
+    esac
+  else
+    printf 'ERROR: acquisizione log Calico fallita.\n' >&2
+    FAILED=1
+  fi
 
   for NODE in \
     k3d-tesi-e10-calico-vxlan-agent-0 \
     k3d-tesi-e10-calico-vxlan-agent-1
   do
-    docker exec "$NODE" sh -c \
-      '/bin/aux/iptables-save -c | /bin/grep -E "cali-|KubernetesNetworkPolicy" || true'
-    docker exec "$NODE" sh -c \
-      '/bin/ipset save | /bin/grep -E "cali" || true'
+    if IPTABLES_OUTPUT="$(docker exec "$NODE" \
+        /bin/aux/iptables-save -c)"
+    then
+      if grep -E 'cali-|KubernetesNetworkPolicy' <<<"$IPTABLES_OUTPUT"
+      then
+        FILTER_RC=0
+      else
+        FILTER_RC=$?
+      fi
+      case "$FILTER_RC" in
+        0) ;;
+        1) printf 'INFO: catene policy Calico assenti su %s.\n' "$NODE" ;;
+        *) printf 'ERROR: filtro iptables Calico fallito su %s (grep rc=%s).\n' \
+             "$NODE" "$FILTER_RC" >&2; FAILED=1 ;;
+      esac
+    else
+      printf 'ERROR: acquisizione iptables Calico fallita su %s.\n' \
+        "$NODE" >&2
+      FAILED=1
+    fi
+
+    if IPSET_OUTPUT="$(docker exec "$NODE" /bin/ipset save)"
+    then
+      if grep -E 'cali' <<<"$IPSET_OUTPUT"
+      then
+        FILTER_RC=0
+      else
+        FILTER_RC=$?
+      fi
+      case "$FILTER_RC" in
+        0) ;;
+        1) printf 'INFO: IPSet Calico assenti su %s.\n' "$NODE" ;;
+        *) printf 'ERROR: filtro IPSet Calico fallito su %s (grep rc=%s).\n' \
+             "$NODE" "$FILTER_RC" >&2; FAILED=1 ;;
+      esac
+    else
+      printf 'ERROR: acquisizione IPSet Calico fallita su %s.\n' \
+        "$NODE" >&2
+      FAILED=1
+    fi
   done
+
+  [[ "$FAILED" -eq 0 ]]
 }
 ```
 
@@ -1493,19 +1830,19 @@ Eseguire poi i tre stati in ordine:
 
 ```bash
 # Baseline: sei connessioni consentite
-run_policy_matrix allow-all
-inspect_calico_policy_plane
+run_policy_matrix allow-all &&
+inspect_calico_policy_plane &&
 
 # Default deny: sei connessioni negate
 kubectl --context "$TESI_CONTEXT" apply \
-  -f manifests/cni/common/default-deny-ingress.yaml
-run_policy_matrix deny-all
-inspect_calico_policy_plane
+  -f manifests/cni/common/default-deny-ingress.yaml &&
+run_policy_matrix deny-all &&
+inspect_calico_policy_plane &&
 
 # Allow selettiva: quattro consentite, due negate
 kubectl --context "$TESI_CONTEXT" apply \
-  -f manifests/cni/common/allow-client-to-http-servers.yaml
-run_policy_matrix selective-allow
+  -f manifests/cni/common/allow-client-to-http-servers.yaml &&
+run_policy_matrix selective-allow &&
 inspect_calico_policy_plane
 ```
 
@@ -1513,6 +1850,21 @@ Selector, IPSet, catene e contatori devono essere coerenti con 6/6 consentiti,
 6/6 negati, quindi 4/6 consentiti. L'enforcement osservato è attribuito al
 calculation graph e a Felix; `calico-kube-controllers` non va descritto come
 policy controller in questa configurazione Kubernetes Datastore.
+
+Rimuovere infine entrambe le policy e richiedere il ripristino della baseline:
+
+```bash
+kubectl --context "$TESI_CONTEXT" delete \
+  -f manifests/cni/common/allow-client-to-http-servers.yaml \
+  --ignore-not-found &&
+kubectl --context "$TESI_CONTEXT" delete \
+  -f manifests/cni/common/default-deny-ingress.yaml \
+  --ignore-not-found &&
+run_policy_matrix allow-all &&
+inspect_calico_policy_plane
+```
+
+L'attribuzione causale è valida soltanto se la matrice torna a 6/6 consentiti.
 
 ### 10.6 Rimozione del cluster
 
@@ -1560,15 +1912,40 @@ Lo SHA-256 del chart deve essere:
 Eseguire lint e rendering con il file valori pubblico:
 
 ```bash
-helm lint "$E20_DIR/cilium-1.19.6.tgz" \
-  --values manifests/cni/cilium/values.yaml
-helm template cilium "$E20_DIR/cilium-1.19.6.tgz" \
-  --namespace kube-system \
-  --values manifests/cni/cilium/values.yaml \
-  --kube-version 1.34.9 \
-  --output-dir "$E20_DIR/rendered"
-grep -R -n -E 'kind: (DaemonSet|Deployment)|image:|latest' \
-  "$E20_DIR/rendered" || true
+if helm lint "$E20_DIR/cilium-1.19.6.tgz" \
+    --values manifests/cni/cilium/values.yaml && \
+    helm template cilium "$E20_DIR/cilium-1.19.6.tgz" \
+      --namespace kube-system \
+      --values manifests/cni/cilium/values.yaml \
+      --kube-version 1.34.9 \
+      --output-dir "$E20_DIR/rendered"
+then
+  RENDER_FILTER_FAILED=0
+  if grep -R -n -E 'kind: (DaemonSet|Deployment)|image:|latest' \
+      "$E20_DIR/rendered"
+  then
+    RENDER_FILTER_RC=0
+  else
+    RENDER_FILTER_RC=$?
+  fi
+  case "$RENDER_FILTER_RC" in
+    0) ;;
+    1) printf 'INFO: nessun marker del filtro trovato nel rendering Cilium.\n' ;;
+    *) printf 'ERROR: filtro rendering Cilium fallito (grep rc=%s).\n' \
+         "$RENDER_FILTER_RC" >&2; RENDER_FILTER_FAILED=1 ;;
+  esac
+  unset RENDER_FILTER_RC
+  if [[ "$RENDER_FILTER_FAILED" -ne 0 ]]
+  then
+    unset RENDER_FILTER_FAILED
+    false
+  else
+    unset RENDER_FILTER_FAILED
+  fi
+else
+  printf 'ERROR: lint o rendering statico Cilium fallito.\n' >&2
+  false
+fi
 ```
 
 Controllare un DaemonSet `cilium`, un Deployment `cilium-operator`, immagini
@@ -1623,14 +2000,15 @@ kubectl --context "$TESI_CONTEXT" get daemonset -n kube-system cilium
 kubectl --context "$TESI_CONTEXT" get deployment -n kube-system cilium-operator
 kubectl --context "$TESI_CONTEXT" get ciliumnodes -o yaml
 
-export CILIUM_AGENT0="$(kubectl --context "$TESI_CONTEXT" get pods \
+_tesi_export_runtime CILIUM_AGENT0 pod-name kubectl \
+  --context "$TESI_CONTEXT" get pods \
   -n kube-system -l k8s-app=cilium \
   --field-selector spec.nodeName=k3d-tesi-e20-cilium-vxlan-agent-0 \
-  -o jsonpath='{.items[0].metadata.name}')"
+  -o jsonpath='{.items[0].metadata.name}' &&
 kubectl --context "$TESI_CONTEXT" exec -n kube-system \
-  "$CILIUM_AGENT0" -- cilium-dbg status --verbose
+  "$CILIUM_AGENT0" -- cilium-dbg status --verbose &&
 kubectl --context "$TESI_CONTEXT" exec -n kube-system \
-  "$CILIUM_AGENT0" -- cilium-dbg endpoint list
+  "$CILIUM_AGENT0" -- cilium-dbg endpoint list &&
 kubectl --context "$TESI_CONTEXT" exec -n kube-system \
   "$CILIUM_AGENT0" -- hubble status \
   --server unix:///var/run/cilium/hubble.sock
@@ -1639,20 +2017,31 @@ kubectl --context "$TESI_CONTEXT" exec -n kube-system \
 Ispezionare CNI, route, VXLAN e attach eBPF in ogni nodo:
 
 ```bash
+NODE_INVENTORY_FAILED=0
 for NODE in \
   k3d-tesi-e20-cilium-vxlan-server-0 \
   k3d-tesi-e20-cilium-vxlan-agent-0 \
   k3d-tesi-e20-cilium-vxlan-agent-1
 do
   docker exec "$NODE" sh -c \
-    'ls -la /var/lib/rancher/k3s/agent/etc/cni/net.d; sed -n "1,240p" /var/lib/rancher/k3s/agent/etc/cni/net.d/05-cilium.conflist'
-  docker exec "$NODE" ip -br link
-  docker exec "$NODE" ip route
-  docker exec "$NODE" ip -details link show cilium_vxlan
+    'ls -la /var/lib/rancher/k3s/agent/etc/cni/net.d; sed -n "1,240p" /var/lib/rancher/k3s/agent/etc/cni/net.d/05-cilium.conflist' || \
+    NODE_INVENTORY_FAILED=1
+  docker exec "$NODE" ip -br link || NODE_INVENTORY_FAILED=1
+  docker exec "$NODE" ip route || NODE_INVENTORY_FAILED=1
+  docker exec "$NODE" ip -details link show cilium_vxlan || \
+    NODE_INVENTORY_FAILED=1
 done
 
-kubectl --context "$TESI_CONTEXT" exec -n kube-system \
-  "$CILIUM_AGENT0" -- bpftool net
+if [[ "$NODE_INVENTORY_FAILED" -ne 0 ]]
+then
+  printf 'ERROR: inventario data plane E20 incompleto.\n' >&2
+  unset NODE_INVENTORY_FAILED
+  false
+else
+  unset NODE_INVENTORY_FAILED
+  kubectl --context "$TESI_CONTEXT" exec -n kube-system \
+    "$CILIUM_AGENT0" -- bpftool net
+fi
 ```
 
 Controllare tre nodi `Ready`, Cilium `3/3`, un Operator disponibile, blocchi
@@ -1667,21 +2056,26 @@ Applicare il workload comune, eseguire la matrice baseline e rileggere
 endpoint, identità e indirizzi:
 
 ```bash
-deploy_common_workload
-run_policy_matrix allow-all
-export CLIENT_IP="$(kubectl --context "$TESI_CONTEXT" -n net-lab get pod client -o jsonpath='{.status.podIP}')"
-export SERVER_A_IP="$(kubectl --context "$TESI_CONTEXT" -n net-lab get pod server-a -o jsonpath='{.status.podIP}')"
-export SERVER_B_IP="$(kubectl --context "$TESI_CONTEXT" -n net-lab get pod server-b -o jsonpath='{.status.podIP}')"
-export SERVICE_IP="$(kubectl --context "$TESI_CONTEXT" -n net-lab get svc servers -o jsonpath='{.spec.clusterIP}')"
+deploy_common_workload &&
+run_policy_matrix allow-all &&
+_tesi_export_runtime CLIENT_IP ipv4 kubectl --context "$TESI_CONTEXT" \
+  -n net-lab get pod client -o jsonpath='{.status.podIP}' &&
+_tesi_export_runtime SERVER_A_IP ipv4 kubectl --context "$TESI_CONTEXT" \
+  -n net-lab get pod server-a -o jsonpath='{.status.podIP}' &&
+_tesi_export_runtime SERVER_B_IP ipv4 kubectl --context "$TESI_CONTEXT" \
+  -n net-lab get pod server-b -o jsonpath='{.status.podIP}' &&
+_tesi_export_runtime SERVICE_IP ipv4 kubectl --context "$TESI_CONTEXT" \
+  -n net-lab get svc servers -o jsonpath='{.spec.clusterIP}' &&
 kubectl --context "$TESI_CONTEXT" get ciliumendpoint \
-  -n net-lab client server-a server-b -o wide
+  -n net-lab client server-a server-b -o wide &&
 
-export CLIENT_ENDPOINT_ID="$(kubectl --context "$TESI_CONTEXT" get \
-  ciliumendpoint -n net-lab client -o jsonpath='{.status.id}')"
+_tesi_export_runtime CLIENT_ENDPOINT_ID positive-integer kubectl \
+  --context "$TESI_CONTEXT" get ciliumendpoint -n net-lab client \
+  -o jsonpath='{.status.id}' &&
 kubectl --context "$TESI_CONTEXT" exec -n kube-system \
-  "$CILIUM_AGENT0" -- cilium-dbg endpoint get "$CLIENT_ENDPOINT_ID"
+  "$CILIUM_AGENT0" -- cilium-dbg endpoint get "$CLIENT_ENDPOINT_ID" &&
 kubectl --context "$TESI_CONTEXT" exec -n kube-system \
-  "$CILIUM_AGENT0" -- ip route get "$SERVER_A_IP"
+  "$CILIUM_AGENT0" -- ip route get "$SERVER_A_IP" &&
 kubectl --context "$TESI_CONTEXT" exec -n kube-system \
   "$CILIUM_AGENT0" -- bpftool net
 ```
@@ -1699,15 +2093,20 @@ fra Pod con il datagramma VXLAN UDP 8472 fra gli indirizzi underlay.
 ```bash
 export SOURCE_NODE='k3d-tesi-e20-cilium-vxlan-agent-0'
 export DESTINATION_NODE='k3d-tesi-e20-cilium-vxlan-agent-1'
-export SOURCE_PID="$(docker inspect -f '{{.State.Pid}}' "$SOURCE_NODE")"
-export SOURCE_UNDERLAY="$(docker inspect -f '{{with index .NetworkSettings.Networks "k3d-tesi-e20-cilium-vxlan"}}{{.IPAddress}}{{end}}' "$SOURCE_NODE")"
-export DESTINATION_UNDERLAY="$(docker inspect -f '{{with index .NetworkSettings.Networks "k3d-tesi-e20-cilium-vxlan"}}{{.IPAddress}}{{end}}' "$DESTINATION_NODE")"
-export CAPTURE_DIR="$(mktemp -d)"
+_tesi_export_runtime SOURCE_PID positive-integer docker inspect \
+  -f '{{.State.Pid}}' "$SOURCE_NODE" &&
+_tesi_export_runtime SOURCE_UNDERLAY ipv4 docker inspect \
+  -f '{{with index .NetworkSettings.Networks "k3d-tesi-e20-cilium-vxlan"}}{{.IPAddress}}{{end}}' \
+  "$SOURCE_NODE" &&
+_tesi_export_runtime DESTINATION_UNDERLAY ipv4 docker inspect \
+  -f '{{with index .NetworkSettings.Networks "k3d-tesi-e20-cilium-vxlan"}}{{.IPAddress}}{{end}}' \
+  "$DESTINATION_NODE" &&
+export CAPTURE_DIR="$(mktemp -d)" &&
 
 sudo /usr/bin/nsenter --target "$SOURCE_PID" --net \
-  /usr/sbin/ip -details link show cilium_vxlan
+  /usr/sbin/ip -details link show cilium_vxlan &&
 
-sudo -v
+sudo -v && {
 (
   sleep 2
   http_flow client server-b
@@ -1749,6 +2148,13 @@ if ! verify_no_tcpdump_processes
 then
   CAPTURE_FAILED=1
 fi
+if ! verify_dual_view_capture \
+    "$CAPTURE_DIR/cilium-inter-node.log" \
+    "$CLIENT_IP" "$SERVER_B_IP" \
+    "$SOURCE_UNDERLAY" "$DESTINATION_UNDERLAY" 8472
+then
+  CAPTURE_FAILED=1
+fi
 
 if [[ "$CAPTURE_FAILED" -ne 0 ]]
 then
@@ -1758,6 +2164,7 @@ else
   sed -n '1,360p' "$CAPTURE_DIR/cilium-inter-node.log" &&
     cat "$CAPTURE_DIR/http-client.log"
 fi
+}
 ```
 
 Correlare il flusso su veth `lxc*`, `cilium_vxlan` ed `eth0`, con IP dei Pod
@@ -1861,10 +2268,10 @@ run_e20_service_attribution() {
   done
 
   cat "$SERVICE_DIR/http-flows.log" || return 1
-  diff -u "$SERVICE_DIR/kube-proxy-before.log" \
-    "$SERVICE_DIR/kube-proxy-after.log" || true
-  diff -u "$SERVICE_DIR/ct-before.log" \
-    "$SERVICE_DIR/ct-after.log" || true
+  show_informative_diff "$SERVICE_DIR/kube-proxy-before.log" \
+    "$SERVICE_DIR/kube-proxy-after.log" || return 1
+  show_informative_diff "$SERVICE_DIR/ct-before.log" \
+    "$SERVICE_DIR/ct-after.log" || return 1
 }
 
 run_e20_service_attribution
@@ -1937,15 +2344,15 @@ capture_cilium_policy_state() {
 Eseguire i tre stati:
 
 ```bash
-capture_cilium_policy_state baseline allow-all
+capture_cilium_policy_state baseline allow-all &&
 
 kubectl --context "$TESI_CONTEXT" apply \
-  -f manifests/cni/common/default-deny-ingress.yaml
-capture_cilium_policy_state default-deny deny-all
+  -f manifests/cni/common/default-deny-ingress.yaml &&
+capture_cilium_policy_state default-deny deny-all &&
 
 kubectl --context "$TESI_CONTEXT" apply \
-  -f manifests/cni/common/allow-client-to-http-servers.yaml
-capture_cilium_policy_state selective-allow selective-allow
+  -f manifests/cni/common/allow-client-to-http-servers.yaml &&
+capture_cilium_policy_state selective-allow selective-allow &&
 
 ls -la "$POLICY_DIR"
 ```
@@ -1955,6 +2362,19 @@ Controllare revisioni endpoint crescenti, policy map eBPF e verdetti Hubble
 negati, poi 4/6 consentiti. Questi artefatti attribuiscono l'enforcement a
 Cilium, non al controller policy K3s disabilitato.
 
+Rimuovere entrambe le policy e acquisire uno stato finale `restored`. La
+conclusione causale richiede che la matrice torni a `allow-all`:
+
+```bash
+kubectl --context "$TESI_CONTEXT" delete \
+  -f manifests/cni/common/allow-client-to-http-servers.yaml \
+  --ignore-not-found &&
+kubectl --context "$TESI_CONTEXT" delete \
+  -f manifests/cni/common/default-deny-ingress.yaml \
+  --ignore-not-found &&
+capture_cilium_policy_state restored allow-all
+```
+
 ### 11.8 Troubleshooting circoscritto al riavvio Docker
 
 Questo controllo non è parte del percorso normale. Usarlo soltanto se, dopo
@@ -1963,17 +2383,20 @@ un riavvio Docker, i flussi intra-node funzionano ma quelli inter-node verso
 
 ```bash
 export AGENT1_NODE='k3d-tesi-e20-cilium-vxlan-agent-1'
-export AGENT1_UNDERLAY="$(docker inspect -f '{{with index .NetworkSettings.Networks "k3d-tesi-e20-cilium-vxlan"}}{{.IPAddress}}{{end}}' "$AGENT1_NODE")"
-export CILIUM_AGENT1="$(kubectl --context "$TESI_CONTEXT" get pods \
+_tesi_export_runtime AGENT1_UNDERLAY ipv4 docker inspect \
+  -f '{{with index .NetworkSettings.Networks "k3d-tesi-e20-cilium-vxlan"}}{{.IPAddress}}{{end}}' \
+  "$AGENT1_NODE" &&
+_tesi_export_runtime CILIUM_AGENT1 pod-name kubectl \
+  --context "$TESI_CONTEXT" get pods \
   -n kube-system -l k8s-app=cilium \
   --field-selector spec.nodeName=k3d-tesi-e20-cilium-vxlan-agent-1 \
-  -o jsonpath='{.items[0].metadata.name}')"
+  -o jsonpath='{.items[0].metadata.name}' &&
 
-printf 'docker_underlay=%s\n' "$AGENT1_UNDERLAY"
+printf 'docker_underlay=%s\n' "$AGENT1_UNDERLAY" &&
 kubectl --context "$TESI_CONTEXT" get ciliumnode \
-  k3d-tesi-e20-cilium-vxlan-agent-1 -o yaml
+  k3d-tesi-e20-cilium-vxlan-agent-1 -o yaml &&
 kubectl --context "$TESI_CONTEXT" exec -n kube-system \
-  "$CILIUM_AGENT0" -- cilium-dbg node list
+  "$CILIUM_AGENT0" -- cilium-dbg node list &&
 kubectl --context "$TESI_CONTEXT" exec -n kube-system \
   "$CILIUM_AGENT0" -- cilium-dbg bpf ipcache list
 ```
@@ -2027,6 +2450,7 @@ run_final_host_check() {
   local cluster_list
   local container_list
   local listener_list
+  local parser_rc
 
   if ! cluster_list="$(k3d cluster list)"
   then
@@ -2037,11 +2461,24 @@ run_final_host_check() {
   if awk '$1 ~ /^tesi-/ { found=1 } END { exit !found }' \
       <<<"$cluster_list"
   then
-    printf 'FAIL: sono ancora presenti cluster tesi.\n' >&2
-    return 1
+    parser_rc=0
+  else
+    parser_rc=$?
   fi
+  case "$parser_rc" in
+    0)
+      printf 'FAIL: sono ancora presenti cluster tesi.\n' >&2
+      return 1
+      ;;
+    1) ;;
+    *)
+      printf 'ERROR: parser inventario cluster fallito (awk rc=%s).\n' \
+        "$parser_rc" >&2
+      return 1
+      ;;
+  esac
 
-  if ! container_list="$(docker ps --filter 'name=k3d-tesi-' \
+  if ! container_list="$(docker ps -a --filter 'name=k3d-tesi-' \
       --format '{{.Names}}\t{{.Image}}\t{{.Status}}')"
   then
     printf 'ERROR: inventario finale dei container non leggibile.\n' >&2

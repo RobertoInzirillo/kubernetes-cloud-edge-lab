@@ -259,7 +259,7 @@ Service. `antctl`, Traceflow e l'ispezione OpenFlow sono strumenti centrali.
 
 ### OVN-Kubernetes
 
-L'[architettura OVN-Kubernetes](https://ovn-kubernetes.io/design/architecture/)
+L'[architettura OVN-Kubernetes](https://ovn-kubernetes.io/1.3/design/architecture/)
 traduce oggetti Kubernetes in switch, router, Access Control
 List (ACL) e load balancer logici OVN; OVS realizza il forwarding sui nodi.
 L'overlay predefinito usa Geneve e la documentazione considerata descrive
@@ -330,7 +330,7 @@ non incluse nel laboratorio.
 - [Cilium 1.19.6: routing](https://github.com/cilium/cilium/blob/v1.19.6/Documentation/network/concepts/routing.rst)
 - [Cilium 1.19.6: Hubble](https://github.com/cilium/cilium/blob/v1.19.6/Documentation/observability/hubble/index.rst)
 - [Antrea 2.6.2](https://antrea.io/docs/v2.6.2/)
-- [OVN-Kubernetes architecture](https://ovn-kubernetes.io/design/architecture/)
+- [OVN-Kubernetes architecture](https://ovn-kubernetes.io/1.3/design/architecture/)
 - [kube-router: how it works](https://www.kube-router.io/docs/how-it-works/)
 - [Calico 3.32.1: Canal](https://docs.tigera.io/calico/latest/getting-started/kubernetes/flannel/install-for-flannel)
 - [Multus documentation](https://k8snetworkplumbingwg.github.io/multus-cni/)

@@ -35,6 +35,185 @@ _tesi_require_context() {
   fi
 }
 
+_tesi_is_ipv4() {
+  if [[ "$#" -ne 1 || ! "$1" =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]]; then
+    return 1
+  fi
+
+  local octet
+  local -a octets
+  IFS=. read -r -a octets <<< "$1"
+  for octet in "${octets[@]}"; do
+    if ((10#$octet > 255)); then
+      return 1
+    fi
+  done
+}
+
+_tesi_export_runtime() {
+  if [[ "$#" -lt 3 || ! "$1" =~ ^[A-Z_][A-Z0-9_]*$ ]]; then
+    printf 'Uso: _tesi_export_runtime VAR TIPO COMANDO [ARGOMENTI...].\n' >&2
+    return 2
+  fi
+
+  local variable_name="$1"
+  local value_type="$2"
+  local value
+  local command_rc
+  shift 2
+
+  if value="$("$@")"; then
+    command_rc=0
+  else
+    command_rc=$?
+  fi
+  if [[ "$command_rc" -ne 0 ]]; then
+    printf 'ERROR: acquisizione runtime %s fallita (rc=%s).\n' \
+      "$variable_name" "$command_rc" >&2
+    return 1
+  fi
+
+  case "$value_type" in
+    ipv4)
+      if ! _tesi_is_ipv4 "$value"; then
+        printf 'ERROR: valore runtime IPv4 non valido per %s: %q.\n' \
+          "$variable_name" "$value" >&2
+        return 1
+      fi
+      ;;
+    positive-integer)
+      if [[ ! "$value" =~ ^[1-9][0-9]*$ ]]; then
+        printf 'ERROR: valore runtime intero non valido per %s: %q.\n' \
+          "$variable_name" "$value" >&2
+        return 1
+      fi
+      ;;
+    pod-name)
+      if [[ ${#value} -gt 253 || \
+            ! "$value" =~ ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$ ]]; then
+        printf 'ERROR: nome Pod runtime non valido per %s: %q.\n' \
+          "$variable_name" "$value" >&2
+        return 1
+      fi
+      ;;
+    nonempty)
+      if [[ -z "$value" ]]; then
+        printf 'ERROR: valore runtime vuoto per %s.\n' "$variable_name" >&2
+        return 1
+      fi
+      ;;
+    *)
+      printf 'ERROR: tipo runtime non supportato per %s: %s.\n' \
+        "$variable_name" "$value_type" >&2
+      return 2
+      ;;
+  esac
+
+  printf -v "$variable_name" '%s' "$value"
+  export "$variable_name"
+}
+
+verify_dual_view_capture() {
+  if [[ "$#" -ne 6 ]]; then
+    printf 'Uso: verify_dual_view_capture FILE POD_SRC POD_DST UNDERLAY_SRC UNDERLAY_DST PORTA_UDP.\n' >&2
+    return 2
+  fi
+
+  local capture_file="$1"
+  local pod_source="$2"
+  local pod_destination="$3"
+  local underlay_source="$4"
+  local underlay_destination="$5"
+  local udp_port="$6"
+  local awk_rc
+
+  if [[ ! -s "$capture_file" ]]; then
+    printf 'FAIL: cattura vuota o assente: %s.\n' "$capture_file" >&2
+    return 1
+  fi
+  if ! _tesi_is_ipv4 "$pod_source" || ! _tesi_is_ipv4 "$pod_destination" || \
+      ! _tesi_is_ipv4 "$underlay_source" || \
+      ! _tesi_is_ipv4 "$underlay_destination" || \
+      [[ ! "$udp_port" =~ ^[1-9][0-9]*$ || "$udp_port" -gt 65535 ]]; then
+    printf 'ERROR: parametri runtime non validi per il gate della cattura.\n' >&2
+    return 1
+  fi
+
+  if awk -v source="$pod_source" -v destination="$pod_destination" '
+      index($0, source) && index($0, destination) &&
+      $0 ~ /TCP/ && (index($0, ".8080") || index($0, "port 8080")) {
+        found=1
+      }
+      END { exit !found }
+    ' "$capture_file"; then
+    awk_rc=0
+  else
+    awk_rc=$?
+  fi
+  case "$awk_rc" in
+    0) ;;
+    1)
+      printf 'FAIL: vista Pod TCP/8080 non trovata nella cattura %s.\n' \
+        "$capture_file" >&2
+      return 1
+      ;;
+    *)
+      printf 'ERROR: parser della vista Pod fallito (awk rc=%s).\n' \
+        "$awk_rc" >&2
+      return 1
+      ;;
+  esac
+
+  if awk -v source="$underlay_source" -v destination="$underlay_destination" \
+      -v port="$udp_port" '
+      index($0, source) && index($0, destination) && $0 ~ /UDP/ &&
+      (index($0, "." port) || index($0, "port " port)) { found=1 }
+      END { exit !found }
+    ' "$capture_file"; then
+    awk_rc=0
+  else
+    awk_rc=$?
+  fi
+  case "$awk_rc" in
+    0)
+      printf 'PASS: cattura con vista Pod TCP/8080 e vista underlay UDP/%s.\n' \
+        "$udp_port"
+      ;;
+    1)
+      printf 'FAIL: vista underlay UDP/%s non trovata nella cattura %s.\n' \
+        "$udp_port" "$capture_file" >&2
+      return 1
+      ;;
+    *)
+      printf 'ERROR: parser della vista underlay fallito (awk rc=%s).\n' \
+        "$awk_rc" >&2
+      return 1
+      ;;
+  esac
+}
+
+show_informative_diff() {
+  if [[ "$#" -ne 2 ]]; then
+    printf 'Uso: show_informative_diff FILE_PRIMA FILE_DOPO.\n' >&2
+    return 2
+  fi
+
+  local diff_rc
+  if diff -u "$1" "$2"; then
+    diff_rc=0
+  else
+    diff_rc=$?
+  fi
+  case "$diff_rc" in
+    0|1) return 0 ;;
+    *)
+      printf 'ERROR: confronto diff fallito (rc=%s): %s %s.\n' \
+        "$diff_rc" "$1" "$2" >&2
+      return 1
+      ;;
+  esac
+}
+
 check_experiment_preflight() {
   if [[ "$#" -ne 2 ]]; then
     printf 'Uso: check_experiment_preflight NOME_CLUSTER PORTA_API\n' >&2
@@ -46,6 +225,7 @@ check_experiment_preflight() {
   local blocked=0
   local cluster_list
   local port_list
+  local parser_rc
   local pgrep_rc
 
   if ! command -v k3d >/dev/null || ! command -v ss >/dev/null || \
@@ -61,10 +241,24 @@ check_experiment_preflight() {
   fi
 
   if printf '%s\n' "$cluster_list" | \
-      awk -v expected="$cluster_name" '$1 == expected { found=1 } END { exit !found }'; then
-    printf 'STOP: esiste già il cluster %s.\n' "$cluster_name" >&2
-    blocked=1
+      awk -v expected="$cluster_name" \
+        '$1 == expected { found=1 } END { exit !found }'; then
+    parser_rc=0
+  else
+    parser_rc=$?
   fi
+  case "$parser_rc" in
+    0)
+      printf 'STOP: esiste già il cluster %s.\n' "$cluster_name" >&2
+      blocked=1
+      ;;
+    1) ;;
+    *)
+      printf 'STOP: parser dell’inventario cluster fallito (awk rc=%s).\n' \
+        "$parser_rc" >&2
+      return 1
+      ;;
+  esac
 
   if ! port_list="$(ss -H -ltn "sport = :${api_port}")"; then
     printf 'STOP: impossibile verificare la porta API %s con ss.\n' \
@@ -152,10 +346,11 @@ deploy_common_workload() {
   kubectl --context "$TESI_CONTEXT" wait -n net-lab \
     --for=condition=Ready pod/client pod/server-a pod/server-b \
     --timeout=180s || return 1
-  kubectl --context "$TESI_CONTEXT" get pods -n net-lab -o wide
-  kubectl --context "$TESI_CONTEXT" get service -n net-lab servers -o wide
+  kubectl --context "$TESI_CONTEXT" get pods -n net-lab -o wide || return 1
+  kubectl --context "$TESI_CONTEXT" get service -n net-lab \
+    servers -o wide || return 1
   kubectl --context "$TESI_CONTEXT" get endpointslice -n net-lab \
-    -l kubernetes.io/service-name=servers -o wide
+    -l kubernetes.io/service-name=servers -o wide || return 1
 }
 
 verify_service_backends() {
@@ -166,6 +361,7 @@ verify_service_backends() {
 
   local endpoints
   local backend
+  local parser_rc
   if ! endpoints="$(kubectl --context "$TESI_CONTEXT" get endpointslice \
     -n net-lab -l kubernetes.io/service-name=servers \
     -o jsonpath='{range .items[*].endpoints[*]}{.targetRef.name}{"\t"}{.conditions.ready}{"\n"}{end}')"; then
@@ -175,11 +371,24 @@ verify_service_backends() {
   printf '%s\n' "$endpoints"
 
   for backend in server-a server-b; do
-    if ! printf '%s\n' "$endpoints" | \
-        awk -v expected="$backend" '$1 == expected && $2 == "true" { found=1 } END { exit !found }'; then
-      printf 'FAIL backend Ready non trovato: %s\n' "$backend" >&2
-      return 1
+    if printf '%s\n' "$endpoints" | awk -v expected="$backend" \
+        '$1 == expected && $2 == "true" { found=1 } END { exit !found }'; then
+      parser_rc=0
+    else
+      parser_rc=$?
     fi
+    case "$parser_rc" in
+      0) ;;
+      1)
+        printf 'FAIL backend Ready non trovato: %s\n' "$backend" >&2
+        return 1
+        ;;
+      *)
+        printf 'ERROR: parser EndpointSlice fallito (awk rc=%s).\n' \
+          "$parser_rc" >&2
+        return 1
+        ;;
+    esac
   done
 
   printf 'PASS backend Ready: server-a server-b\n'
@@ -296,8 +505,9 @@ http_flow() {
     printf 'ERROR kind=kubectl-api pod=%s\n' "$destination_pod" >&2
     return 70
   fi
-  if [[ -z "$destination_ip" ]]; then
-    printf 'ERROR kind=missing-pod-ip pod=%s\n' "$destination_pod" >&2
+  if ! _tesi_is_ipv4 "$destination_ip"; then
+    printf 'ERROR kind=invalid-pod-ip pod=%s value=%q\n' \
+      "$destination_pod" "$destination_ip" >&2
     return 70
   fi
 
@@ -447,7 +657,7 @@ service_http_flows() {
     printf 'ERROR: lettura ClusterIP del Service fallita.\n' >&2
     return 1
   fi
-  if [[ -z "$service_ip" || "$service_ip" == None ]]; then
+  if ! _tesi_is_ipv4 "$service_ip"; then
     printf 'ERROR: ClusterIP del Service non valido: %q.\n' "$service_ip" >&2
     return 1
   fi
