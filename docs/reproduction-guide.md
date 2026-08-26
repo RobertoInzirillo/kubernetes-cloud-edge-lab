@@ -2,11 +2,46 @@
 
 ## 1. Come usare questa guida
 
+### 1.1 Ottenere la repository
+
+La procedura richiede un account con `sudo` e accesso a Internet. Da una nuova
+installazione Ubuntu 24.04 Noble o dal sistema compatibile di riferimento,
+verificare `sudo` e installare Git se non è già disponibile:
+
+```bash
+sudo -v
+if ! command -v git >/dev/null 2>&1
+then
+  sudo apt-get update
+  sudo apt-get install -y git
+fi
+git --version
+```
+
+Clonare quindi la repository nella home dell'utente ed entrarvi:
+
+```bash
+cd "$HOME"
+git clone https://github.com/RobertoInzirillo/kubernetes-cloud-edge-lab.git
+cd kubernetes-cloud-edge-lab
+git status --short --branch
+git rev-parse --verify HEAD
+```
+
+Per la validation immediata si può usare il branch corrente. Una riproduzione
+destinata a essere archiviata o citata deve invece registrare un tag di
+baseline o il commit restituito da `git rev-parse`; quando verrà pubblicato un
+tag stabile, questo è il punto nel quale selezionarlo prima di proseguire.
+
+### 1.2 Percorso della guida
+
 Il manuale accompagna il lettore dalla preparazione di un host Linux alla
-riproduzione di E01, E02, E10 ed E20. I comandi vanno eseguiti nell'ordine
-indicato e, salvo diversa indicazione, dalla radice della repository clonata.
-Ogni esperimento usa un cluster distinto; eliminarlo al termine evita che
-interfacce, route o regole residue influenzino il caso successivo.
+riproduzione di E01, E02, E10 ed E20. Preparazione e toolchain vanno eseguite
+nell'ordine indicato; dopo le sezioni comuni ciascun esperimento può iniziare
+dal proprio punto di ingresso. Salvo diversa indicazione, i comandi si
+eseguono dalla radice della repository clonata. Ogni esperimento usa un
+cluster distinto; eliminarlo al termine evita che interfacce, route o regole
+residue influenzino il caso successivo.
 
 La guida presenta la procedura consolidata necessaria a riprodurre
 configurazioni, esperimenti, osservazioni e attribuzioni. Non ricostruisce la
@@ -19,14 +54,14 @@ Percorso di lavoro:
 2. installare Docker Engine, kubectl, Helm e k3d;
 3. controllare versioni, immagini e file bloccati;
 4. definire le variabili e le funzioni comuni;
-5. eseguire E01, E02, E10 ed E20 in sequenza;
+5. eseguire uno o più esperimenti dal relativo punto di ingresso;
 6. controllare la rimozione dei cluster creati.
 
 La configurazione sperimentale descritta è quella validata nel laboratorio.
-La procedura è stata controllata staticamente ed è attualmente in validazione
-end-to-end su un secondo sistema pulito. Gli output indicati come risultati
-appartengono agli esperimenti pubblicati e non vanno assunti come esito di una
-nuova replica.
+La procedura pubblica è stata controllata staticamente, ma non è ancora stata
+validata end-to-end su un secondo sistema pulito. Gli output indicati come
+risultati appartengono agli esperimenti pubblicati e non vanno assunti come
+esito di una nuova replica.
 
 ## 2. Ambiente di riferimento
 
@@ -97,32 +132,57 @@ pacchetti che forniscono le utility richieste:
 ```bash
 sudo apt-get update
 sudo apt-get install -y \
-  ca-certificates curl gpg file coreutils diffutils tar gzip grep sed mawk \
+  ca-certificates curl git gpg file coreutils diffutils tar gzip grep sed mawk \
   tcpdump util-linux iproute2 iptables nftables procps kmod
 ```
 
 Questo passaggio prepara utility di download e verifica, strumenti per
 namespace e rete, diagnostica dei processi e ispezione del kernel. È un
 prerequisito operativo della guida pubblica, non una variabile scientifica.
-Il blocco APT è incluso nella validazione end-to-end corrente.
+Il blocco APT fa parte della procedura da sottoporre alla validation
+end-to-end.
 
-Verificare sistema operativo, architettura e caratteristiche di base:
+Verificare sistema operativo, architettura, risorse e caratteristiche di base:
 
 ```bash
 cat /etc/os-release
 uname -srmo
 dpkg --print-architecture
 getconf LONG_BIT
+test "$(dpkg --print-architecture)" = amd64 && printf 'PASS: architettura amd64\n'
+test "$(getconf LONG_BIT)" -eq 64 && printf 'PASS: sistema a 64 bit\n'
+nproc
+free -h
+df -h /
 lsmod | grep -E '(^| )(br_netfilter|vxlan|overlay)( |$)' || true
 sysctl net.ipv4.ip_forward
-mount | grep -E 'cgroup2|bpf' || true
-stat -fc '%T %n' /sys/fs/cgroup /sys/fs/bpf
+findmnt -T /sys/fs/cgroup
+findmnt -T /sys/fs/bpf || true
+stat -fc '%T %n' /sys/fs/cgroup
+test "$(stat -fc '%T' /sys/fs/cgroup)" = cgroup2fs && \
+  printf 'PASS: cgroup v2\n'
+if test -r /sys/kernel/btf/vmlinux
+then
+  printf 'PASS: BTF disponibile\n'
+else
+  printf 'ATTENZIONE: BTF non rilevato; fermarsi prima di E20\n' >&2
+fi
 ```
 
 Il risultato deve indicare Ubuntu Noble o il sistema compatibile di
-riferimento, `amd64` e 64 bit. L'assenza di un modulo da `lsmod` non prova da
-sola un'incompatibilità: può essere integrato nel kernel o caricato al primo
-uso. cgroup v2 deve essere montato; bpffs è necessario soprattutto per E20.
+riferimento, `amd64`, 64 bit e `cgroup2fs` per `/sys/fs/cgroup`; fermarsi se
+architettura o cgroup non corrispondono. L'assenza di un modulo da `lsmod` non
+prova da sola un'incompatibilità: può essere integrato nel kernel o caricato al
+primo uso. Il forwarding può essere ancora `0` prima dell'avvio di Docker, ma
+deve risultare `1` nel controllo finale della toolchain; in caso contrario
+fermarsi prima di creare cluster. Per E20 verificare inoltre BTF e, dopo
+l'installazione di Cilium, il mount bpffs e i prerequisiti eBPF dentro i nodi.
+
+Per questo laboratorio a tre nodi sono raccomandati operativamente almeno 4
+thread CPU, 8 GiB di RAM e 20 GiB liberi. Non sono minimi ufficiali di
+Kubernetes o Cilium: se la macchina offre meno risorse, ridurre il carico
+estraneo o prevedere timeout e possibili mancate convergenze durante la
+validation.
 
 Controllare quindi tutte le utility richieste:
 
@@ -139,19 +199,27 @@ usano anche i percorsi assoluti previsti dai pacchetti Ubuntu Noble.
 
 ## 5. Installazione della toolchain
 
-Creare una directory temporanea per i download. Mantenerla fino alla fine
-della sezione, perché servirà a confrontare sorgenti e binari installati:
-
-```bash
-export TOOLCHAIN_DIR="$(mktemp -d)"
-printf 'toolchain_dir=%s\n' "$TOOLCHAIN_DIR"
-```
-
 ### 5.1 Docker Engine
 
 La procedura usa il repository APT ufficiale Docker per Ubuntu Noble e rende
-esplicite le versioni validate. Installare prima certificati e client HTTP,
-poi il keyring e la definizione del repository:
+esplicite le versioni della baseline consolidata. Prima di configurarlo,
+controllare senza rimuovere nulla se sono installati pacchetti che la
+documentazione Docker considera confliggenti:
+
+```bash
+dpkg-query -W -f='${binary:Package}\t${db:Status-Abbrev}\n' \
+  docker.io docker-compose docker-compose-v2 docker-doc docker-buildx \
+  podman-docker containerd runc 2>/dev/null | \
+  awk '$2 ~ /^ii/ { found=1; print } END { exit found ? 1 : 0 }'
+```
+
+L'output vuoto e il codice zero sono l'esito atteso. Se compaiono pacchetti,
+fermarsi prima dell'installazione: valutarne consapevolmente rimozione e dati
+associati seguendo la documentazione Docker, senza cancellarli come effetto
+automatico di questa guida.
+
+Installare quindi certificati e client HTTP, poi il keyring e la definizione
+del repository:
 
 ```bash
 sudo apt-get update
@@ -185,14 +253,13 @@ l'installazione senza modificare l'host:
 ```bash
 apt-cache policy \
   docker-ce docker-ce-cli containerd.io \
-  docker-buildx-plugin docker-compose-plugin
+  docker-buildx-plugin
 
 apt-get --simulate install \
   docker-ce=5:29.6.2-1~ubuntu.24.04~noble \
   docker-ce-cli=5:29.6.2-1~ubuntu.24.04~noble \
   containerd.io=2.2.6-1~ubuntu.24.04~noble \
-  docker-buildx-plugin=0.35.0-1~ubuntu.24.04~noble \
-  docker-compose-plugin=5.3.1-1~ubuntu.24.04~noble
+  docker-buildx-plugin=0.35.0-1~ubuntu.24.04~noble
 ```
 
 I candidati devono provenire da `download.docker.com`, suite Noble, canale
@@ -207,18 +274,19 @@ sudo apt-get install -y \
   docker-ce=5:29.6.2-1~ubuntu.24.04~noble \
   docker-ce-cli=5:29.6.2-1~ubuntu.24.04~noble \
   containerd.io=2.2.6-1~ubuntu.24.04~noble \
-  docker-buildx-plugin=0.35.0-1~ubuntu.24.04~noble \
-  docker-compose-plugin=5.3.1-1~ubuntu.24.04~noble \
-  docker-ce-rootless-extras=5:29.6.2-1~ubuntu.24.04~noble
+  docker-buildx-plugin=0.35.0-1~ubuntu.24.04~noble
 ```
+
+Il laboratorio usa il daemon Docker di sistema e `docker buildx imagetools`.
+Non usa Docker Compose né la modalità rootless; i relativi plugin non fanno
+quindi parte della baseline consolidata.
 
 Verificare pacchetti, servizi e socket:
 
 ```bash
 dpkg-query -W \
   docker-ce docker-ce-cli containerd.io \
-  docker-buildx-plugin docker-compose-plugin \
-  docker-ce-rootless-extras
+  docker-buildx-plugin
 systemctl is-active docker docker.socket containerd
 systemctl is-enabled docker docker.socket containerd
 stat -c '%a %U:%G %n' /run/docker.sock
@@ -226,10 +294,10 @@ docker --version
 containerd --version
 runc --version
 docker buildx version
-docker compose version
 ```
 
-I tre servizi devono essere attivi; il socket deve appartenere a
+I servizi `docker` e `containerd` e il socket Docker devono essere attivi; il
+socket deve appartenere a
 `root:docker`. Dopo avere ottenuto l'accesso utente nella sezione successiva,
 `docker info` dovrà riportare storage driver `overlayfs`, cgroup v2 e cgroup
 driver `systemd`.
@@ -244,18 +312,32 @@ sudo usermod -aG docker "$USER"
 ```
 
 L'appartenenza al gruppo `docker` consente di avviare container privilegiati
-e concede di fatto privilegi elevati sull'host. Effettuare logout e login
-prima di continuare. Per un controllo immediato in una shell effimera si può
-usare:
+e concede di fatto privilegi elevati sull'host. A questo punto effettuare
+logout e login e **non proseguire nella vecchia shell**. Dopo il nuovo login,
+tornare esplicitamente nella repository e verificare il nuovo gruppo:
 
 ```bash
-sg docker -c 'docker version'
-sg docker -c 'docker info --format "Server={{.ServerVersion}}; Driver={{.Driver}}; Cgroup={{.CgroupDriver}}; CgroupVersion={{.CgroupVersion}}"'
+cd "$HOME/kubernetes-cloud-edge-lab"
+git status --short --branch
+id -nG
+docker version
+docker info --format \
+  'Server={{.ServerVersion}}; Driver={{.Driver}}; Cgroup={{.CgroupDriver}}; CgroupVersion={{.CgroupVersion}}'
 ```
 
 Se il socket continua a restituire `permission denied`, non usare `sudo
 docker` come soluzione permanente: controllare `id -nG`, chiudere la sessione
 e accedere nuovamente.
+
+Creare soltanto ora la directory temporanea usata per kubectl, Helm e k3d:
+
+```bash
+export TOOLCHAIN_DIR="$(mktemp -d)"
+printf 'toolchain_dir=%s\n' "$TOOLCHAIN_DIR"
+```
+
+La directory appartiene a questa nuova sessione e non richiede di recuperare
+variabili definite prima del logout.
 
 ### 5.3 kubectl
 
@@ -360,7 +442,7 @@ SHA-256 atteso.
 
 ### 5.6 Verifica finale della toolchain
 
-Dopo logout/login, eseguire il controllo complessivo:
+Al termine delle installazioni, eseguire il controllo complessivo:
 
 ```bash
 id
@@ -374,19 +456,33 @@ helm version --short
 k3d version
 lsmod | grep -E '(^| )(br_netfilter|vxlan|overlay)( |$)' || true
 sysctl net.ipv4.ip_forward
+test "$(sysctl -n net.ipv4.ip_forward)" -eq 1 && \
+  printf 'PASS: forwarding IPv4 abilitato\n'
 mount | grep -E 'cgroup2|bpf' || true
 ```
 
 Verificare che l'utente appartenga al gruppo `docker`, che il daemon risponda
 senza `sudo`, che usi `overlayfs`, cgroup v2 e driver `systemd`, e che le tre
 Command Line Interface (CLI) riportino le versioni previste. Non devono
-comparire errori evidenti del daemon.
+comparire errori evidenti del daemon e `net.ipv4.ip_forward` deve valere `1`;
+se vale ancora `0`, fermarsi prima di creare cluster.
+
+`TOOLCHAIN_DIR` serve soltanto durante la sezione 5. Dopo un esito positivo si
+può eliminarla con il comando seguente; in caso di errore conservarla finché
+non sono stati ispezionati file e checksum:
+
+```bash
+rm -rf -- "$TOOLCHAIN_DIR"
+unset TOOLCHAIN_DIR KUBECTL_FILE KUBECTL_SHA256 \
+  HELM_ARCHIVE HELM_EXTRACT_DIR HELM_ARCHIVE_SHA256 \
+  K3D_FILE K3D_SHA256
+```
 
 ## 6. Versioni, immagini e artefatti bloccati
 
 | Componente | Versione o riferimento |
 |---|---|
-| Docker validato inizialmente | `29.6.2` |
+| Docker della baseline consolidata | `29.6.2` |
 | k3d | `v5.9.0` |
 | K3s/Kubernetes | `v1.34.9+k3s1` |
 | kubectl | `v1.34.9` |
@@ -395,9 +491,12 @@ comparire errori evidenti del daemon.
 | Calico | `v3.32.1` |
 | Cilium | `1.19.6` |
 
-Docker era `29.6.2` in E01/E02, `29.7.1` in E10 e `29.7.2` in E20. Questa
-variazione dell'ambiente tra le diverse esecuzioni è documentata come limite,
-non come variabile sperimentale.
+Docker era `29.6.2` in E01/E02, `29.7.1` in E10 e `29.7.2` in E20. La guida
+propone `29.6.2` come baseline consolidata per la nuova riproduzione, senza
+ricreare la cronologia degli aggiornamenti intermedi. La variazione delle
+evidence originali resta una limitazione ambientale; l'equivalenza pratica
+della baseline sarà valutata dalla futura validation end-to-end e non è qui
+presentata come già confermata.
 
 ### 6.1 Immagine K3s
 
@@ -460,96 +559,88 @@ test -f manifests/cni/calico/tigera-operator-values.yaml
 test -f manifests/cni/calico/imageset.yaml
 test -f manifests/cni/calico/installation.yaml
 test -f manifests/cni/cilium/values.yaml
+test -f scripts/cni/common/lab-env.sh
 test -x scripts/cni/calico/pin-tigera-operator-image.sh
 ```
 
 ## 7. Convenzioni e variabili comuni
 
-Definire una sola volta l'immagine K3s usata da tutti i cluster:
+All'inizio di una nuova shell, oppure prima di iniziare direttamente E01,
+E02, E10 o E20, entrare nella root della repository e caricare l'ambiente
+comune in una shell Bash:
 
 ```bash
-export TESI_K3S_IMAGE='docker.io/rancher/k3s@sha256:0487bcfa1ea34f02a80c93122520fb70af434663a3bcdb61a697a0b5ab37e69d'
+cd "$HOME/kubernetes-cloud-edge-lab"
+source scripts/cni/common/lab-env.sh
 ```
 
-Prima di ogni creazione verificare che il nome cluster non esista e che la
-porta API scelta non sia occupata:
+Lo script rileva e verifica la root, definisce l'immagine K3s bloccata e gli
+helper comuni. Può essere caricato più volte: non crea cluster, non modifica il
+sistema e non avvia test. Gli helper specifici di E02, E10 ed E20 restano nelle
+relative sezioni e vengono definiti prima dell'uso.
 
-```bash
-k3d cluster list
-ss -ltn
+Prima di creare un cluster, ogni esperimento invoca:
+
+```text
+check_experiment_preflight NOME_CLUSTER PORTA_API
 ```
+
+I valori concreti sono già riportati nei punti di ingresso degli esperimenti,
+quindi questa forma descrittiva non deve essere copiata. Il controllo si ferma
+se trova lo stesso cluster, la porta occupata o un processo `tcpdump` residuo;
+non elimina nulla. In quel caso scegliere se conservare e analizzare lo stato
+esistente oppure eseguire consapevolmente la rimozione documentata per
+l'esperimento precedente.
 
 ### 7.1 Workload e flussi comuni
 
 Il workload colloca `client` e `server-a` su `agent-0`, e `server-b` su
-`agent-1`. Sostituire soltanto contesto e prefisso nodo:
+`agent-1`. Ogni esperimento imposta `TESI_CONTEXT` e `TESI_NODE_PREFIX`, poi
+invoca:
 
 ```bash
-export TESI_CONTEXT='k3d-NOME-CLUSTER'
-export TESI_NODE_PREFIX='k3d-NOME-CLUSTER'
-
-kubectl --context "$TESI_CONTEXT" label node \
-  "${TESI_NODE_PREFIX}-agent-0" tesi-placement=a --overwrite
-kubectl --context "$TESI_CONTEXT" label node \
-  "${TESI_NODE_PREFIX}-agent-1" tesi-placement=b --overwrite
-kubectl --context "$TESI_CONTEXT" apply \
-  -f manifests/cni/common/workload.yaml
-kubectl --context "$TESI_CONTEXT" wait -n net-lab \
-  --for=condition=Ready pod/client pod/server-a pod/server-b \
-  --timeout=180s
-kubectl --context "$TESI_CONTEXT" get pods -n net-lab -o wide
-kubectl --context "$TESI_CONTEXT" get service -n net-lab servers -o wide
-kubectl --context "$TESI_CONTEXT" get endpointslice -n net-lab \
-  -l kubernetes.io/service-name=servers -o wide
+deploy_common_workload
 ```
 
-Per una singola connessione HTTP diretta a un Pod, la forma parametrica del
-comando usato negli esperimenti è:
+Il manifest comune usa ora la label neutra `cni-network-baseline`. Le evidence
+storiche restano byte-identiche e possono quindi mostrare il precedente valore
+`e01-network-baseline`; la label non partecipa ai selector delle policy provate.
+
+La funzione rifiuta di procedere se contesto o prefisso non sono definiti. Per
+il Service, `verify_service_backends` controlla separatamente che `server-a` e
+`server-b` siano entrambi Ready negli EndpointSlice; `service_http_flows N`
+genera invece `N` nuove connessioni e registra il backend realmente osservato,
+senza imporre una distribuzione probabilistica.
+
+Per le connessioni dirette fra Pod, `http_flow` conserva il return code
+applicativo. Le matrici usano `expect_allow` ed `expect_deny`: un deny atteso
+viene registrato come `PASS`, mentre la funzione restituisce non-zero soltanto
+se l'esito diverge dall'atteso. Eseguire una delle tre forme:
 
 ```bash
-http_flow() {
-  TESI_SOURCE_POD="$1"
-  TESI_DESTINATION_POD="$2"
-  TESI_DESTINATION_IP="$(kubectl --context "$TESI_CONTEXT" get pod \
-    -n net-lab "$TESI_DESTINATION_POD" \
-    -o jsonpath='{.status.podIP}')"
-
-  kubectl --context "$TESI_CONTEXT" exec -n net-lab \
-    "$TESI_SOURCE_POD" -- sh -c '
-      destination_ip="$1"
-      body="$(wget -qO- -T 3 "http://${destination_ip}:8080/")"
-      rc=$?
-      printf "response=%s\nexit_code=%s\n" "$body" "$rc"
-      exit "$rc"
-    ' sh "$TESI_DESTINATION_IP"
-}
+run_policy_matrix allow-all
+run_policy_matrix deny-all
+run_policy_matrix selective-allow
 ```
 
-La matrice controllata usa tre flussi, ciascuno ripetuto due volte. La funzione
-seguente rende ripetibile lo stesso insieme nei diversi stati di policy:
-
-```bash
-run_policy_matrix() {
-  http_flow client server-a
-  http_flow client server-a
-  http_flow client server-b
-  http_flow client server-b
-  http_flow server-a server-b
-  http_flow server-a server-b
-}
-```
-
-Con nessuna policy devono riuscire tutte le nuove connessioni. Con default
-deny devono fallire tutte. Con l'allow mirata devono riuscire i quattro flussi
-dal client e fallire i due da `server-a` a `server-b`. Una risposta diversa
-richiede diagnosi prima di proseguire.
+Ogni matrice esegue due volte `client → server-a`, `client → server-b` e
+`server-a → server-b`, poi stampa sei esiti e un riepilogo. Le forme
+`allow-all`, `deny-all` e `selective-allow` corrispondono rispettivamente a
+6/6 consentite, 6/6 negate e quattro consentite più due negate.
 
 ## 8. E01 — Flannel VXLAN
 
 ### 8.1 Creazione e controllo iniziale
 
 Creiamo la baseline K3s con Flannel VXLAN, un server e due agent. La porta
-API è esposta soltanto su loopback.
+API è esposta soltanto su loopback. Questo è il punto di ingresso E01 anche in
+una nuova shell:
+
+```bash
+cd "$HOME/kubernetes-cloud-edge-lab"
+source scripts/cni/common/lab-env.sh
+check_experiment_preflight tesi-flannel-vxlan 6445
+```
 
 ```bash
 k3d cluster create tesi-flannel-vxlan \
@@ -615,10 +706,11 @@ specifico flusso usi il tunnel.
 
 ### 8.3 Workload e test
 
-Eseguire il blocco comune della sezione 7.1 con i valori già impostati. Rileggere
-gli indirizzi:
+Con i valori già impostati, applicare il workload comune e rileggere gli
+indirizzi:
 
 ```bash
+deploy_common_workload
 export CLIENT_IP="$(kubectl --context "$TESI_CONTEXT" -n net-lab get pod client -o jsonpath='{.status.podIP}')"
 export SERVER_A_IP="$(kubectl --context "$TESI_CONTEXT" -n net-lab get pod server-a -o jsonpath='{.status.podIP}')"
 export SERVER_B_IP="$(kubectl --context "$TESI_CONTEXT" -n net-lab get pod server-b -o jsonpath='{.status.podIP}')"
@@ -638,15 +730,14 @@ http_flow client server-a
 http_flow client server-b
 ```
 
-Verificare il Service con connessioni nuove. L'esito prova ClusterIP e
-selezione degli endpoint, non isola causalmente kube-proxy:
+Verificare prima che entrambi i backend siano Ready, poi generare connessioni
+nuove. Le risposte registrano soltanto i backend effettivamente scelti; non è
+richiesto che un numero finito di connessioni li selezioni entrambi. L'esito
+prova il ClusterIP nei flussi osservati, ma non isola causalmente kube-proxy:
 
 ```bash
-for REQUEST in 1 2 3 4 5 6 7 8 9 10 11 12
-do
-  kubectl --context "$TESI_CONTEXT" exec -n net-lab client -- \
-    wget -qO- -T 5 "http://${SERVICE_IP}:8080/"
-done
+verify_service_backends
+service_http_flows 6
 ```
 
 Usare il nome assoluto, con il punto finale, per evitare che un search suffix
@@ -708,8 +799,8 @@ map_pod_veth server-b k3d-tesi-flannel-vxlan-agent-1
 ```
 
 Per ogni Pod controllare che `eth0` mostri il Pod IP corrente e che l'ultima
-riga individui una sola veth del nodo. Il blocco Pod–veth è incluso nella
-validazione end-to-end corrente.
+riga individui una sola veth del nodo. Questo controllo fa parte della
+procedura da sottoporre alla validation end-to-end.
 
 Per correlare il GET inter-node al traffico VXLAN UDP 8472, leggiamo poi PID
 host dei nodi e indirizzi underlay correnti:
@@ -740,6 +831,7 @@ indirizzi underlay. Avviare un solo GET ritardato e mantenere la cattura
 limitata in primo piano:
 
 ```bash
+sudo -v
 (
   sleep 2
   kubectl --context "$TESI_CONTEXT" exec -n net-lab client -- \
@@ -747,24 +839,46 @@ limitata in primo piano:
 ) >"$CAPTURE_DIR/http-client.log" 2>&1 &
 export HTTP_JOB=$!
 
-sudo /usr/bin/env LC_ALL=C \
-  /usr/bin/nsenter --target "$SOURCE_PID" --net \
-  /usr/bin/timeout --verbose --foreground --preserve-status \
-  --signal=TERM --kill-after=2s 8s \
-  /usr/bin/tcpdump -i any -tttt -nn -e -vv -A -s 0 -l \
-  "((host $CLIENT_IP and host $SERVER_B_IP and tcp port 8080) or (host $SOURCE_UNDERLAY and host $DESTINATION_UNDERLAY and udp port 8472))" \
-  >"$CAPTURE_DIR/flannel-inter-node.log" 2>&1
+if sudo /usr/bin/env LC_ALL=C \
+    /usr/bin/nsenter --target "$SOURCE_PID" --net \
+    /usr/bin/timeout --verbose --foreground --preserve-status \
+    --signal=TERM --kill-after=2s 8s \
+    /usr/bin/tcpdump -i any -tttt -nn -e -vv -A -s 0 -l \
+    "((host $CLIENT_IP and host $SERVER_B_IP and tcp port 8080) or (host $SOURCE_UNDERLAY and host $DESTINATION_UNDERLAY and udp port 8472))" \
+    >"$CAPTURE_DIR/flannel-inter-node.log" 2>&1
+then
+  export CAPTURE_RC=0
+else
+  export CAPTURE_RC=$?
+fi
+printf 'capture_exit=%s\n' "$CAPTURE_RC"
+case "$CAPTURE_RC" in
+  0|124|143) ;;
+  *) printf 'FAIL: terminazione inattesa della cattura\n' >&2; false ;;
+esac
 
 wait "$HTTP_JOB"
 sed -n '1,260p' "$CAPTURE_DIR/flannel-inter-node.log"
 cat "$CAPTURE_DIR/http-client.log"
-pgrep -af 'tcpdump|nsenter|timeout'
+if pgrep -x tcpdump >/dev/null
+then
+  printf 'FAIL: tcpdump residuo\n' >&2
+  pgrep -a -x tcpdump >&2
+  false
+else
+  printf 'PASS: nessun tcpdump residuo\n'
+fi
 ```
 
 Ispezionare il GET con IP dei Pod e i datagrammi VXLAN fra gli IP underlay;
 la porta di destinazione deve essere 8472 e il VNI 1. L'eventuale codice di
 terminazione di `timeout` non descrive l'esito HTTP: i due output restano
-separati.
+separati. `0` indica chiusura gestita da `tcpdump`; `124` o `143` indicano la
+terminazione temporizzata accettata. Ogni altro codice arresta il blocco.
+
+`CAPTURE_DIR` conserva i due output per l'ispezione. Dopo un esito positivo può
+essere eliminata con `rm -rf -- "$CAPTURE_DIR"`; in caso di errore conservarla
+temporaneamente per la diagnosi.
 
 ### 8.5 Rimozione del cluster
 
@@ -781,9 +895,17 @@ E02 confronta due cluster equivalenti: controller NetworkPolicy K3s attivo
 osservato dipenda da Flannel oppure da un componente separato dello stack
 K3s. Eseguire i cluster in sequenza per evitare ambiguità.
 
+Questo è il punto di ingresso E02 anche in una nuova shell:
+
+```bash
+cd "$HOME/kubernetes-cloud-edge-lab"
+source scripts/cni/common/lab-env.sh
+```
+
 La matrice comprende `client → server-a`, `client → server-b` e
 `server-a → server-b`, con due nuove connessioni per ogni flusso. La funzione
-`run_policy_matrix` della sezione 7.1 esegue esplicitamente le sei richieste.
+`run_policy_matrix` della sezione 7.1 esegue esplicitamente le sei richieste e
+verifica il risultato atteso.
 
 Per capire se una policy è stata tradotta nel data plane, leggiamo i log del
 controller e cerchiamo catene iptables e insiemi IPSet con prefisso `KUBE-`.
@@ -811,6 +933,7 @@ inspect_k3s_policy_plane() {
 ### 9.1 Controllo ON
 
 ```bash
+check_experiment_preflight tesi-e02-flannel-netpol-on 6446
 k3d cluster create tesi-e02-flannel-netpol-on \
   --servers 1 --agents 2 \
   --image "$TESI_K3S_IMAGE" \
@@ -828,7 +951,8 @@ Applicare il workload con il blocco della sezione 7.1. La baseline, senza
 NetworkPolicy, deve consentire tutte le sei connessioni:
 
 ```bash
-run_policy_matrix
+deploy_common_workload
+run_policy_matrix allow-all
 inspect_k3s_policy_plane
 ```
 
@@ -840,7 +964,7 @@ kubectl --context "$TESI_CONTEXT" apply \
   -f manifests/cni/common/default-deny-ingress.yaml
 kubectl --context "$TESI_CONTEXT" get networkpolicy \
   default-deny-ingress -n net-lab -o yaml
-run_policy_matrix
+run_policy_matrix deny-all
 inspect_k3s_policy_plane
 ```
 
@@ -853,7 +977,7 @@ Applicare quindi l'allow mirata e ripetere la matrice:
 kubectl --context "$TESI_CONTEXT" apply \
   -f manifests/cni/common/allow-client-to-http-servers.yaml
 kubectl --context "$TESI_CONTEXT" get networkpolicy -n net-lab -o yaml
-run_policy_matrix
+run_policy_matrix selective-allow
 inspect_k3s_policy_plane
 ```
 
@@ -869,6 +993,7 @@ k3d cluster delete tesi-e02-flannel-netpol-on
 ### 9.2 Controllo OFF
 
 ```bash
+check_experiment_preflight tesi-e02-flannel-netpol-off 6447
 k3d cluster create tesi-e02-flannel-netpol-off \
   --servers 1 --agents 2 \
   --image "$TESI_K3S_IMAGE" \
@@ -883,12 +1008,14 @@ kubectl --context "$TESI_CONTEXT" wait \
   --for=condition=Ready node --all --timeout=120s
 ```
 
-Applicare il workload con la sezione 7.1. Eseguire ora tutti e tre gli stati,
-senza abbreviare la matrice:
+Applicare il workload con la sezione 7.1. Poiché il controller è disabilitato,
+in tutti e tre gli stati l'esito atteso resta `allow-all`:
 
 ```bash
+deploy_common_workload
+
 # Baseline senza policy
-run_policy_matrix
+run_policy_matrix allow-all
 inspect_k3s_policy_plane
 
 # Default deny dichiarato nell'API
@@ -896,14 +1023,14 @@ kubectl --context "$TESI_CONTEXT" apply \
   -f manifests/cni/common/default-deny-ingress.yaml
 kubectl --context "$TESI_CONTEXT" get networkpolicy \
   default-deny-ingress -n net-lab -o yaml
-run_policy_matrix
+run_policy_matrix allow-all
 inspect_k3s_policy_plane
 
 # Default deny più allow selettiva
 kubectl --context "$TESI_CONTEXT" apply \
   -f manifests/cni/common/allow-client-to-http-servers.yaml
 kubectl --context "$TESI_CONTEXT" get networkpolicy -n net-lab -o yaml
-run_policy_matrix
+run_policy_matrix allow-all
 inspect_k3s_policy_plane
 ```
 
@@ -926,6 +1053,13 @@ ss -ltn 'sport = :6446 or sport = :6447'
 ```
 
 ## 10. E10 — Calico VXLAN con data plane Linux
+
+Questo è il punto di ingresso E10 anche in una nuova shell:
+
+```bash
+cd "$HOME/kubernetes-cloud-edge-lab"
+source scripts/cni/common/lab-env.sh
+```
 
 ### 10.1 Download e verifica dei chart
 
@@ -996,6 +1130,7 @@ Deployment operator deve usare il digest bloccato dal post-renderer.
 ### 10.2 Creazione del cluster e installazione
 
 ```bash
+check_experiment_preflight tesi-e10-calico-vxlan 6448
 k3d cluster create tesi-e10-calico-vxlan \
   --image "$TESI_K3S_IMAGE" \
   --servers 1 --agents 2 \
@@ -1044,10 +1179,10 @@ kubectl --context "$TESI_CONTEXT" apply \
   -f manifests/cni/calico/installation.yaml
 ```
 
-La sequenza applica direttamente la configurazione finale consolidata. È
-inclusa nella validazione end-to-end corrente su un sistema pulito; non è
-ancora dichiarata validata in quella forma. Se non converge, fermarsi e
-conservare lo stato per la diagnosi.
+La sequenza applica direttamente la configurazione finale consolidata. È stata
+controllata staticamente, ma non è ancora stata validata end-to-end in questa
+forma su un sistema pulito. Se non converge, fermarsi e conservare lo stato per
+la diagnosi.
 
 ### 10.3 Verifica di Calico, CNI e IPAM
 
@@ -1090,17 +1225,26 @@ do
     'ls -la /var/lib/rancher/k3s/agent/etc/cni/net.d; sed -n "1,240p" /var/lib/rancher/k3s/agent/etc/cni/net.d/*calico*.conflist'
 done
 
-docker exec k3d-tesi-e10-calico-vxlan-agent-0 ip link show cni0
+if docker exec k3d-tesi-e10-calico-vxlan-agent-0 ip link show cni0
+then
+  printf 'FAIL: cni0 non atteso in E10\n' >&2
+  false
+else
+  printf 'PASS: cni0 assente come atteso\n'
+fi
 ```
 
-L'ultimo comando deve segnalare che `cni0` non esiste. Le interfacce dei Pod
-sono `cali*`, il tunnel è `vxlan.calico`, con UDP 4789 e VNI 4096.
+Il controllo deve registrare `PASS` perché `cni0` non esiste. Le interfacce dei
+Pod sono `cali*`, il tunnel è `vxlan.calico`, con UDP 4789 e VNI 4096.
 
 ### 10.4 Workload, percorso e cattura
 
-Eseguire il blocco comune della sezione 7.1, poi rileggere gli indirizzi:
+Applicare il workload comune, eseguire la matrice baseline e rileggere gli
+indirizzi:
 
 ```bash
+deploy_common_workload
+run_policy_matrix allow-all
 export CLIENT_IP="$(kubectl --context "$TESI_CONTEXT" -n net-lab get pod client -o jsonpath='{.status.podIP}')"
 export SERVER_A_IP="$(kubectl --context "$TESI_CONTEXT" -n net-lab get pod server-a -o jsonpath='{.status.podIP}')"
 export SERVER_B_IP="$(kubectl --context "$TESI_CONTEXT" -n net-lab get pod server-b -o jsonpath='{.status.podIP}')"
@@ -1113,8 +1257,8 @@ docker exec k3d-tesi-e10-calico-vxlan-agent-1 ip -br link
 docker exec k3d-tesi-e10-calico-vxlan-agent-1 ip route
 ```
 
-Eseguire la matrice baseline della sezione 7.1. Ispezionare nuovamente route e
-interfacce `cali*`; il percorso intra-node è routing L3 fra veth, senza bridge.
+Ispezionare nuovamente route e interfacce `cali*`; il percorso intra-node è
+routing L3 fra veth, senza bridge.
 
 Per la cattura inter-node, rileggere PID e underlay e usare un GET singolo.
 Come in E01, entriamo nel namespace del nodo sorgente perché contiene
@@ -1129,6 +1273,7 @@ export SOURCE_UNDERLAY="$(docker inspect -f '{{with index .NetworkSettings.Netwo
 export DESTINATION_UNDERLAY="$(docker inspect -f '{{with index .NetworkSettings.Networks "k3d-tesi-e10-calico-vxlan"}}{{.IPAddress}}{{end}}' "$DESTINATION_NODE")"
 export CAPTURE_DIR="$(mktemp -d)"
 
+sudo -v
 (
   sleep 2
   kubectl --context "$TESI_CONTEXT" exec -n net-lab client -- \
@@ -1136,30 +1281,54 @@ export CAPTURE_DIR="$(mktemp -d)"
 ) >"$CAPTURE_DIR/http-client.log" 2>&1 &
 export HTTP_JOB=$!
 
-sudo -- /usr/bin/timeout --preserve-status --signal=TERM \
-  --kill-after=3s 10s \
-  /usr/bin/nsenter --target "$SOURCE_PID" --net \
-  /usr/bin/tcpdump -i any -tttt -nn -e -vv -A -s 0 -l \
-  "((host $CLIENT_IP and host $SERVER_B_IP and tcp port 8080) or (host $SOURCE_UNDERLAY and host $DESTINATION_UNDERLAY and udp port 4789))" \
-  >"$CAPTURE_DIR/calico-inter-node.log" 2>&1
+if sudo -- /usr/bin/timeout --preserve-status --signal=TERM \
+    --kill-after=3s 10s \
+    /usr/bin/nsenter --target "$SOURCE_PID" --net \
+    /usr/bin/tcpdump -i any -tttt -nn -e -vv -A -s 0 -l \
+    "((host $CLIENT_IP and host $SERVER_B_IP and tcp port 8080) or (host $SOURCE_UNDERLAY and host $DESTINATION_UNDERLAY and udp port 4789))" \
+    >"$CAPTURE_DIR/calico-inter-node.log" 2>&1
+then
+  export CAPTURE_RC=0
+else
+  export CAPTURE_RC=$?
+fi
+printf 'capture_exit=%s\n' "$CAPTURE_RC"
+case "$CAPTURE_RC" in
+  0|124|143) ;;
+  *) printf 'FAIL: terminazione inattesa della cattura\n' >&2; false ;;
+esac
 
 wait "$HTTP_JOB"
 sed -n '1,260p' "$CAPTURE_DIR/calico-inter-node.log"
 cat "$CAPTURE_DIR/http-client.log"
-pgrep -af 'tcpdump|nsenter|timeout'
+if pgrep -x tcpdump >/dev/null
+then
+  printf 'FAIL: tcpdump residuo\n' >&2
+  pgrep -a -x tcpdump >&2
+  false
+else
+  printf 'PASS: nessun tcpdump residuo\n'
+fi
 ```
 
 Correlare gli IP dei Pod all'interno e gli IP underlay all'esterno; cercare
-UDP 4789, `vxlan.calico` e VNI 4096.
+UDP 4789, `vxlan.calico` e VNI 4096. Per la cattura sono accettati exit code
+`0`, `124` o `143`; gli altri indicano un errore da diagnosticare.
+
+`CAPTURE_DIR` va conservata in caso di errore. Dopo un esito positivo può
+essere rimossa con `rm -rf -- "$CAPTURE_DIR"`.
 
 ### 10.5 Service e NetworkPolicy
 
-Per attribuire il Service confrontiamo catene e contatori kube-proxy prima e
-dopo nuove connessioni al ClusterIP.
+Per attribuire il Service verifichiamo separatamente i due backend Ready, poi
+confrontiamo catene e contatori kube-proxy prima e dopo nuove connessioni al
+ClusterIP.
 
 ```bash
 export CALICO_AGENT0='k3d-tesi-e10-calico-vxlan-agent-0'
 export SERVICE_DIR="$(mktemp -d)"
+
+verify_service_backends
 
 docker logs "$CALICO_AGENT0" 2>&1 | \
   grep -E 'kube-proxy|Using iptables Proxier' \
@@ -1168,10 +1337,8 @@ docker exec "$CALICO_AGENT0" /bin/aux/iptables-save -c -t nat | \
   grep -F 'net-lab/servers:http' \
   >"$SERVICE_DIR/iptables-before.log" || true
 
-kubectl --context "$TESI_CONTEXT" exec -n net-lab client -- \
-  wget -qO- -T 5 "http://${SERVICE_IP}:8080/"
-kubectl --context "$TESI_CONTEXT" exec -n net-lab client -- \
-  wget -qO- -T 5 "http://${SERVICE_IP}:8080/"
+service_http_flows 6 >"$SERVICE_DIR/http-flows.log"
+cat "$SERVICE_DIR/http-flows.log"
 
 docker exec "$CALICO_AGENT0" /bin/aux/iptables-save -c -t nat | \
   grep -F 'net-lab/servers:http' \
@@ -1180,9 +1347,12 @@ diff -u "$SERVICE_DIR/iptables-before.log" \
   "$SERVICE_DIR/iptables-after.log" || true
 ```
 
-Le risposte devono includere entrambi i backend; catene `KUBE-SVC`/`KUBE-SEP`,
-Destination Network Address Translation (DNAT) e delta dei contatori
-sostengono l'attribuzione a kube-proxy iptables.
+La distribuzione delle risposte fra i backend non è un criterio di successo.
+Per i flussi realmente osservati, catene `KUBE-SVC`/`KUBE-SEP`, Destination
+Network Address Translation (DNAT) e delta pertinenti dei contatori sostengono
+l'attribuzione a kube-proxy iptables. Le evidence originali E10 registrarono
+due risposte `server-a`; quel risultato è coerente con la selezione
+probabilistica e non indebolisce l'attribuzione basata sui contatori.
 
 Per le policy vogliamo correlare il risultato applicativo con il lavoro di
 Felix. Nei log cerchiamo calcolo di policy, selector e IPSet; nel kernel
@@ -1214,19 +1384,19 @@ Eseguire poi i tre stati in ordine:
 
 ```bash
 # Baseline: sei connessioni consentite
-run_policy_matrix
+run_policy_matrix allow-all
 inspect_calico_policy_plane
 
 # Default deny: sei connessioni negate
 kubectl --context "$TESI_CONTEXT" apply \
   -f manifests/cni/common/default-deny-ingress.yaml
-run_policy_matrix
+run_policy_matrix deny-all
 inspect_calico_policy_plane
 
 # Allow selettiva: quattro consentite, due negate
 kubectl --context "$TESI_CONTEXT" apply \
   -f manifests/cni/common/allow-client-to-http-servers.yaml
-run_policy_matrix
+run_policy_matrix selective-allow
 inspect_calico_policy_plane
 ```
 
@@ -1245,7 +1415,19 @@ k3d cluster list
 ss -ltn 'sport = :6448'
 ```
 
+Le directory `CALICO_CHART_DIR`, `CALICO_RENDER_DIR`, `CAPTURE_DIR` e
+`SERVICE_DIR` servono soltanto a E10. Dopo un esito positivo possono essere
+eliminate esplicitamente; se un controllo fallisce, conservarle finché chart,
+rendering, cattura e delta non sono stati diagnosticati.
+
 ## 11. E20 — Cilium VXLAN con data plane eBPF
+
+Questo è il punto di ingresso E20 anche in una nuova shell:
+
+```bash
+cd "$HOME/kubernetes-cloud-edge-lab"
+source scripts/cni/common/lab-env.sh
+```
 
 ### 11.1 Download e controllo statico del chart
 
@@ -1253,8 +1435,6 @@ Scaricare esattamente il chart usato e verificarne l'integrità:
 
 ```bash
 export E20_DIR="$(mktemp -d)"
-curl -fsSL https://helm.cilium.io/index.yaml \
-  -o "$E20_DIR/helm-index.yaml"
 curl -fsSL https://helm.cilium.io/cilium-1.19.6.tgz \
   -o "$E20_DIR/cilium-1.19.6.tgz"
 printf '%s  %s\n' \
@@ -1295,6 +1475,7 @@ come Relay, livello 7, cifratura e Cluster Mesh. Helm renderizza e applica
 questa configurazione al cluster privo di Flannel.
 
 ```bash
+check_experiment_preflight tesi-e20-cilium-vxlan 6449
 k3d cluster create tesi-e20-cilium-vxlan \
   --image "$TESI_K3S_IMAGE" \
   --servers 1 --agents 2 \
@@ -1373,10 +1554,12 @@ Hubble soltanto locale.
 
 ### 11.4 Workload e percorso intra-node
 
-Applicare il workload con la sezione 7.1. Rileggere endpoint, identità e
-indirizzi:
+Applicare il workload comune, eseguire la matrice baseline e rileggere
+endpoint, identità e indirizzi:
 
 ```bash
+deploy_common_workload
+run_policy_matrix allow-all
 export CLIENT_IP="$(kubectl --context "$TESI_CONTEXT" -n net-lab get pod client -o jsonpath='{.status.podIP}')"
 export SERVER_A_IP="$(kubectl --context "$TESI_CONTEXT" -n net-lab get pod server-a -o jsonpath='{.status.podIP}')"
 export SERVER_B_IP="$(kubectl --context "$TESI_CONTEXT" -n net-lab get pod server-b -o jsonpath='{.status.podIP}')"
@@ -1394,9 +1577,9 @@ kubectl --context "$TESI_CONTEXT" exec -n kube-system \
   "$CILIUM_AGENT0" -- bpftool net
 ```
 
-Eseguire la matrice baseline della sezione 7.1. Per il flusso locale verificare
-veth `lxc*`, route tramite `cilium_host` e programma `cil_from_container`; il
-tunnel non deve intervenire fra `client` e `server-a`.
+Per il flusso locale verificare veth `lxc*`, route tramite `cilium_host` e
+programma `cil_from_container`; il tunnel non deve intervenire fra `client` e
+`server-a`.
 
 ### 11.5 Cattura inter-node
 
@@ -1415,6 +1598,7 @@ export CAPTURE_DIR="$(mktemp -d)"
 sudo /usr/bin/nsenter --target "$SOURCE_PID" --net \
   /usr/sbin/ip -details link show cilium_vxlan
 
+sudo -v
 (
   sleep 2
   kubectl --context "$TESI_CONTEXT" exec -n net-lab client -- \
@@ -1422,18 +1606,35 @@ sudo /usr/bin/nsenter --target "$SOURCE_PID" --net \
 ) >"$CAPTURE_DIR/http-client.log" 2>&1 &
 export HTTP_JOB=$!
 
-sudo /usr/bin/env LC_ALL=C \
-  /usr/bin/nsenter --target "$SOURCE_PID" --net \
-  /usr/bin/timeout --verbose --foreground --preserve-status \
-  --signal=TERM --kill-after=2s 8s \
-  /usr/bin/tcpdump -i any -tttt -nn -e -vv -A -s 0 -l \
-  "((host $CLIENT_IP and host $SERVER_B_IP and tcp port 8080) or (host $SOURCE_UNDERLAY and host $DESTINATION_UNDERLAY and udp port 8472))" \
-  >"$CAPTURE_DIR/cilium-inter-node.log" 2>&1
+if sudo /usr/bin/env LC_ALL=C \
+    /usr/bin/nsenter --target "$SOURCE_PID" --net \
+    /usr/bin/timeout --verbose --foreground --preserve-status \
+    --signal=TERM --kill-after=2s 8s \
+    /usr/bin/tcpdump -i any -tttt -nn -e -vv -A -s 0 -l \
+    "((host $CLIENT_IP and host $SERVER_B_IP and tcp port 8080) or (host $SOURCE_UNDERLAY and host $DESTINATION_UNDERLAY and udp port 8472))" \
+    >"$CAPTURE_DIR/cilium-inter-node.log" 2>&1
+then
+  export CAPTURE_RC=0
+else
+  export CAPTURE_RC=$?
+fi
+printf 'capture_exit=%s\n' "$CAPTURE_RC"
+case "$CAPTURE_RC" in
+  0|124|143) ;;
+  *) printf 'FAIL: terminazione inattesa della cattura\n' >&2; false ;;
+esac
 
 wait "$HTTP_JOB"
 sed -n '1,360p' "$CAPTURE_DIR/cilium-inter-node.log"
 cat "$CAPTURE_DIR/http-client.log"
-pgrep -af 'tcpdump|nsenter|timeout'
+if pgrep -x tcpdump >/dev/null
+then
+  printf 'FAIL: tcpdump residuo\n' >&2
+  pgrep -a -x tcpdump >&2
+  false
+else
+  printf 'PASS: nessun tcpdump residuo\n'
+fi
 ```
 
 Correlare il flusso su veth `lxc*`, `cilium_vxlan` ed `eth0`, con IP dei Pod
@@ -1444,6 +1645,12 @@ come assenza del VNI. Nelle
 valori osservati sono 21766 e 16090 e coincidono con le security identity delle
 rispettive sorgenti; in una nuova replica possono cambiare.
 
+Per la cattura sono accettati exit code `0`, `124` o `143`; gli altri indicano
+un errore da diagnosticare.
+
+`CAPTURE_DIR` va conservata in caso di errore. Dopo un esito positivo può
+essere rimossa con `rm -rf -- "$CAPTURE_DIR"`.
+
 ### 11.6 Attribuzione del Service
 
 La configurazione mantiene kube-proxy, quindi la sola presenza delle sue
@@ -1452,12 +1659,15 @@ nella stessa finestra: contatori iptables kube-proxy, stato load balancer e
 conntrack eBPF, e flussi Hubble. Solo la combinazione dei delta permette una
 conclusione circoscritta alle connessioni generate.
 
-Acquisire stato kube-proxy ed eBPF prima di due nuove connessioni:
+Verificare prima la disponibilità dei due backend, poi acquisire stato
+kube-proxy ed eBPF prima di nuove connessioni:
 
 ```bash
 export CILIUM_NODE='k3d-tesi-e20-cilium-vxlan-agent-0'
 export SERVICE_DIR="$(mktemp -d)"
 export START_UTC="$(date -u --iso-8601=seconds)"
+
+verify_service_backends
 
 docker exec "$CILIUM_NODE" /bin/aux/iptables-save -c -t nat | \
   grep -F 'net-lab/servers:http' \
@@ -1475,10 +1685,8 @@ kubectl --context "$TESI_CONTEXT" exec -n kube-system \
   "$CILIUM_AGENT0" -- cilium-dbg bpf ct list global \
   >"$SERVICE_DIR/ct-before.log"
 
-kubectl --context "$TESI_CONTEXT" exec -n net-lab client -- \
-  wget -qO- -T 5 "http://${SERVICE_IP}:8080/"
-kubectl --context "$TESI_CONTEXT" exec -n net-lab client -- \
-  wget -qO- -T 5 "http://${SERVICE_IP}:8080/"
+service_http_flows 6 >"$SERVICE_DIR/http-flows.log"
+cat "$SERVICE_DIR/http-flows.log"
 export END_UTC="$(date -u --iso-8601=seconds)"
 ```
 
@@ -1504,11 +1712,14 @@ diff -u "$SERVICE_DIR/ct-before.log" \
   "$SERVICE_DIR/ct-after.log" || true
 ```
 
-La conclusione E20 richiede congiuntamente: entrambi i backend nelle risposte,
-nuove entry conntrack `TCP SVC` con reverse Network Address Translation (NAT),
-coerenza con Hubble e nessun delta nei contatori kube-proxy pertinenti. Vale
-soltanto per le due connessioni osservate; non dimostra che kube-proxy sia
-inattivo in ogni percorso.
+La distribuzione delle risposte fra i backend non è un criterio di successo.
+La conclusione E20 richiede congiuntamente, per le connessioni realmente
+osservate: nuove entry conntrack `TCP SVC` con backend e reverse Network
+Address Translation (NAT) coerenti con le risposte, correlazione Hubble e
+nessun delta nei contatori kube-proxy pertinenti. Vale soltanto per quei flussi
+e non dimostra che kube-proxy sia inattivo in ogni percorso. Le evidence
+originali selezionarono entrambi i backend in due connessioni, ma la nuova
+procedura non assume che ciò debba ripetersi.
 
 ### 11.7 Matrice NetworkPolicy
 
@@ -1520,9 +1731,17 @@ salva ogni stato in una directory separata:
 export POLICY_DIR="$(mktemp -d)"
 
 capture_cilium_policy_state() {
-  POLICY_STATE="$1"
+  if [[ "$#" -ne 2 ]]
+  then
+    printf 'Uso: capture_cilium_policy_state STATO ASPETTATIVA\n' >&2
+    return 2
+  fi
+  local POLICY_STATE="$1"
+  local POLICY_EXPECTATION="$2"
+  local POLICY_SINCE
+  local POLICY_UNTIL
   POLICY_SINCE="$(date -u --iso-8601=seconds)"
-  run_policy_matrix
+  run_policy_matrix "$POLICY_EXPECTATION"
   POLICY_UNTIL="$(date -u --iso-8601=seconds)"
 
   kubectl --context "$TESI_CONTEXT" get networkpolicy -n net-lab -o yaml \
@@ -1545,15 +1764,15 @@ capture_cilium_policy_state() {
 Eseguire i tre stati:
 
 ```bash
-capture_cilium_policy_state baseline
+capture_cilium_policy_state baseline allow-all
 
 kubectl --context "$TESI_CONTEXT" apply \
   -f manifests/cni/common/default-deny-ingress.yaml
-capture_cilium_policy_state default-deny
+capture_cilium_policy_state default-deny deny-all
 
 kubectl --context "$TESI_CONTEXT" apply \
   -f manifests/cni/common/allow-client-to-http-servers.yaml
-capture_cilium_policy_state selective-allow
+capture_cilium_policy_state selective-allow selective-allow
 
 ls -la "$POLICY_DIR"
 ```
@@ -1614,6 +1833,11 @@ k3d cluster list
 ss -ltn 'sport = :6449'
 ```
 
+Le directory `E20_DIR`, `CAPTURE_DIR`, `SERVICE_DIR` e `POLICY_DIR` servono
+soltanto a E20. Dopo un esito positivo possono essere eliminate esplicitamente;
+in caso di errore conservarle finché chart, cattura, output Service e stato
+policy non sono stati diagnosticati.
+
 La rimozione deve riguardare solo E20. Non eliminare manualmente programmi o
 mappe eBPF, route, regole netfilter o reti Docker senza avere prima dimostrato
 un residuo specifico.
@@ -1631,7 +1855,14 @@ docker ps --filter 'name=k3d-tesi-' \
   --format 'table {{.Names}}\t{{.Image}}\t{{.Status}}'
 kubectl config get-contexts
 ss -ltn 'sport = :6445 or sport = :6446 or sport = :6447 or sport = :6448 or sport = :6449'
-pgrep -af 'tcpdump|nsenter|timeout'
+if pgrep -x tcpdump >/dev/null
+then
+  printf 'FAIL: tcpdump residuo\n' >&2
+  pgrep -a -x tcpdump >&2
+  false
+else
+  printf 'PASS: nessun tcpdump residuo\n'
+fi
 ```
 
 L'elenco non deve contenere i cluster E01, E02, E10 o E20. Non rimuovere

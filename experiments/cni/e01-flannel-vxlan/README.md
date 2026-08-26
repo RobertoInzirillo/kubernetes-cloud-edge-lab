@@ -16,9 +16,9 @@ intra-node e inter-node in un cluster K3s/k3d con Flannel e VXLAN?
 - workload comune con `client` e `server-a` sullo stesso agent e `server-b`
   sull'altro.
 
-La configurazione CNI osservata concatenava `flannel`, `portmap` e
-`bandwidth`. Flannel forniva la raggiungibilità inter-node; bridge e IPAM
-erano realizzati dai plugin delegati dello stack K3s.
+La procedura di riproduzione verifica la concatenazione CNI di `flannel`,
+`portmap` e `bandwidth`. Flannel fornisce la raggiungibilità inter-node;
+bridge e IPAM sono realizzati dai plugin delegati dello stack K3s.
 
 ## 3. Versioni rilevanti
 
@@ -54,20 +54,16 @@ manuale è l'unica fonte operativa.
 
 ## 6. Risultati osservati
 
-- tre nodi `Ready` con subnet Pod `/24` distinte;
-- `10-flannel.conflist` identico sui nodi, MTU overlay `1450`, `flannel.1`
-  VXLAN su UDP 8472 e VNI 1;
-- ICMP e HTTP riusciti sia intra-node sia inter-node;
-- ClusterIP raggiungibile e selezione osservata di entrambi gli endpoint;
-- veth di `client` e `server-a` collegate a `cni0`;
+- flusso HTTP intra-node osservato sulla veth del `client`, con richiesta a
+  `server-a` e risposta HTTP `200 OK`;
 - percorso inter-node osservato `veth → cni0 → flannel.1 → eth0`, con
   risposta nel verso inverso;
 - pacchetto interno con IP dei Pod conservati e datagramma esterno fra gli IP
   underlay, UDP 8472 e VNI 1;
 - incremento di 50 byte fra frame interno ed esterno, coerente con Ethernet,
   IPv4, UDP e VXLAN;
-- flusso HTTP e cattura conclusiva terminati con exit code `0`, zero pacchetti
-  scartati dal kernel e nessun processo residuo.
+- GET inter-node e procedura di cattura terminati con exit code `0`, zero
+  pacchetti scartati dal kernel e nessun processo residuo.
 
 ## 7. Attribuzione
 
@@ -86,7 +82,11 @@ NetworkPolicy viene studiato separatamente in E02.
 La [selezione delle evidenze originali](evidence/) conserva le catture
 intra-node e inter-node, il GET correlato e il riepilogo della procedura. Il
 relativo indice collega ciascun file alle affermazioni sostenute e ne esplicita
-i limiti; `SHA256SUMS` permette di verificarne l'integrità.
+i limiti; `SHA256SUMS` permette di verificarne l'integrità. La selezione non
+contiene output autonomi per readiness, configurazione CNI completa, matrice
+di connettività o Service/DNS; tali controlli restano nella procedura da
+sottoporre alla nuova validation e non sono elencati qui come risultati
+pubblicamente dimostrati.
 
 ## 9. Limiti
 

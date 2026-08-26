@@ -59,12 +59,15 @@ esperimenti esistenti.
 │   ├── common/
 │   ├── calico/
 │   └── cilium/
-└── scripts/cni/calico/
+└── scripts/cni/
+    ├── common/lab-env.sh
+    └── calico/
 ```
 
 I manifest comuni fissano workload e NetworkPolicy; le directory Calico e
-Cilium contengono le configurazioni specifiche. Lo script Calico è il
-post-renderer usato per bloccare l'immagine del Tigera Operator.
+Cilium contengono le configurazioni specifiche. Lo script comune ricostruisce
+l'ambiente di shell degli esperimenti; lo script Calico è il post-renderer
+usato per bloccare l'immagine del Tigera Operator.
 
 ## Percorso di lettura e riproduzione
 

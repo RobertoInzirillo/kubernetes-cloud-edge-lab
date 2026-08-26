@@ -3,7 +3,7 @@ kind: Namespace
 metadata:
   name: net-lab
   labels:
-    app.kubernetes.io/part-of: e01-network-baseline
+    app.kubernetes.io/part-of: cni-network-baseline
 ---
 apiVersion: v1
 kind: Pod
@@ -13,7 +13,7 @@ metadata:
   labels:
     app.kubernetes.io/name: network-client
     app.kubernetes.io/instance: client
-    app.kubernetes.io/part-of: e01-network-baseline
+    app.kubernetes.io/part-of: cni-network-baseline
 spec:
   automountServiceAccountToken: false
   enableServiceLinks: false
@@ -45,7 +45,7 @@ metadata:
   labels:
     app.kubernetes.io/name: http-server
     app.kubernetes.io/instance: server-a
-    app.kubernetes.io/part-of: e01-network-baseline
+    app.kubernetes.io/part-of: cni-network-baseline
 spec:
   automountServiceAccountToken: false
   enableServiceLinks: false
@@ -99,7 +99,7 @@ metadata:
   labels:
     app.kubernetes.io/name: http-server
     app.kubernetes.io/instance: server-b
-    app.kubernetes.io/part-of: e01-network-baseline
+    app.kubernetes.io/part-of: cni-network-baseline
 spec:
   automountServiceAccountToken: false
   enableServiceLinks: false
@@ -152,7 +152,7 @@ metadata:
   namespace: net-lab
   labels:
     app.kubernetes.io/name: http-server
-    app.kubernetes.io/part-of: e01-network-baseline
+    app.kubernetes.io/part-of: cni-network-baseline
 spec:
   type: ClusterIP
   sessionAffinity: None
