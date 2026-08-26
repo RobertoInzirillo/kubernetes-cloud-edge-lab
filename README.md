@@ -69,17 +69,22 @@ Cilium contengono le configurazioni specifiche. Lo script comune ricostruisce
 l'ambiente di shell degli esperimenti; lo script Calico è il post-renderer
 usato per bloccare l'immagine del Tigera Operator.
 
-## Percorso di lettura e riproduzione
+## Percorso di lettura
 
-1. La [panoramica CNI](docs/cni-overview.md) introduce modello e tassonomia.
-2. La [guida di riproduzione](docs/reproduction-guide.md) è il percorso
-   operativo principale per E01, E02, E10 ed E20.
-3. I README dei [singoli esperimenti](experiments/cni/) descrivono domande,
-   configurazioni, risultati e attribuzioni.
-4. Il [confronto controllato](docs/cni-comparison.md) sintetizza le differenze
-   osservate.
-5. I [limiti](docs/limitations.md) definiscono l'ambito nel quale i risultati
-   possono essere generalizzati.
+1. La [panoramica CNI](docs/cni-overview.md) introduce il modello CNI, i
+   principali approcci al networking Kubernetes e le soluzioni considerate.
+2. I README dei [singoli esperimenti](experiments/cni/) descrivono le domande
+   sperimentali, le configurazioni utilizzate, i risultati osservati e le
+   relative attribuzioni.
+3. Il [confronto controllato](docs/cni-comparison.md) mette a confronto
+   Flannel, Calico e Cilium sulla base delle configurazioni effettivamente
+   studiate.
+4. I [limiti](docs/limitations.md) definiscono l'ambito nel quale i risultati
+   possono essere interpretati e generalizzati.
+
+Per chi vuole replicare il laboratorio, la
+[guida di riproduzione](docs/reproduction-guide.md) descrive la procedura
+completa per preparare un sistema pulito ed eseguire E01, E02, E10 ed E20.
 
 La baseline usa k3d `v5.9.0`, K3s `v1.34.9+k3s1`, Kubernetes `1.34.9`,
 `kubectl` `v1.34.9`, Helm `v3.21.3` e BusyBox `1.38.0`. Le immagini K3s e
