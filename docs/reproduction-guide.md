@@ -2204,7 +2204,7 @@ for NODE in \
   k3d-tesi-e20-cilium-vxlan-agent-1
 do
   docker exec "$NODE" sh -c \
-    'ls -la /var/lib/rancher/k3s/agent/etc/cni/net.d; sed -n "1,240p" /var/lib/rancher/k3s/agent/etc/cni/net.d/05-cilium.conflist' || \
+    'test -d /etc/cni/net.d && ls -la /etc/cni/net.d && test -r /etc/cni/net.d/05-cilium.conflist && sed -n "1,240p" /etc/cni/net.d/05-cilium.conflist' || \
     NODE_INVENTORY_FAILED=1
   docker exec "$NODE" ip -br link || NODE_INVENTORY_FAILED=1
   docker exec "$NODE" ip route || NODE_INVENTORY_FAILED=1
