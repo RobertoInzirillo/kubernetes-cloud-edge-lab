@@ -68,14 +68,21 @@ La matrice usa inoltre User Datagram Protocol (UDP), Virtual Tunnel Endpoint
 | **O — interfaccia tunnel** | `flannel.1` | `vxlan.calico` | `cilium_vxlan` |
 | **O — porta VXLAN** | UDP destinazione `8472` | UDP destinazione `4789` | UDP destinazione `8472` |
 | **O/I — VNI/tunnel ID** | VNI fisso `1` | VNI fisso `4096` | `21766` in andata e `16090` al ritorno, coincidenti con l'identità della sorgente |
-| **O/I — stato di raggiungibilità** | subnet manager, annotazioni Flannel, route e vicini VTEP nel kernel | IPPool, blocchi/affinità, WorkloadEndpoint e stato Felix; BGP disabilitato | `CiliumNode`, IP cache, endpoint e security identity |
+| **O/I — stato di raggiungibilità** | subnet manager, annotazioni Flannel, route e vicini VTEP nel kernel | IPPool, IPAMBlock/BlockAffinity, Pod IP/nodo, route e stato Felix; BGP disabilitato | `CiliumNode`, IP cache, endpoint e security identity |
 | **I — data plane** | bridge, routing e VXLAN del kernel Linux configurati da CNI/Flannel | routing, netfilter/iptables, IPSet e VXLAN del kernel programmati da Felix | programmi e mappe eBPF su veth/TCX, routing e VXLAN del kernel |
 | **O/I — Service** | controllo incluso nella procedura, ma non documentato da output autonomi nella selezione pubblica E01; attribuzione causale non isolata | kube-proxy iptables: catene `KUBE-SVC`/`KUBE-SEP`, Destination Network Address Translation e delta dei contatori | per due flussi: load balancing, reverse NAT e conntrack `TCP SVC` eBPF; regole kube-proxy presenti ma senza delta |
 | **O/I — NetworkPolicy** | enforcement del controller K3s separato quando attivo, non di Flannel | calculation graph e Felix traducono e programmano la policy | Cilium associa policy e identità agli endpoint e applica la decisione in eBPF |
-| **O — artefatti policy** | catene/ipset policy-specifici `KUBE-*` e contatori soltanto nel controllo ON | WorkloadEndpoint, selector, IPSet e catene iptables con riferimenti alle policy | policy revision, policy map eBPF, contatori e verdetti Hubble |
+| **O — artefatti policy** | catene/ipset policy-specifici `KUBE-*` e contatori soltanto nel controllo ON | NetworkPolicy Kubernetes, selector, IPSet e catene iptables con riferimenti alle policy | policy revision, policy map eBPF, contatori e verdetti Hubble |
 | **O — osservabilità usata** | file CNI, route, bridge, netfilter, log K3s e `tcpdump` | risorse Calico, log Felix, IPSet/iptables, route e `tcpdump` | `CiliumEndpoint`, identità, mappe/programmi eBPF, `cilium-dbg`, Hubble e `tcpdump` |
 | **I — deleghe** | bridge/IPAM ai plugin CNI; policy al controller K3s; Service separato da Flannel | Service a kube-proxy; applicazione finale al kernel Linux | kube-proxy resta installato; il kernel eBPF applica forwarding, Service e policy nei flussi osservati |
 | **O/T — limiti specifici** | non provati `host-gw` e altri backend; Service non isolato causalmente | non provati BGP/no-overlay, IP-in-IP, nftables o eBPF | non provati native routing o kube-proxy replacement |
+
+WorkloadEndpoint rimane il modello logico con cui Calico rappresenta un
+endpoint di workload. Nella configurazione E10 con Kubernetes API datastore,
+gli workload endpoint sono basati sui Pod Kubernetes e non è esposta una CRD
+WorkloadEndpoint interrogabile direttamente con il comando `kubectl` usato in
+precedenza. Le osservazioni E10 correlano quindi Pod IP e nodo, interfacce
+`cali*`, route, IPAMBlock/BlockAffinity e dataplane Felix.
 
 I numeri del VNI non sono una metrica di qualità. Nei casi Flannel e Calico
 identificano il dominio VXLAN configurato. Nel caso Cilium osservato, il

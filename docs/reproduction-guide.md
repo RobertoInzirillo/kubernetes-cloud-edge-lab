@@ -1741,16 +1741,19 @@ _tesi_export_runtime SERVER_B_IP ipv4 kubectl --context "$TESI_CONTEXT" \
   -n net-lab get pod server-b -o jsonpath='{.status.podIP}' &&
 _tesi_export_runtime SERVICE_IP ipv4 kubectl --context "$TESI_CONTEXT" \
   -n net-lab get svc servers -o jsonpath='{.spec.clusterIP}' &&
-kubectl --context "$TESI_CONTEXT" get \
-  workloadendpoints.projectcalico.org -A -o wide &&
+kubectl --context "$TESI_CONTEXT" get pods -n net-lab -o wide &&
 docker exec k3d-tesi-e10-calico-vxlan-agent-0 ip -br link &&
 docker exec k3d-tesi-e10-calico-vxlan-agent-0 ip route &&
 docker exec k3d-tesi-e10-calico-vxlan-agent-1 ip -br link &&
 docker exec k3d-tesi-e10-calico-vxlan-agent-1 ip route
 ```
 
-Ispezionare nuovamente route e interfacce `cali*`; il percorso intra-node è
-routing L3 fra veth, senza bridge.
+Nel Kubernetes API datastore usato da E10, WorkloadEndpoint resta il modello
+logico Calico dell'endpoint, ma gli endpoint dei workload sono basati sui Pod
+Kubernetes e non è esposta una CRD WorkloadEndpoint interrogabile con il
+comando `kubectl` precedentemente pubblicato. La correlazione osservabile usa
+quindi Pod IP e nodo, interfacce `cali*`, route, IPAMBlock e BlockAffinity.
+Il percorso intra-node è routing L3 fra veth, senza bridge.
 
 Per la cattura inter-node, rileggere PID e underlay e usare un GET singolo.
 Come in E01, entriamo nel namespace del nodo sorgente perché contiene
@@ -1914,8 +1917,8 @@ inspect_calico_policy_plane() {
   local IPSET_OUTPUT
   local IPTABLES_OUTPUT
   local LOG_OUTPUT
+  local POD_OUTPUT
   local POLICY_OUTPUT
-  local WEP_OUTPUT
 
   if POLICY_OUTPUT="$(kubectl --context "$TESI_CONTEXT" get \
       networkpolicy -n net-lab -o yaml)"
@@ -1925,12 +1928,12 @@ inspect_calico_policy_plane() {
     printf 'ERROR: acquisizione NetworkPolicy Calico fallita.\n' >&2
     FAILED=1
   fi
-  if WEP_OUTPUT="$(kubectl --context "$TESI_CONTEXT" get \
-      workloadendpoints.projectcalico.org -A -o yaml)"
+  if POD_OUTPUT="$(kubectl --context "$TESI_CONTEXT" get pods \
+      -n net-lab -o wide)"
   then
-    printf '%s\n' "$WEP_OUTPUT"
+    printf '%s\n' "$POD_OUTPUT"
   else
-    printf 'ERROR: acquisizione WorkloadEndpoint Calico fallita.\n' >&2
+    printf 'ERROR: acquisizione Pod/IP/nodo per la policy Calico fallita.\n' >&2
     FAILED=1
   fi
   if LOG_OUTPUT="$(kubectl --context "$TESI_CONTEXT" logs -n calico-system \
