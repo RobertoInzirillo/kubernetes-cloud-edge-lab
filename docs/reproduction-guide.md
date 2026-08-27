@@ -1453,21 +1453,102 @@ render_calico_static() {
     return 1
   fi
 
-  if grep -n -E 'latest|goldmane|whisker' "$CALICO_OPERATOR_RENDERED"
+  if awk '
+      $1 == "image:" {
+        image=$2
+        gsub(/^"|"$/, "", image)
+        if (image ~ /:latest(@sha256:[[:xdigit:]]+)?$/) { found=1 }
+      }
+      END { exit !found }
+    ' "$CALICO_OPERATOR_RENDERED"
   then
-    printf 'FAIL: marker latest/Goldmane/Whisker inatteso nel rendering Calico.\n' >&2
-    return 1
+    AWK_RC=0
   else
-    FILTER_RC=$?
+    AWK_RC=$?
   fi
-  if [[ "$FILTER_RC" -gt 1 ]]
-  then
-    printf 'ERROR: filtro rendering Calico fallito (grep rc=%s).\n' \
-      "$FILTER_RC" >&2
-    return 1
-  fi
+  case "$AWK_RC" in
+    0)
+      printf 'FAIL: immagine con tag latest inattesa nel rendering Calico.\n' >&2
+      return 1
+      ;;
+    1) ;;
+    *)
+      printf 'ERROR: parser tag image fallito (awk rc=%s).\n' \
+        "$AWK_RC" >&2
+      return 1
+      ;;
+  esac
 
-  printf 'PASS: rendering Tigera Operator pinned e componenti esclusi assenti.\n'
+  if awk '
+      function inspect_document(lower_name) {
+        lower_name=tolower(object_name)
+        if (object_kind != "" && \
+            lower_name ~ /(^|[-.])(goldmane|whisker)([-.]|$)/) {
+          printf "oggetto inatteso: kind=%s metadata.name=%s\n", \
+            object_kind, object_name > "/dev/stderr"
+          found=1
+        }
+      }
+      function reset_document() {
+        object_kind=""
+        object_name=""
+        in_metadata=0
+        metadata_child_indent=0
+      }
+      BEGIN { reset_document() }
+      /^---[[:space:]]*$/ {
+        inspect_document()
+        reset_document()
+        next
+      }
+      /^kind:[[:space:]]*/ {
+        object_kind=$0
+        sub(/^kind:[[:space:]]*/, "", object_kind)
+        next
+      }
+      /^metadata:[[:space:]]*$/ {
+        in_metadata=1
+        metadata_child_indent=0
+        next
+      }
+      /^[^[:space:]#][^:]*:/ { in_metadata=0 }
+      in_metadata && /^[[:space:]]+[^[:space:]#][^:]*:/ {
+        current_indent=match($0, /[^[:space:]]/) - 1
+        if (metadata_child_indent == 0 || \
+            current_indent < metadata_child_indent) {
+          metadata_child_indent=current_indent
+        }
+        if (current_indent == metadata_child_indent && \
+            $0 ~ /^[[:space:]]+name:[[:space:]]*/) {
+          object_name=$0
+          sub(/^[[:space:]]+name:[[:space:]]*/, "", object_name)
+          gsub(/^"|"$/, "", object_name)
+        }
+      }
+      END {
+        inspect_document()
+        exit !found
+      }
+    ' "$CALICO_OPERATOR_RENDERED"
+  then
+    AWK_RC=0
+  else
+    AWK_RC=$?
+  fi
+  case "$AWK_RC" in
+    0)
+      printf 'FAIL: componente Goldmane/Whisker inatteso nel rendering Calico.\n' >&2
+      return 1
+      ;;
+    1) ;;
+    *)
+      printf 'ERROR: parser oggetti Calico fallito (awk rc=%s).\n' \
+        "$AWK_RC" >&2
+      return 1
+      ;;
+  esac
+
+  printf 'PASS: operator pinned; tag latest e componenti Goldmane/Whisker assenti.\n'
 }
 
 render_calico_static
