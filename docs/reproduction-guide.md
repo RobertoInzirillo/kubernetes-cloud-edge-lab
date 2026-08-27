@@ -1685,7 +1685,7 @@ do
   docker exec "$NODE" ip -details link show vxlan.calico || \
     NODE_INVENTORY_FAILED=1
   docker exec "$NODE" sh -c \
-    'ls -la /var/lib/rancher/k3s/agent/etc/cni/net.d; sed -n "1,240p" /var/lib/rancher/k3s/agent/etc/cni/net.d/*calico*.conflist' || \
+    'ls -la /etc/cni/net.d && sed -n "1,240p" /etc/cni/net.d/10-calico.conflist' || \
     NODE_INVENTORY_FAILED=1
 done
 
