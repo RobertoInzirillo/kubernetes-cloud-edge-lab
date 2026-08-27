@@ -140,9 +140,28 @@ verify_dual_view_capture() {
   fi
 
   if awk -v source="$pod_source" -v destination="$pod_destination" '
-      index($0, source) && index($0, destination) &&
-      $0 ~ /TCP/ && (index($0, ".8080") || index($0, "port 8080")) {
-        found=1
+      function has_endpoint(text, ip, pattern) {
+        pattern=ip
+        gsub(/\./, "\\.", pattern)
+        return text ~ ("(^|[^0-9.])" pattern "\\.[0-9]+([^0-9]|$)")
+      }
+      function has_protocol(text, protocol) {
+        return text ~ ("(^|[^[:alnum:]_])" protocol \
+          "([^[:alnum:]_]|$)")
+      }
+      function has_port(text, port) {
+        return text ~ ("\\." port "([^0-9]|$)") || \
+          text ~ ("port[[:space:]]+" port "([^0-9]|$)")
+      }
+      {
+        window=previous_two ORS previous_one ORS $0
+        if (has_endpoint(window, source) && \
+            has_endpoint(window, destination) && \
+            has_protocol(window, "TCP") && has_port(window, 8080)) {
+          found=1
+        }
+        previous_two=previous_one
+        previous_one=$0
       }
       END { exit !found }
     ' "$capture_file"; then
@@ -166,8 +185,29 @@ verify_dual_view_capture() {
 
   if awk -v source="$underlay_source" -v destination="$underlay_destination" \
       -v port="$udp_port" '
-      index($0, source) && index($0, destination) && $0 ~ /UDP/ &&
-      (index($0, "." port) || index($0, "port " port)) { found=1 }
+      function has_endpoint(text, ip, pattern) {
+        pattern=ip
+        gsub(/\./, "\\.", pattern)
+        return text ~ ("(^|[^0-9.])" pattern "\\.[0-9]+([^0-9]|$)")
+      }
+      function has_protocol(text, protocol) {
+        return text ~ ("(^|[^[:alnum:]_])" protocol \
+          "([^[:alnum:]_]|$)")
+      }
+      function has_port(text, expected_port) {
+        return text ~ ("\\." expected_port "([^0-9]|$)") || \
+          text ~ ("port[[:space:]]+" expected_port "([^0-9]|$)")
+      }
+      {
+        window=previous_two ORS previous_one ORS $0
+        if (has_endpoint(window, source) && \
+            has_endpoint(window, destination) && \
+            has_protocol(window, "UDP") && has_port(window, port)) {
+          found=1
+        }
+        previous_two=previous_one
+        previous_one=$0
+      }
       END { exit !found }
     ' "$capture_file"; then
     awk_rc=0
