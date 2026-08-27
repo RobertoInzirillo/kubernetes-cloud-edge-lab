@@ -2474,11 +2474,14 @@ salva ogni stato in una directory separata. Prima delle matrici successive a
 una mutazione, un gate indipendente dal traffico attende al massimo 120 secondi
 la nuova revisione sugli agent Cilium che ospitano `client`, `server-a` o
 `server-b`, la policy importata attesa e gli endpoint `ready` con revisione
-richiesta e realizzata coincidenti:
+richiesta e realizzata coincidenti. La cattura Hubble usa una finestra UTC
+RFC3339Nano congelata attorno alla singola matrice e attende per non più di 20
+secondi che la ring buffer renda disponibile l'evidence semanticamente attesa:
 
 ```bash
 export POLICY_DIR="$(mktemp -d)"
 export CILIUM_POLICY_TIMEOUT=120
+export CILIUM_HUBBLE_TIMEOUT=20
 declare -a CILIUM_POLICY_NODES=()
 declare -a CILIUM_POLICY_AGENTS=()
 declare -a CILIUM_POLICY_REVISIONS=()
@@ -2840,6 +2843,187 @@ wait_for_cilium_policy_convergence() {
   done
 }
 
+_verify_cilium_hubble_policy_capture() {
+  if [[ "$#" -ne 4 ]]
+  then
+    printf 'Uso: _verify_cilium_hubble_policy_capture FILE STATO SINCE UNTIL\n' >&2
+    return 2
+  fi
+  local HUBBLE_FILE="$1"
+  local POLICY_STATE="$2"
+  local POLICY_SINCE="$3"
+  local POLICY_UNTIL="$4"
+  local VERIFY_RC
+
+  awk -v state="$POLICY_STATE" \
+      -v since="$POLICY_SINCE" -v until="$POLICY_UNTIL" '
+    function valid_timestamp(value) {
+      return value ~ /^[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]T[0-9][0-9]:[0-9][0-9]:[0-9][0-9]\.[0-9]+Z$/
+    }
+    function valid_json_record(value,    i, char, quoted, escaped, braces, brackets) {
+      if (substr(value, 1, 1) != "{" ||
+          substr(value, length(value), 1) != "}") return 0
+      for (i = 1; i <= length(value); i++) {
+        char = substr(value, i, 1)
+        if (quoted) {
+          if (escaped) escaped = 0
+          else if (char == "\\") escaped = 1
+          else if (char == "\"") quoted = 0
+          continue
+        }
+        if (char == "\"") quoted = 1
+        else if (char == "{") braces++
+        else if (char == "}") braces--
+        else if (char == "[") brackets++
+        else if (char == "]") brackets--
+        if (braces < 0 || brackets < 0) return 0
+      }
+      return !quoted && !escaped && braces == 0 && brackets == 0
+    }
+    BEGIN {
+      if (!valid_timestamp(since) || !valid_timestamp(until) || since > until) {
+        parser_error = 1
+        exit
+      }
+    }
+    {
+      sub(/\r$/, "")
+      if ($0 == "") next
+      records++
+      if (!valid_json_record($0)) {
+        parser_error = 1
+        exit
+      }
+      compact = $0
+      gsub(/[[:space:]]/, "", compact)
+      if (index(compact, "\"flow\":{") &&
+          index(compact, "\"namespace\":\"net-lab\"") &&
+          index(compact, "\"TCP\":{") &&
+          index(compact, "\"destination_port\":8080")) {
+        marker = "\"time\":\""
+        start = index(compact, marker)
+        if (!start) {
+          parser_error = 1
+          exit
+        }
+        timestamp = substr(compact, start + length(marker))
+        finish = index(timestamp, "\"")
+        if (!finish) {
+          parser_error = 1
+          exit
+        }
+        timestamp = substr(timestamp, 1, finish - 1)
+        if (!valid_timestamp(timestamp)) {
+          parser_error = 1
+          exit
+        }
+        if (timestamp >= since && timestamp <= until) {
+          relevant++
+          if (index(compact, "\"verdict\":\"FORWARDED\"")) forwarded++
+          if (index(compact, "\"verdict\":\"DROPPED\"") &&
+              index(compact, "\"drop_reason_desc\":\"POLICY_DENIED\""))
+            policy_denied++
+        }
+      }
+    }
+    END {
+      if (parser_error) exit 2
+      if (records == 0 || relevant == 0) exit 1
+      if (state == "baseline" || state == "restored")
+        exit !(forwarded > 0)
+      if (state == "default-deny")
+        exit !(policy_denied > 0)
+      if (state == "selective-allow")
+        exit !(forwarded > 0 && policy_denied > 0)
+      exit 2
+    }
+  ' "$HUBBLE_FILE"
+  VERIFY_RC=$?
+  case "$VERIFY_RC" in
+    0|1) return "$VERIFY_RC" ;;
+    *)
+      printf 'ERROR: output Hubble JSONPB malformato per lo stato %s.\n' \
+        "$POLICY_STATE" >&2
+      return 2
+      ;;
+  esac
+}
+
+wait_for_cilium_hubble_policy_capture() {
+  if [[ "$#" -ne 4 ]]
+  then
+    printf 'Uso: wait_for_cilium_hubble_policy_capture STATO SINCE UNTIL FILE\n' >&2
+    return 2
+  fi
+  local POLICY_STATE="$1"
+  local POLICY_SINCE="$2"
+  local POLICY_UNTIL="$3"
+  local HUBBLE_FINAL="$4"
+  local HUBBLE_TEMP
+  local DEADLINE=$((SECONDS + CILIUM_HUBBLE_TIMEOUT))
+  local VERIFY_RC
+
+  case "$POLICY_STATE" in
+    baseline|default-deny|selective-allow|restored) ;;
+    *)
+      printf 'ERROR: stato Hubble E20 non riconosciuto: %s.\n' \
+        "$POLICY_STATE" >&2
+      return 2
+      ;;
+  esac
+  if ! HUBBLE_TEMP="$(mktemp \
+      "$POLICY_DIR/.${POLICY_STATE}-hubble.XXXXXX")"
+  then
+    printf 'ERROR: creazione del file temporaneo Hubble fallita.\n' >&2
+    return 1
+  fi
+
+  while true
+  do
+    if ! kubectl --context "$TESI_CONTEXT" exec -n kube-system \
+        "$CILIUM_AGENT0" -- hubble observe \
+        --server unix:///var/run/cilium/hubble.sock \
+        --since "$POLICY_SINCE" --until "$POLICY_UNTIL" \
+        --namespace net-lab --port 8080 -o jsonpb \
+        >"$HUBBLE_TEMP"
+    then
+      printf 'ERROR: query Hubble fallita per lo stato %s.\n' \
+        "$POLICY_STATE" >&2
+      rm -f -- "$HUBBLE_TEMP"
+      return 1
+    fi
+
+    if _verify_cilium_hubble_policy_capture \
+        "$HUBBLE_TEMP" "$POLICY_STATE" "$POLICY_SINCE" "$POLICY_UNTIL"
+    then
+      if ! mv -f -- "$HUBBLE_TEMP" "$HUBBLE_FINAL"
+      then
+        printf 'ERROR: promozione atomica dell output Hubble fallita.\n' >&2
+        rm -f -- "$HUBBLE_TEMP"
+        return 1
+      fi
+      printf 'PASS: evidence Hubble %s completa nella finestra %s / %s.\n' \
+        "$POLICY_STATE" "$POLICY_SINCE" "$POLICY_UNTIL"
+      return 0
+    else
+      VERIFY_RC=$?
+    fi
+    if [[ "$VERIFY_RC" -eq 2 ]]
+    then
+      rm -f -- "$HUBBLE_TEMP"
+      return 1
+    fi
+    if [[ "$SECONDS" -ge "$DEADLINE" ]]
+    then
+      printf 'ERROR: timeout evidence Hubble incompleta per lo stato %s.\n' \
+        "$POLICY_STATE" >&2
+      rm -f -- "$HUBBLE_TEMP"
+      return 1
+    fi
+    sleep 0.5
+  done
+}
+
 capture_cilium_policy_state() {
   if [[ "$#" -ne 2 ]]
   then
@@ -2850,10 +3034,14 @@ capture_cilium_policy_state() {
   local POLICY_EXPECTATION="$2"
   local POLICY_SINCE
   local POLICY_UNTIL
+  local HUBBLE_FILE="$POLICY_DIR/${POLICY_STATE}-hubble.json"
   local REQUIRED_FILE
-  POLICY_SINCE="$(date -u --iso-8601=seconds)" || return 1
+  POLICY_SINCE="$(date -u '+%Y-%m-%dT%H:%M:%S.%NZ')" || return 1
   run_policy_matrix "$POLICY_EXPECTATION" || return 1
-  POLICY_UNTIL="$(date -u --iso-8601=seconds)" || return 1
+  POLICY_UNTIL="$(date -u '+%Y-%m-%dT%H:%M:%S.%NZ')" || return 1
+  wait_for_cilium_hubble_policy_capture \
+    "$POLICY_STATE" "$POLICY_SINCE" "$POLICY_UNTIL" "$HUBBLE_FILE" || \
+    return 1
 
   kubectl --context "$TESI_CONTEXT" get networkpolicy -n net-lab -o yaml \
     >"$POLICY_DIR/${POLICY_STATE}-networkpolicy.yaml" || return 1
@@ -2863,18 +3051,12 @@ capture_cilium_policy_state() {
   kubectl --context "$TESI_CONTEXT" exec -n kube-system \
     "$CILIUM_AGENT0" -- cilium-dbg bpf policy get --all \
     >"$POLICY_DIR/${POLICY_STATE}-bpf-policy.log" || return 1
-  kubectl --context "$TESI_CONTEXT" exec -n kube-system \
-    "$CILIUM_AGENT0" -- hubble observe \
-    --server unix:///var/run/cilium/hubble.sock \
-    --since "$POLICY_SINCE" --until "$POLICY_UNTIL" \
-    --namespace net-lab --port 8080 -o jsonpb \
-    >"$POLICY_DIR/${POLICY_STATE}-hubble.json" || return 1
 
   for REQUIRED_FILE in \
     "$POLICY_DIR/${POLICY_STATE}-networkpolicy.yaml" \
     "$POLICY_DIR/${POLICY_STATE}-endpoints.yaml" \
     "$POLICY_DIR/${POLICY_STATE}-bpf-policy.log" \
-    "$POLICY_DIR/${POLICY_STATE}-hubble.json"
+    "$HUBBLE_FILE"
   do
     if [[ ! -s "$REQUIRED_FILE" ]]
     then
