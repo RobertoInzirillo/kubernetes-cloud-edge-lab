@@ -1617,8 +1617,38 @@ la diagnosi.
 ### 10.3 Verifica di Calico, CNI e IPAM
 
 ```bash
+wait_for_tigera_statuses() {
+  local STATUS
+
+  for STATUS in apiserver calico ippools tiers
+  do
+    if ! kubectl --context "$TESI_CONTEXT" wait \
+        --for=create "tigerastatus/$STATUS" --timeout=300s
+    then
+      printf 'ERROR: TigeraStatus %s non creato entro il timeout.\n' \
+        "$STATUS" >&2
+      return 1
+    fi
+    if ! kubectl --context "$TESI_CONTEXT" wait \
+        --for=condition=Available=True "tigerastatus/$STATUS" --timeout=300s
+    then
+      printf 'ERROR: TigeraStatus %s non è diventato Available=True.\n' \
+        "$STATUS" >&2
+      return 1
+    fi
+    if ! kubectl --context "$TESI_CONTEXT" wait \
+        --for=condition=Degraded=False "tigerastatus/$STATUS" --timeout=300s
+    then
+      printf 'ERROR: TigeraStatus %s è rimasto Degraded.\n' \
+        "$STATUS" >&2
+      return 1
+    fi
+  done
+}
+
 kubectl --context "$TESI_CONTEXT" wait \
-  --for=condition=Ready node --all --timeout=300s
+  --for=condition=Ready node --all --timeout=300s &&
+wait_for_tigera_statuses && {
 kubectl --context "$TESI_CONTEXT" get nodes -o wide
 kubectl --context "$TESI_CONTEXT" get pods -A -o wide
 kubectl --context "$TESI_CONTEXT" get tigerastatus
@@ -1634,6 +1664,7 @@ kubectl --context "$TESI_CONTEXT" get \
   blockaffinities.crd.projectcalico.org -o yaml
 kubectl --context "$TESI_CONTEXT" get \
   ipamblocks.crd.projectcalico.org -o yaml
+}
 ```
 
 Tutti i `TigeraStatus` devono essere disponibili e non degraded. Verificare
