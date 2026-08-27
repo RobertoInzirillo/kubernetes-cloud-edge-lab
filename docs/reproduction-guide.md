@@ -838,7 +838,6 @@ map_pod_veth() {
   local SANDBOX_IDS
   local SANDBOX_COUNT
   local SANDBOX_ID
-  local SANDBOX_INSPECT
   local SANDBOX_PID
   local POD_IP
   local PEER_IFINDEX
@@ -864,11 +863,8 @@ map_pod_veth() {
     return 1
   fi
 
-  SANDBOX_INSPECT="$(docker exec "$NODE_NAME" crictl inspectp \
-    "$SANDBOX_ID")" || return 1
-  SANDBOX_PID="$(sed -n '
-    s/^[[:space:]]*"pid"[[:space:]]*:[[:space:]]*\([0-9][0-9]*\)[[:space:]]*,\{0,1\}[[:space:]]*$/\1/p
-  ' <<<"$SANDBOX_INSPECT")" || return 1
+  SANDBOX_PID="$(docker exec "$NODE_NAME" crictl inspectp \
+    -o go-template --template '{{.info.pid}}' "$SANDBOX_ID")" || return 1
   if [[ ! "$SANDBOX_PID" =~ ^[1-9][0-9]*$ ]]; then
     printf 'ERROR: PID sandbox non valido per %s: %q.\n' \
       "$POD_NAME" "$SANDBOX_PID" >&2
