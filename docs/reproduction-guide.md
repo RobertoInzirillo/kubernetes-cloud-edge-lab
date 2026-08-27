@@ -1384,41 +1384,93 @@ operator.
 
 ```bash
 export CALICO_RENDER_DIR="$(mktemp -d)"
-if helm template calico-crds "$CALICO_CRD_CHART" \
-    --output-dir "$CALICO_RENDER_DIR" && \
-    helm template calico "$CALICO_OPERATOR_CHART" \
+export CALICO_OPERATOR_RENDERED="$CALICO_RENDER_DIR/tigera-operator-rendered.yaml"
+
+render_calico_static() {
+  local AWK_RC
+  local FILTER_RC
+  local PINNED_IMAGE_COUNT
+  local PINNED_OPERATOR_IMAGE='quay.io/tigera/operator@sha256:9ca16aacd5676df68535e08e77529f6c1988ffecbff451e0ff5777e1b126dd91'
+  local TAGGED_OPERATOR_IMAGE='quay.io/tigera/operator:v1.42.3'
+
+  if ! helm template calico-crds "$CALICO_CRD_CHART" \
+      --output-dir "$CALICO_RENDER_DIR"
+  then
+    printf 'ERROR: rendering statico delle CRD Calico fallito.\n' >&2
+    return 1
+  fi
+
+  if ! helm template calico "$CALICO_OPERATOR_CHART" \
       --namespace tigera-operator \
       --values manifests/cni/calico/tigera-operator-values.yaml \
       --no-hooks \
       --post-renderer scripts/cni/calico/pin-tigera-operator-image.sh \
-      --output-dir "$CALICO_RENDER_DIR"
-then
-  RENDER_FILTER_FAILED=0
-  if grep -R -n -E 'latest|goldmane|whisker|quay.io/tigera/operator' \
-      "$CALICO_RENDER_DIR"
+      >"$CALICO_OPERATOR_RENDERED"
   then
-    RENDER_FILTER_RC=0
-  else
-    RENDER_FILTER_RC=$?
+    printf 'ERROR: rendering statico Calico fallito.\n' >&2
+    return 1
   fi
-  case "$RENDER_FILTER_RC" in
-    0) ;;
-    1) printf 'INFO: nessun marker del filtro trovato nel rendering Calico.\n' ;;
-    *) printf 'ERROR: filtro rendering Calico fallito (grep rc=%s).\n' \
-         "$RENDER_FILTER_RC" >&2; RENDER_FILTER_FAILED=1 ;;
-  esac
-  unset RENDER_FILTER_RC
-  if [[ "$RENDER_FILTER_FAILED" -ne 0 ]]
+  if [[ ! -s "$CALICO_OPERATOR_RENDERED" ]]
   then
-    unset RENDER_FILTER_FAILED
-    false
-  else
-    unset RENDER_FILTER_FAILED
+    printf 'FAIL: rendering Tigera Operator vuoto: %s.\n' \
+      "$CALICO_OPERATOR_RENDERED" >&2
+    return 1
   fi
-else
-  printf 'ERROR: rendering statico Calico fallito.\n' >&2
-  false
-fi
+
+  if PINNED_IMAGE_COUNT="$(awk -v expected="$PINNED_OPERATOR_IMAGE" '
+      $1 == "image:" && $2 == expected { count++ }
+      END { print count + 0 }
+    ' "$CALICO_OPERATOR_RENDERED")"
+  then
+    AWK_RC=0
+  else
+    AWK_RC=$?
+  fi
+  if [[ "$AWK_RC" -ne 0 ]]
+  then
+    printf 'ERROR: parser immagine operator fallito (awk rc=%s).\n' \
+      "$AWK_RC" >&2
+    return 1
+  fi
+  if [[ "$PINNED_IMAGE_COUNT" -ne 1 ]]
+  then
+    printf 'FAIL: attesa una immagine Tigera Operator pinned, trovate %s.\n' \
+      "$PINNED_IMAGE_COUNT" >&2
+    return 1
+  fi
+
+  if grep -F -n "$TAGGED_OPERATOR_IMAGE" "$CALICO_OPERATOR_RENDERED"
+  then
+    printf 'FAIL: immagine Tigera Operator tagged ancora presente.\n' >&2
+    return 1
+  else
+    FILTER_RC=$?
+  fi
+  if [[ "$FILTER_RC" -gt 1 ]]
+  then
+    printf 'ERROR: filtro immagine operator tagged fallito (grep rc=%s).\n' \
+      "$FILTER_RC" >&2
+    return 1
+  fi
+
+  if grep -n -E 'latest|goldmane|whisker' "$CALICO_OPERATOR_RENDERED"
+  then
+    printf 'FAIL: marker latest/Goldmane/Whisker inatteso nel rendering Calico.\n' >&2
+    return 1
+  else
+    FILTER_RC=$?
+  fi
+  if [[ "$FILTER_RC" -gt 1 ]]
+  then
+    printf 'ERROR: filtro rendering Calico fallito (grep rc=%s).\n' \
+      "$FILTER_RC" >&2
+    return 1
+  fi
+
+  printf 'PASS: rendering Tigera Operator pinned e componenti esclusi assenti.\n'
+}
+
+render_calico_static
 ```
 
 Non devono esserci tag `latest` né workload Goldmane o Whisker. Il
