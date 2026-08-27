@@ -840,6 +840,7 @@ map_pod_veth() {
   local SANDBOX_ID
   local SANDBOX_PID
   local POD_IP
+  local POD_ETH0_LINK
   local PEER_IFINDEX
   local POD_LINK
   local POD_LINK_IP_RC
@@ -877,8 +878,24 @@ map_pod_veth() {
     printf 'ERROR: Pod IP non valido per %s: %q.\n' "$POD_NAME" "$POD_IP" >&2
     return 1
   fi
-  PEER_IFINDEX="$(docker exec "$NODE_NAME" nsenter \
-    -t "$SANDBOX_PID" -n cat /sys/class/net/eth0/iflink)" || return 1
+  POD_ETH0_LINK="$(docker exec "$NODE_NAME" nsenter \
+    -t "$SANDBOX_PID" -n ip -o link show dev eth0)" || {
+    printf 'ERROR: impossibile leggere eth0 nel namespace del Pod %s.\n' \
+      "$POD_NAME" >&2
+    return 1
+  }
+  if [[ -z "$POD_ETH0_LINK" || "$POD_ETH0_LINK" == *$'\n'* ]]; then
+    printf 'ERROR: output eth0 vuoto o ambiguo per il Pod %s: %q.\n' \
+      "$POD_NAME" "$POD_ETH0_LINK" >&2
+    return 1
+  fi
+  if [[ "$POD_ETH0_LINK" =~ ^[[:space:]]*[1-9][0-9]*:[[:space:]]+eth0@if([1-9][0-9]*): ]]; then
+    PEER_IFINDEX="${BASH_REMATCH[1]}"
+  else
+    printf 'ERROR: peer ifindex non estraibile da eth0 del Pod %s: %q.\n' \
+      "$POD_NAME" "$POD_ETH0_LINK" >&2
+    return 1
+  fi
   if [[ ! "$PEER_IFINDEX" =~ ^[1-9][0-9]*$ ]]; then
     printf 'ERROR: ifindex peer non valido per %s: %q.\n' \
       "$POD_NAME" "$PEER_IFINDEX" >&2
