@@ -607,6 +607,97 @@ expect_deny() {
   _tesi_expect DENY "$1" "$2"
 }
 
+wait_for_policy_convergence() {
+  if [[ "$#" -ne 1 ]]; then
+    printf 'Uso: wait_for_policy_convergence default-deny|selective-allow|restored\n' >&2
+    return 2
+  fi
+  if ! _tesi_require_context; then
+    return 2
+  fi
+
+  local expected_state="$1"
+  local deadline=$((SECONDS + 90))
+  local probe
+  local expected
+  local source_pod
+  local destination_pod
+  local flow_rc
+  local readiness
+  local pending
+  local -a probes=()
+
+  case "$expected_state" in
+    default-deny)
+      probes=('DENY client server-b')
+      ;;
+    selective-allow)
+      probes=('ALLOW client server-b' 'DENY server-a server-b')
+      ;;
+    restored)
+      probes=('ALLOW server-a server-b')
+      ;;
+    *)
+      printf 'ERROR: stato convergenza policy non valido: %s.\n' \
+        "$expected_state" >&2
+      return 2
+      ;;
+  esac
+
+  while true; do
+    pending=0
+    for probe in "${probes[@]}"; do
+      read -r expected source_pod destination_pod <<< "$probe"
+      if [[ "$expected" == DENY ]]; then
+        if ! readiness="$(kubectl --context "$TESI_CONTEXT" get pod \
+            -n net-lab "$destination_pod" \
+            -o jsonpath='{.status.phase}{"|"}{range .status.conditions[?(@.type=="Ready")]}{.status}{end}')"; then
+          printf 'ERROR kind=kubectl-api-readiness pod=%s\n' \
+            "$destination_pod" >&2
+          return 2
+        fi
+        if [[ ! "$readiness" =~ ^[^|]+\|(True|False|Unknown)$ ]]; then
+          printf 'ERROR kind=readiness-parser pod=%s value=%q\n' \
+            "$destination_pod" "$readiness" >&2
+          return 2
+        fi
+        if [[ "$readiness" != 'Running|True' ]]; then
+          printf 'ERROR kind=destination-not-ready pod=%s value=%s\n' \
+            "$destination_pod" "$readiness" >&2
+          return 2
+        fi
+      fi
+
+      if http_flow "$source_pod" "$destination_pod"; then
+        flow_rc=0
+      else
+        flow_rc=$?
+      fi
+      case "$expected:$flow_rc" in
+        ALLOW:0|DENY:10) ;;
+        ALLOW:10|DENY:0) pending=1 ;;
+        *)
+          printf 'ERROR kind=policy-convergence-probe expected=%s flow=%s-%s rc=%s\n' \
+            "$expected" "$source_pod" "$destination_pod" "$flow_rc" >&2
+          return 2
+          ;;
+      esac
+    done
+
+    if [[ "$pending" -eq 0 ]]; then
+      printf 'PASS: convergenza policy raggiunta per lo stato %s.\n' \
+        "$expected_state"
+      return 0
+    fi
+    if [[ "$SECONDS" -ge "$deadline" ]]; then
+      printf 'FAIL: timeout di 90s attendendo la convergenza policy %s.\n' \
+        "$expected_state" >&2
+      return 1
+    fi
+    sleep 1
+  done
+}
+
 run_policy_matrix() {
   if [[ "$#" -ne 1 ]]; then
     printf 'Uso: run_policy_matrix allow-all|deny-all|selective-allow\n' >&2

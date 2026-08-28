@@ -659,6 +659,10 @@ restituisca il nome del Pod destinazione. Le matrici usano `expect_allow` ed
 `expect_deny`: un deny atteso viene registrato come `PASS` soltanto quando il
 probe remoto è completo, `wget` restituisce il fallimento applicativo previsto
 e un probe locale nel Pod destinazione conferma che il server HTTP è sano.
+`wait_for_policy_convergence` usa gli stessi probe in un polling separato,
+limitato a 90 secondi con intervallo di un secondo; non esegue la matrice e
+interrompe subito il polling in caso di errore operativo o di parsing. Prima di
+accettare un deny controlla inoltre che il Pod destinazione sia `Ready`.
 Scegliere una sola modalità per lo stato di policy corrente:
 
 ```text
@@ -1209,12 +1213,16 @@ kubectl --context "$TESI_CONTEXT" apply \
   -f manifests/cni/common/default-deny-ingress.yaml &&
 kubectl --context "$TESI_CONTEXT" get networkpolicy \
   default-deny-ingress -n net-lab -o yaml &&
+wait_for_policy_convergence default-deny &&
 run_policy_matrix deny-all &&
 inspect_k3s_policy_plane
 ```
 
 Le sei connessioni devono fallire, mentre i Pod restano `Ready`. Catene,
-IPSet e contatori devono mostrare la traduzione del deny.
+IPSet e contatori devono mostrare la traduzione del deny. I contatori includono
+anche i probe di precondizionamento del gate; la matrice eseguita una sola volta
+resta la verifica autorevole degli esiti applicativi, senza attribuzione
+quantitativa esclusiva dei pacchetti ai suoi sei tentativi.
 
 Applicare quindi l'allow mirata e ripetere la matrice:
 
@@ -1222,6 +1230,7 @@ Applicare quindi l'allow mirata e ripetere la matrice:
 kubectl --context "$TESI_CONTEXT" apply \
   -f manifests/cni/common/allow-client-to-http-servers.yaml &&
 kubectl --context "$TESI_CONTEXT" get networkpolicy -n net-lab -o yaml &&
+wait_for_policy_convergence selective-allow &&
 run_policy_matrix selective-allow &&
 inspect_k3s_policy_plane
 ```
@@ -1237,6 +1246,7 @@ kubectl --context "$TESI_CONTEXT" delete \
 kubectl --context "$TESI_CONTEXT" delete \
   -f manifests/cni/common/default-deny-ingress.yaml \
   --ignore-not-found &&
+wait_for_policy_convergence restored &&
 run_policy_matrix allow-all &&
 inspect_k3s_policy_plane
 ```
@@ -2028,19 +2038,24 @@ inspect_calico_policy_plane &&
 # Default deny: sei connessioni negate
 kubectl --context "$TESI_CONTEXT" apply \
   -f manifests/cni/common/default-deny-ingress.yaml &&
+wait_for_policy_convergence default-deny &&
 run_policy_matrix deny-all &&
 inspect_calico_policy_plane &&
 
 # Allow selettiva: quattro consentite, due negate
 kubectl --context "$TESI_CONTEXT" apply \
   -f manifests/cni/common/allow-client-to-http-servers.yaml &&
+wait_for_policy_convergence selective-allow &&
 run_policy_matrix selective-allow &&
 inspect_calico_policy_plane
 ```
 
-Selector, IPSet, catene e contatori devono essere coerenti con 6/6 consentiti,
-6/6 negati, quindi 4/6 consentiti. L'enforcement osservato è attribuito al
-calculation graph e a Felix; `calico-kube-controllers` non va descritto come
+Selector, IPSet, catene e contatori devono essere coerenti con la progressione
+qualitativa da baseline a deny e allow selettiva. I contatori includono anche i
+probe di convergenza che precedono ciascuna matrice; gli esiti applicativi
+autorevoli restano 6/6 consentiti, 6/6 negati e quindi 4/6 consentiti nella
+singola esecuzione della matrice per stato. L'enforcement osservato è attribuito
+al calculation graph e a Felix; `calico-kube-controllers` non va descritto come
 policy controller in questa configurazione Kubernetes Datastore.
 
 Rimuovere infine entrambe le policy e richiedere il ripristino della baseline:
@@ -2052,6 +2067,7 @@ kubectl --context "$TESI_CONTEXT" delete \
 kubectl --context "$TESI_CONTEXT" delete \
   -f manifests/cni/common/default-deny-ingress.yaml \
   --ignore-not-found &&
+wait_for_policy_convergence restored &&
 run_policy_matrix allow-all &&
 inspect_calico_policy_plane
 ```
@@ -2648,7 +2664,13 @@ la nuova revisione sugli agent Cilium che ospitano `client`, `server-a` o
 richiesta e realizzata coincidenti. La cattura Hubble usa una finestra UTC
 RFC3339Nano congelata attorno alla singola matrice e attende per non più di 20
 secondi che le ring buffer locali degli agent interessati rendano disponibile
-l'evidence aggregata semanticamente attesa:
+l'evidence aggregata semanticamente attesa. Le policy map eBPF sono invece
+node-local: vengono salvate come output raw distinto per ciascuno degli stessi
+agent e accompagnate da un indice aggregato con intestazioni di provenienza.
+Poiché ogni agent selezionato ospita almeno uno degli endpoint workload già
+verificati, un dump BPF policy vuoto è trattato come errore di acquisizione.
+Hubble continua a interrogare direttamente le ring buffer locali; Relay resta
+disabilitato:
 
 ```bash
 export POLICY_DIR="$(mktemp -d)"
@@ -3273,6 +3295,94 @@ wait_for_cilium_hubble_policy_capture() {
   done
 }
 
+capture_cilium_bpf_policy_maps() {
+  if [[ "$#" -ne 1 ]]
+  then
+    printf 'Uso: capture_cilium_bpf_policy_maps STATO\n' >&2
+    return 2
+  fi
+  local POLICY_STATE="$1"
+  local AGGREGATE_FINAL="$POLICY_DIR/${POLICY_STATE}-bpf-policy.log"
+  local AGGREGATE_TEMP
+  local AGENT
+  local AGENT_FINAL
+  local AGENT_COUNT=0
+  local -A SEEN_AGENTS=()
+
+  case "$POLICY_STATE" in
+    baseline|default-deny|selective-allow|restored) ;;
+    *)
+      printf 'ERROR: stato BPF policy E20 non riconosciuto: %s.\n' \
+        "$POLICY_STATE" >&2
+      return 2
+      ;;
+  esac
+  if [[ "${#CILIUM_POLICY_AGENTS[@]}" -eq 0 ]]
+  then
+    printf 'ERROR: nessun agent Cilium per la raccolta BPF policy.\n' >&2
+    return 1
+  fi
+  if ! AGGREGATE_TEMP="$(mktemp \
+      "$POLICY_DIR/.${POLICY_STATE}-bpf-policy-aggregate.XXXXXX")"
+  then
+    printf 'ERROR: creazione aggregato BPF policy fallita.\n' >&2
+    return 1
+  fi
+
+  for AGENT in "${CILIUM_POLICY_AGENTS[@]}"
+  do
+    if [[ ! "$AGENT" =~ ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$ ]]
+    then
+      printf 'ERROR: nome agent Cilium non valido: %q.\n' "$AGENT" >&2
+      rm -f -- "$AGGREGATE_TEMP"
+      return 1
+    fi
+    if [[ -n "${SEEN_AGENTS[$AGENT]:-}" ]]
+    then
+      printf 'INFO: agent Cilium duplicato ignorato nella raccolta BPF: %s.\n' \
+        "$AGENT" >&2
+      continue
+    fi
+    SEEN_AGENTS["$AGENT"]=1
+    AGENT_FINAL="$POLICY_DIR/${POLICY_STATE}-bpf-policy-${AGENT}.log"
+
+    if ! kubectl --context "$TESI_CONTEXT" exec -n kube-system \
+        "$AGENT" -- cilium-dbg bpf policy get --all >"$AGENT_FINAL"
+    then
+      printf 'ERROR: raccolta BPF policy fallita sull agent %s.\n' \
+        "$AGENT" >&2
+      rm -f -- "$AGENT_FINAL" "$AGGREGATE_TEMP"
+      return 1
+    fi
+    if [[ ! -s "$AGENT_FINAL" ]]
+    then
+      printf 'ERROR: output BPF policy vuoto sull agent %s.\n' \
+        "$AGENT" >&2
+      rm -f -- "$AGENT_FINAL" "$AGGREGATE_TEMP"
+      return 1
+    fi
+    if ! printf '===== agent=%s raw-file=%s =====\n' \
+        "$AGENT" "${AGENT_FINAL##*/}" >>"$AGGREGATE_TEMP" || \
+       ! cat -- "$AGENT_FINAL" >>"$AGGREGATE_TEMP" || \
+       ! printf '\n' >>"$AGGREGATE_TEMP"
+    then
+      printf 'ERROR: aggregazione BPF policy fallita per %s.\n' \
+        "$AGENT" >&2
+      rm -f -- "$AGGREGATE_TEMP"
+      return 1
+    fi
+    AGENT_COUNT=$((AGENT_COUNT + 1))
+  done
+  if ! mv -f -- "$AGGREGATE_TEMP" "$AGGREGATE_FINAL"
+  then
+    printf 'ERROR: promozione aggregato BPF policy fallita.\n' >&2
+    rm -f -- "$AGGREGATE_TEMP"
+    return 1
+  fi
+  printf 'PASS: BPF policy %s acquisita da %s agent distinti.\n' \
+    "$POLICY_STATE" "$AGENT_COUNT"
+}
+
 capture_cilium_policy_state() {
   if [[ "$#" -ne 2 ]]
   then
@@ -3297,9 +3407,7 @@ capture_cilium_policy_state() {
   kubectl --context "$TESI_CONTEXT" get ciliumendpoint \
     -n net-lab client server-a server-b -o yaml \
     >"$POLICY_DIR/${POLICY_STATE}-endpoints.yaml" || return 1
-  kubectl --context "$TESI_CONTEXT" exec -n kube-system \
-    "$CILIUM_AGENT0" -- cilium-dbg bpf policy get --all \
-    >"$POLICY_DIR/${POLICY_STATE}-bpf-policy.log" || return 1
+  capture_cilium_bpf_policy_maps "$POLICY_STATE" || return 1
 
   for REQUIRED_FILE in \
     "$POLICY_DIR/${POLICY_STATE}-networkpolicy.yaml" \
@@ -3338,8 +3446,10 @@ capture_cilium_policy_state selective-allow selective-allow &&
 ls -la "$POLICY_DIR"
 ```
 
-Controllare revisioni endpoint crescenti, policy map eBPF e verdetti Hubble
-`FORWARDED` o `POLICY_DENIED`. La matrice attesa è 6/6 consentiti, 6/6
+Controllare revisioni endpoint crescenti, policy map eBPF per-agent e verdetti
+Hubble `FORWARDED` o `POLICY_DENIED`. Il file logico
+`<stato>-bpf-policy.log` è un indice aggregato con intestazioni agent/file, non
+l'output raw di un singolo comando. La matrice attesa è 6/6 consentiti, 6/6
 negati, poi 4/6 consentiti. Questi artefatti attribuiscono l'enforcement a
 Cilium, non al controller policy K3s disabilitato.
 
