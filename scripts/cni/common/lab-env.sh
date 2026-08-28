@@ -1283,6 +1283,15 @@ verify_cilium_service_ct_lb() {
       sub(/\)$/, "", copy)
       return (copy ~ /^[0-9][0-9]*$/ ? copy : "")
     }
+    function valid_ipv4(value,    octets, count, i) {
+      count = split(value, octets, ".")
+      if (count != 4) return 0
+      for (i = 1; i <= count; i++)
+        if (octets[i] !~ /^[0-9][0-9]*$/ ||
+            octets[i] + 0 < 0 || octets[i] + 0 > 255)
+          return 0
+      return 1
+    }
     FILENAME == correlation_file {
       if (NF != 5 || $1 !~ /^[1-9][0-9]*$/ ||
           $4 !~ /^[1-9][0-9]*$/ || $5 !~ /^[1-9][0-9]*$/) {
@@ -1319,15 +1328,57 @@ verify_cilium_service_ct_lb() {
       }
       next
     }
-    FILENAME == backend_file && $1 ~ /^[1-9][0-9]*$/ {
-      endpoint_count = split($2, endpoint, ":")
-      sub(/\/TCP$/, "", endpoint[2])
-      if (endpoint_count == 2 && endpoint[1] ~ /^[0-9.]+$/ &&
-          endpoint[2] ~ /^[1-9][0-9]*$/) {
-        backend_map[$1]++
-        backend_ip[$1] = endpoint[1]
-        backend_port[$1] = endpoint[2]
+    FILENAME == backend_file {
+      if ($0 ~ /^[[:space:]]*$/) next
+      if ($1 == "ID" && $2 == "BACKEND") next
+      if (NF != 2 || $1 !~ /^[1-9][0-9]*$/) {
+        parser_error("riga backend map malformata")
+        next
       }
+
+      id = $1
+      raw_backend = $2
+      protocol = map_ip = map_port = ""
+      has_port = 0
+      uri_count = split(raw_backend, uri, "://")
+      if (uri_count == 2) {
+        protocol = uri[1]
+        map_ip = uri[2]
+      } else {
+        protocol_count = split(raw_backend, protocol_parts, "/")
+        if (protocol_count != 2) {
+          parser_error("protocollo backend map assente o ambiguo")
+          next
+        }
+        protocol = protocol_parts[2]
+        endpoint_count = split(protocol_parts[1], endpoint, ":")
+        if (endpoint_count != 2) {
+          parser_error("endpoint backend map malformato")
+          next
+        }
+        map_ip = endpoint[1]
+        map_port = endpoint[2]
+        has_port = 1
+      }
+      if (protocol !~ /^[A-Z][A-Z0-9]*$/ || !valid_ipv4(map_ip) ||
+          (has_port && map_port !~ /^[1-9][0-9]*$/)) {
+        parser_error("protocollo, IP o porta backend map non validi")
+        next
+      }
+      if (id in backend_ip) {
+        if (backend_protocol[id] != protocol || backend_ip[id] != map_ip ||
+            backend_has_port[id] != has_port ||
+            (has_port && backend_port[id] != map_port))
+          parser_error("backend ID associato a mapping differenti")
+        else
+          parser_error("backend ID duplicato")
+        next
+      }
+      backend_map[id] = 1
+      backend_protocol[id] = protocol
+      backend_ip[id] = map_ip
+      backend_has_port[id] = has_port
+      if (has_port) backend_port[id] = map_port
       next
     }
     FILENAME != correlation_file && FILENAME != frontend_file &&
@@ -1357,9 +1408,20 @@ verify_cilium_service_ct_lb() {
           causal_fail("backend ID CT non correlabile al frontend Service")
           continue
         }
-        if (backend_map[id] != 1 || backend_ip[id] != ct_ip[i] ||
-            backend_port[id] != port) {
-          causal_fail("backend ID/IP CT non correlabile alla backend map")
+        if (backend_map[id] != 1) {
+          causal_fail("backend ID CT assente dalla backend map")
+          continue
+        }
+        if (backend_protocol[id] != "TCP") {
+          causal_fail("protocollo backend map diverso da TCP")
+          continue
+        }
+        if (backend_ip[id] != ct_ip[i]) {
+          causal_fail("IP backend map diverso dalla TCP OUT correlata")
+          continue
+        }
+        if (backend_has_port[id] && backend_port[id] != port) {
+          causal_fail("porta esplicita backend map diversa dal flusso")
           continue
         }
         if (ct_revnat[i] != main_revnat ||
