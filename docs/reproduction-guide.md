@@ -2476,7 +2476,8 @@ la nuova revisione sugli agent Cilium che ospitano `client`, `server-a` o
 `server-b`, la policy importata attesa e gli endpoint `ready` con revisione
 richiesta e realizzata coincidenti. La cattura Hubble usa una finestra UTC
 RFC3339Nano congelata attorno alla singola matrice e attende per non più di 20
-secondi che la ring buffer renda disponibile l'evidence semanticamente attesa:
+secondi che le ring buffer locali degli agent interessati rendano disponibile
+l'evidence aggregata semanticamente attesa:
 
 ```bash
 export POLICY_DIR="$(mktemp -d)"
@@ -2949,6 +2950,21 @@ _verify_cilium_hubble_policy_capture() {
   esac
 }
 
+_remove_cilium_hubble_temp_files() {
+  local TEMP_FILE
+
+  for TEMP_FILE in "$@"
+  do
+    if [[ -z "$TEMP_FILE" || "$TEMP_FILE" != "$POLICY_DIR"/.* ]]
+    then
+      printf 'ERROR: percorso temporaneo Hubble non valido: %q.\n' \
+        "$TEMP_FILE" >&2
+      return 1
+    fi
+    rm -f -- "$TEMP_FILE" || return 1
+  done
+}
+
 wait_for_cilium_hubble_policy_capture() {
   if [[ "$#" -ne 4 ]]
   then
@@ -2959,7 +2975,11 @@ wait_for_cilium_hubble_policy_capture() {
   local POLICY_SINCE="$2"
   local POLICY_UNTIL="$3"
   local HUBBLE_FINAL="$4"
-  local HUBBLE_TEMP
+  local HUBBLE_AGGREGATE
+  local HUBBLE_AGENT_FILE
+  local AGENT
+  local INDEX
+  local -a HUBBLE_AGENT_FILES=()
   local DEADLINE=$((SECONDS + CILIUM_HUBBLE_TIMEOUT))
   local VERIFY_RC
 
@@ -2971,53 +2991,111 @@ wait_for_cilium_hubble_policy_capture() {
       return 2
       ;;
   esac
-  if ! HUBBLE_TEMP="$(mktemp \
-      "$POLICY_DIR/.${POLICY_STATE}-hubble.XXXXXX")"
+  if [[ "${#CILIUM_POLICY_AGENTS[@]}" -eq 0 ]]
   then
-    printf 'ERROR: creazione del file temporaneo Hubble fallita.\n' >&2
+    printf 'ERROR: nessun agent Cilium associato ai workload E20.\n' >&2
     return 1
   fi
+  if ! HUBBLE_AGGREGATE="$(mktemp \
+      "$POLICY_DIR/.${POLICY_STATE}-hubble-aggregate.XXXXXX")"
+  then
+    printf 'ERROR: creazione aggregato Hubble temporaneo fallita.\n' >&2
+    return 1
+  fi
+  for INDEX in "${!CILIUM_POLICY_AGENTS[@]}"
+  do
+    AGENT="${CILIUM_POLICY_AGENTS[$INDEX]}"
+    if [[ ! "$AGENT" =~ ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$ ]]
+    then
+      printf 'ERROR: nome agent Cilium non valido: %q.\n' "$AGENT" >&2
+      _remove_cilium_hubble_temp_files \
+        "$HUBBLE_AGGREGATE" "${HUBBLE_AGENT_FILES[@]}" || true
+      return 1
+    fi
+    if ! HUBBLE_AGENT_FILE="$(mktemp \
+        "$POLICY_DIR/.${POLICY_STATE}-hubble-agent-${INDEX}.XXXXXX")"
+    then
+      printf 'ERROR: creazione del file Hubble per-agent fallita.\n' >&2
+      _remove_cilium_hubble_temp_files \
+        "$HUBBLE_AGGREGATE" "${HUBBLE_AGENT_FILES[@]}" || true
+      return 1
+    fi
+    HUBBLE_AGENT_FILES+=("$HUBBLE_AGENT_FILE")
+  done
 
   while true
   do
-    if ! kubectl --context "$TESI_CONTEXT" exec -n kube-system \
-        "$CILIUM_AGENT0" -- hubble observe \
-        --server unix:///var/run/cilium/hubble.sock \
-        --since "$POLICY_SINCE" --until "$POLICY_UNTIL" \
-        --namespace net-lab --port 8080 -o jsonpb \
-        >"$HUBBLE_TEMP"
+    if ! : >"$HUBBLE_AGGREGATE"
     then
-      printf 'ERROR: query Hubble fallita per lo stato %s.\n' \
-        "$POLICY_STATE" >&2
-      rm -f -- "$HUBBLE_TEMP"
+      printf 'ERROR: inizializzazione aggregato Hubble fallita.\n' >&2
+      _remove_cilium_hubble_temp_files \
+        "$HUBBLE_AGGREGATE" "${HUBBLE_AGENT_FILES[@]}" || true
       return 1
     fi
-
-    if _verify_cilium_hubble_policy_capture \
-        "$HUBBLE_TEMP" "$POLICY_STATE" "$POLICY_SINCE" "$POLICY_UNTIL"
-    then
-      if ! mv -f -- "$HUBBLE_TEMP" "$HUBBLE_FINAL"
+    for INDEX in "${!CILIUM_POLICY_AGENTS[@]}"
+    do
+      AGENT="${CILIUM_POLICY_AGENTS[$INDEX]}"
+      HUBBLE_AGENT_FILE="${HUBBLE_AGENT_FILES[$INDEX]}"
+      printf 'INFO: query Hubble locale stato=%s agent=%s.\n' \
+        "$POLICY_STATE" "$AGENT" >&2
+      if ! kubectl --context "$TESI_CONTEXT" exec -n kube-system \
+          "$AGENT" -- hubble observe \
+          --server unix:///var/run/cilium/hubble.sock \
+          --since "$POLICY_SINCE" --until "$POLICY_UNTIL" \
+          --namespace net-lab --port 8080 -o jsonpb \
+          >"$HUBBLE_AGENT_FILE"
       then
-        printf 'ERROR: promozione atomica dell output Hubble fallita.\n' >&2
-        rm -f -- "$HUBBLE_TEMP"
+        printf 'ERROR: query Hubble fallita per agent %s nello stato %s.\n' \
+          "$AGENT" "$POLICY_STATE" >&2
+        _remove_cilium_hubble_temp_files \
+          "$HUBBLE_AGGREGATE" "${HUBBLE_AGENT_FILES[@]}" || true
         return 1
       fi
-      printf 'PASS: evidence Hubble %s completa nella finestra %s / %s.\n' \
-        "$POLICY_STATE" "$POLICY_SINCE" "$POLICY_UNTIL"
+      if ! cat -- "$HUBBLE_AGENT_FILE" >>"$HUBBLE_AGGREGATE"
+      then
+        printf 'ERROR: aggregazione Hubble fallita per agent %s.\n' \
+          "$AGENT" >&2
+        _remove_cilium_hubble_temp_files \
+          "$HUBBLE_AGGREGATE" "${HUBBLE_AGENT_FILES[@]}" || true
+        return 1
+      fi
+    done
+
+    if _verify_cilium_hubble_policy_capture \
+        "$HUBBLE_AGGREGATE" "$POLICY_STATE" \
+        "$POLICY_SINCE" "$POLICY_UNTIL"
+    then
+      if ! mv -f -- "$HUBBLE_AGGREGATE" "$HUBBLE_FINAL"
+      then
+        printf 'ERROR: promozione atomica dell output Hubble fallita.\n' >&2
+        _remove_cilium_hubble_temp_files \
+          "$HUBBLE_AGGREGATE" "${HUBBLE_AGENT_FILES[@]}" || true
+        return 1
+      fi
+      if ! _remove_cilium_hubble_temp_files "${HUBBLE_AGENT_FILES[@]}"
+      then
+        printf 'ERROR: pulizia dei file Hubble per-agent fallita.\n' >&2
+        return 1
+      fi
+      printf 'PASS: evidence Hubble %s aggregata da %s agent nella finestra %s / %s.\n' \
+        "$POLICY_STATE" "${#CILIUM_POLICY_AGENTS[@]}" \
+        "$POLICY_SINCE" "$POLICY_UNTIL"
       return 0
     else
       VERIFY_RC=$?
     fi
     if [[ "$VERIFY_RC" -eq 2 ]]
     then
-      rm -f -- "$HUBBLE_TEMP"
+      _remove_cilium_hubble_temp_files \
+        "$HUBBLE_AGGREGATE" "${HUBBLE_AGENT_FILES[@]}" || true
       return 1
     fi
     if [[ "$SECONDS" -ge "$DEADLINE" ]]
     then
       printf 'ERROR: timeout evidence Hubble incompleta per lo stato %s.\n' \
         "$POLICY_STATE" >&2
-      rm -f -- "$HUBBLE_TEMP"
+      _remove_cilium_hubble_temp_files \
+        "$HUBBLE_AGGREGATE" "${HUBBLE_AGENT_FILES[@]}" || true
       return 1
     fi
     sleep 0.5
@@ -3071,6 +3149,7 @@ capture_cilium_policy_state() {
 Eseguire i tre stati:
 
 ```bash
+snapshot_cilium_policy_revisions &&
 capture_cilium_policy_state baseline allow-all &&
 
 snapshot_cilium_policy_revisions &&
