@@ -1647,7 +1647,7 @@ wait_for_tigera_statuses() {
 }
 
 kubectl --context "$TESI_CONTEXT" wait \
-  --for=condition=Ready node --all --timeout=300s &&
+  --for=condition=Ready node --all --timeout=600s &&
 wait_for_tigera_statuses && {
 kubectl --context "$TESI_CONTEXT" get nodes -o wide
 kubectl --context "$TESI_CONTEXT" get pods -A -o wide
