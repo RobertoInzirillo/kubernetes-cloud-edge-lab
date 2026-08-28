@@ -659,10 +659,10 @@ restituisca il nome del Pod destinazione. Le matrici usano `expect_allow` ed
 `expect_deny`: un deny atteso viene registrato come `PASS` soltanto quando il
 probe remoto è completo, `wget` restituisce il fallimento applicativo previsto
 e un probe locale nel Pod destinazione conferma che il server HTTP è sano.
-`wait_for_policy_convergence` usa gli stessi probe in un polling separato,
-limitato a 90 secondi con intervallo di un secondo; non esegue la matrice e
-interrompe subito il polling in caso di errore operativo o di parsing. Prima di
-accettare un deny controlla inoltre che il Pod destinazione sia `Ready`.
+`wait_for_policy_convergence` effettua un polling read-only degli artefatti
+iptables sui nodi ricavati dall'inventario dei Pod. Il gate è limitato a 90
+secondi con intervallo di un secondo, non genera connessioni workload e
+interrompe subito il polling in caso di errore operativo o di parsing.
 Scegliere una sola modalità per lo stato di policy corrente:
 
 ```text
@@ -1206,23 +1206,24 @@ inspect_k3s_policy_plane
 ```
 
 Applicare il default deny, controllare l'oggetto API ed eseguire di nuovo la
-matrice:
+matrice. La modalità `k3s` attende le relazioni semanticamente marcate fra
+`KUBE-NWPLCY-*`, `KUBE-POD-FW-*` e i nomi delle policy, senza dipendere dagli
+hash delle chain:
 
 ```bash
 kubectl --context "$TESI_CONTEXT" apply \
   -f manifests/cni/common/default-deny-ingress.yaml &&
 kubectl --context "$TESI_CONTEXT" get networkpolicy \
   default-deny-ingress -n net-lab -o yaml &&
-wait_for_policy_convergence default-deny &&
+wait_for_policy_convergence k3s default-deny &&
 run_policy_matrix deny-all &&
 inspect_k3s_policy_plane
 ```
 
 Le sei connessioni devono fallire, mentre i Pod restano `Ready`. Catene,
-IPSet e contatori devono mostrare la traduzione del deny. I contatori includono
-anche i probe di precondizionamento del gate; la matrice eseguita una sola volta
-resta la verifica autorevole degli esiti applicativi, senza attribuzione
-quantitativa esclusiva dei pacchetti ai suoi sei tentativi.
+IPSet e contatori devono mostrare la traduzione del deny. Il gate precedente
+legge soltanto il dataplane: la singola matrice resta la verifica applicativa
+autorevole e l'unica sorgente di nuovo traffico workload in questa fase.
 
 Applicare quindi l'allow mirata e ripetere la matrice:
 
@@ -1230,7 +1231,7 @@ Applicare quindi l'allow mirata e ripetere la matrice:
 kubectl --context "$TESI_CONTEXT" apply \
   -f manifests/cni/common/allow-client-to-http-servers.yaml &&
 kubectl --context "$TESI_CONTEXT" get networkpolicy -n net-lab -o yaml &&
-wait_for_policy_convergence selective-allow &&
+wait_for_policy_convergence k3s selective-allow &&
 run_policy_matrix selective-allow &&
 inspect_k3s_policy_plane
 ```
@@ -1246,7 +1247,7 @@ kubectl --context "$TESI_CONTEXT" delete \
 kubectl --context "$TESI_CONTEXT" delete \
   -f manifests/cni/common/default-deny-ingress.yaml \
   --ignore-not-found &&
-wait_for_policy_convergence restored &&
+wait_for_policy_convergence k3s restored &&
 run_policy_matrix allow-all &&
 inspect_k3s_policy_plane
 ```
@@ -1930,7 +1931,10 @@ probabilistica e non indebolisce l'attribuzione basata sui contatori.
 Per le policy vogliamo correlare il risultato applicativo con il lavoro di
 Felix. Nei log cerchiamo calcolo di policy, selector e IPSet; nel kernel
 cerchiamo gli insiemi `cali*`, le catene iptables e i loro contatori. Definire
-il controllo una volta:
+il controllo una volta. Il gate in modalità `calico` attende nei dump iptables
+i commenti `KubernetesNetworkPolicy net-lab/<nome> ingress` prodotti da Felix,
+ricava dinamicamente i nomi delle chain e richiede i relativi jump dalle
+`cali-tw-*` associate via route ai Pod selezionati, senza codificare hash:
 
 ```bash
 inspect_calico_policy_plane() {
@@ -2038,25 +2042,25 @@ inspect_calico_policy_plane &&
 # Default deny: sei connessioni negate
 kubectl --context "$TESI_CONTEXT" apply \
   -f manifests/cni/common/default-deny-ingress.yaml &&
-wait_for_policy_convergence default-deny &&
+wait_for_policy_convergence calico default-deny &&
 run_policy_matrix deny-all &&
 inspect_calico_policy_plane &&
 
 # Allow selettiva: quattro consentite, due negate
 kubectl --context "$TESI_CONTEXT" apply \
   -f manifests/cni/common/allow-client-to-http-servers.yaml &&
-wait_for_policy_convergence selective-allow &&
+wait_for_policy_convergence calico selective-allow &&
 run_policy_matrix selective-allow &&
 inspect_calico_policy_plane
 ```
 
 Selector, IPSet, catene e contatori devono essere coerenti con la progressione
-qualitativa da baseline a deny e allow selettiva. I contatori includono anche i
-probe di convergenza che precedono ciascuna matrice; gli esiti applicativi
-autorevoli restano 6/6 consentiti, 6/6 negati e quindi 4/6 consentiti nella
-singola esecuzione della matrice per stato. L'enforcement osservato è attribuito
-al calculation graph e a Felix; `calico-kube-controllers` non va descritto come
-policy controller in questa configurazione Kubernetes Datastore.
+qualitativa da baseline a deny e allow selettiva. Il gate legge gli artefatti
+Felix senza generare traffico; gli esiti applicativi autorevoli restano 6/6
+consentiti, 6/6 negati e quindi 4/6 consentiti nella singola esecuzione della
+matrice per stato. L'enforcement osservato è attribuito al calculation graph e
+a Felix; `calico-kube-controllers` non va descritto come policy controller in
+questa configurazione Kubernetes Datastore.
 
 Rimuovere infine entrambe le policy e richiedere il ripristino della baseline:
 
@@ -2067,7 +2071,7 @@ kubectl --context "$TESI_CONTEXT" delete \
 kubectl --context "$TESI_CONTEXT" delete \
   -f manifests/cni/common/default-deny-ingress.yaml \
   --ignore-not-found &&
-wait_for_policy_convergence restored &&
+wait_for_policy_convergence calico restored &&
 run_policy_matrix allow-all &&
 inspect_calico_policy_plane
 ```

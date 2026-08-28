@@ -608,35 +608,59 @@ expect_deny() {
 }
 
 wait_for_policy_convergence() {
-  if [[ "$#" -ne 1 ]]; then
-    printf 'Uso: wait_for_policy_convergence default-deny|selective-allow|restored\n' >&2
+  if [[ "$#" -ne 2 ]]; then
+    printf 'Uso: wait_for_policy_convergence k3s|calico default-deny|selective-allow|restored\n' >&2
     return 2
   fi
   if ! _tesi_require_context; then
     return 2
   fi
 
-  local expected_state="$1"
+  local dataplane="$1"
+  local expected_state="$2"
   local deadline=$((SECONDS + 90))
-  local probe
-  local expected
-  local source_pod
-  local destination_pod
-  local flow_rc
-  local readiness
+  local pod_inventory
+  local pod
+  local node
+  local pod_ip
+  local extra
+  local route_output
+  local interface_name
+  local iptables_output
+  local line
+  local default_chain
+  local default_link
+  local allow_chain
+  local allow_link
+  local default_chain_name
+  local allow_chain_name
+  local discovered_chain_name
+  local pod_default_link
+  local pod_allow_link
+  local workload_policy_link
   local pending
-  local -a probes=()
+  local -a workload_nodes=()
+  local -A expected_pods=(
+    [client]=1
+    [server-a]=1
+    [server-b]=1
+  )
+  local -A seen_pods=()
+  local -A seen_nodes=()
+  local -A target_nodes=()
+  local -A pod_nodes=()
+  local -A pod_ips=()
+  local -A pod_interfaces=()
 
+  case "$dataplane" in
+    k3s|calico) ;;
+    *)
+      printf 'ERROR: dataplane policy non valido: %s.\n' "$dataplane" >&2
+      return 2
+      ;;
+  esac
   case "$expected_state" in
-    default-deny)
-      probes=('DENY client server-b')
-      ;;
-    selective-allow)
-      probes=('ALLOW client server-b' 'DENY server-a server-b')
-      ;;
-    restored)
-      probes=('ALLOW server-a server-b')
-      ;;
+    default-deny|selective-allow|restored) ;;
     *)
       printf 'ERROR: stato convergenza policy non valido: %s.\n' \
         "$expected_state" >&2
@@ -644,49 +668,190 @@ wait_for_policy_convergence() {
       ;;
   esac
 
+  if ! pod_inventory="$(kubectl --context "$TESI_CONTEXT" get pods \
+      -n net-lab client server-a server-b \
+      -o jsonpath='{range .items[*]}{.metadata.name}{"|"}{.spec.nodeName}{"|"}{.status.podIP}{"\n"}{end}')"; then
+    printf 'ERROR: inventario Pod/nodo per la convergenza policy fallito.\n' >&2
+    return 2
+  fi
+  while IFS='|' read -r pod node pod_ip extra; do
+    if [[ -n "$extra" || -z "${expected_pods[$pod]:-}" || \
+          -n "${seen_pods[$pod]:-}" || \
+          ! "$node" =~ ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$ ]] || \
+       ! _tesi_is_ipv4 "$pod_ip"; then
+      printf 'ERROR: record Pod/nodo policy non valido: %q.\n' \
+        "$pod_inventory" >&2
+      return 2
+    fi
+    seen_pods["$pod"]=1
+    pod_nodes["$pod"]="$node"
+    pod_ips["$pod"]="$pod_ip"
+    if [[ -z "${seen_nodes[$node]:-}" ]]; then
+      seen_nodes["$node"]=1
+      workload_nodes+=("$node")
+    fi
+    if [[ "$pod" == server-a || "$pod" == server-b ]]; then
+      target_nodes["$node"]=1
+    fi
+  done <<< "$pod_inventory"
+  if [[ "${#seen_pods[@]}" -ne 3 || "${#target_nodes[@]}" -eq 0 ]]; then
+    printf 'ERROR: inventario workload policy incompleto o incoerente.\n' >&2
+    return 2
+  fi
+
+  if [[ "$dataplane" == calico ]]; then
+    for pod in client server-a server-b; do
+      node="${pod_nodes[$pod]}"
+      if ! route_output="$(docker exec "$node" \
+          ip -o route get "${pod_ips[$pod]}")"; then
+        printf 'ERROR: route workload Calico non leggibile per %s su %s.\n' \
+          "$pod" "$node" >&2
+        return 2
+      fi
+      if [[ -z "$route_output" || "$route_output" == *$'\n'* || \
+            ! "$route_output" =~ (^|[[:space:]])dev[[:space:]]+(cali[a-zA-Z0-9_.-]+)($|[[:space:]]) ]]; then
+        printf 'ERROR: interfaccia workload Calico non interpretabile per %s: %q.\n' \
+          "$pod" "$route_output" >&2
+        return 2
+      fi
+      interface_name="${BASH_REMATCH[2]}"
+      pod_interfaces["$pod"]="$interface_name"
+    done
+  fi
+
   while true; do
     pending=0
-    for probe in "${probes[@]}"; do
-      read -r expected source_pod destination_pod <<< "$probe"
-      if [[ "$expected" == DENY ]]; then
-        if ! readiness="$(kubectl --context "$TESI_CONTEXT" get pod \
-            -n net-lab "$destination_pod" \
-            -o jsonpath='{.status.phase}{"|"}{range .status.conditions[?(@.type=="Ready")]}{.status}{end}')"; then
-          printf 'ERROR kind=kubectl-api-readiness pod=%s\n' \
-            "$destination_pod" >&2
-          return 2
-        fi
-        if [[ ! "$readiness" =~ ^[^|]+\|(True|False|Unknown)$ ]]; then
-          printf 'ERROR kind=readiness-parser pod=%s value=%q\n' \
-            "$destination_pod" "$readiness" >&2
-          return 2
-        fi
-        if [[ "$readiness" != 'Running|True' ]]; then
-          printf 'ERROR kind=destination-not-ready pod=%s value=%s\n' \
-            "$destination_pod" "$readiness" >&2
-          return 2
-        fi
+    for node in "${workload_nodes[@]}"; do
+      if ! iptables_output="$(docker exec "$node" \
+          /bin/aux/iptables-save -c)"; then
+        printf 'ERROR: lettura dataplane policy fallita sul nodo %s.\n' \
+          "$node" >&2
+        return 2
+      fi
+      if [[ -z "$iptables_output" || "$iptables_output" != *'*filter'* || \
+            "$iptables_output" != *'COMMIT'* ]]; then
+        printf 'ERROR: dump iptables non interpretabile sul nodo %s.\n' \
+          "$node" >&2
+        return 2
       fi
 
-      if http_flow "$source_pod" "$destination_pod"; then
-        flow_rc=0
-      else
-        flow_rc=$?
+      default_chain=0
+      default_link=0
+      allow_chain=0
+      allow_link=0
+      default_chain_name=''
+      allow_chain_name=''
+      workload_policy_link=0
+      while IFS= read -r line; do
+        if [[ "$dataplane" == k3s ]]; then
+          [[ "$line" == *'-A KUBE-NWPLCY-'* && \
+             "$line" == *'net-lab/default-deny-ingress'* ]] && \
+            default_chain=1
+          [[ "$line" == *'-A KUBE-POD-FW-'* && \
+             "$line" == *'run through nw policy default-deny-ingress'* ]] && \
+            default_link=1
+          [[ "$line" == *'-A KUBE-NWPLCY-'* && \
+             "$line" == *'net-lab/allow-client-to-http-servers'* ]] && \
+            allow_chain=1
+          [[ "$line" == *'-A KUBE-POD-FW-'* && \
+             "$line" == *'run through nw policy allow-client-to-http-servers'* ]] && \
+            allow_link=1
+        else
+          if [[ "$line" == *'KubernetesNetworkPolicy net-lab/default-deny-ingress ingress'* ]]; then
+            if [[ ! "$line" =~ -A[[:space:]]+(cali-pi-[^[:space:]]+).*KubernetesNetworkPolicy[[:space:]]+net-lab/default-deny-ingress[[:space:]]+ingress ]]; then
+              printf 'ERROR: chain Calico default-deny non interpretabile su %s.\n' \
+                "$node" >&2
+              return 2
+            fi
+            discovered_chain_name="${BASH_REMATCH[1]}"
+            if [[ -n "$default_chain_name" && \
+                  "$default_chain_name" != "$discovered_chain_name" ]]; then
+              printf 'ERROR: chain Calico default-deny ambigua su %s.\n' \
+                "$node" >&2
+              return 2
+            fi
+            default_chain_name="$discovered_chain_name"
+            default_chain=1
+          fi
+          if [[ "$line" == *'KubernetesNetworkPolicy net-lab/allow-client-to-http-servers ingress'* ]]; then
+            if [[ ! "$line" =~ -A[[:space:]]+(cali-pi-[^[:space:]]+).*KubernetesNetworkPolicy[[:space:]]+net-lab/allow-client-to-http-servers[[:space:]]+ingress ]]; then
+              printf 'ERROR: chain Calico selective-allow non interpretabile su %s.\n' \
+                "$node" >&2
+              return 2
+            fi
+            discovered_chain_name="${BASH_REMATCH[1]}"
+            if [[ -n "$allow_chain_name" && \
+                  "$allow_chain_name" != "$discovered_chain_name" ]]; then
+              printf 'ERROR: chain Calico selective-allow ambigua su %s.\n' \
+                "$node" >&2
+              return 2
+            fi
+            allow_chain_name="$discovered_chain_name"
+            allow_chain=1
+          fi
+        fi
+      done <<< "$iptables_output"
+
+      if [[ "$dataplane" == calico ]]; then
+        default_link=1
+        if [[ -n "${target_nodes[$node]:-}" ]]; then
+          allow_link=1
+        else
+          allow_link=0
+        fi
+        for pod in client server-a server-b; do
+          [[ "${pod_nodes[$pod]}" == "$node" ]] || continue
+          interface_name="${pod_interfaces[$pod]}"
+          pod_default_link=0
+          pod_allow_link=0
+          while IFS= read -r line; do
+            if [[ "$line" == *"-A cali-tw-${interface_name} "* && \
+                  "$line" == *'-j cali-pi-'* ]]; then
+              workload_policy_link=1
+            fi
+            if [[ -n "$default_chain_name" && \
+                  "$line" == *"-A cali-tw-${interface_name} "* && \
+                  "$line" == *"-j ${default_chain_name}"* ]]; then
+              pod_default_link=1
+            fi
+            if [[ -n "$allow_chain_name" && \
+                  "$line" == *"-A cali-tw-${interface_name} "* && \
+                  "$line" == *"-j ${allow_chain_name}"* ]]; then
+              pod_allow_link=1
+            fi
+          done <<< "$iptables_output"
+          [[ "$pod_default_link" -eq 1 ]] || default_link=0
+          if [[ "$pod" == server-a || "$pod" == server-b ]]; then
+            [[ "$pod_allow_link" -eq 1 ]] || allow_link=0
+          fi
+        done
       fi
-      case "$expected:$flow_rc" in
-        ALLOW:0|DENY:10) ;;
-        ALLOW:10|DENY:0) pending=1 ;;
-        *)
-          printf 'ERROR kind=policy-convergence-probe expected=%s flow=%s-%s rc=%s\n' \
-            "$expected" "$source_pod" "$destination_pod" "$flow_rc" >&2
-          return 2
+
+      case "$expected_state" in
+        default-deny)
+          [[ "$default_chain" -eq 1 && "$default_link" -eq 1 ]] || \
+            pending=1
+          ;;
+        selective-allow)
+          [[ "$default_chain" -eq 1 && "$default_link" -eq 1 ]] || \
+            pending=1
+          if [[ -n "${target_nodes[$node]:-}" ]]; then
+            [[ "$allow_chain" -eq 1 && "$allow_link" -eq 1 ]] || \
+              pending=1
+          fi
+          ;;
+        restored)
+          [[ "$default_chain" -eq 0 && "$default_link" -eq 0 && \
+             "$allow_chain" -eq 0 && "$allow_link" -eq 0 && \
+             "$workload_policy_link" -eq 0 ]] || \
+            pending=1
           ;;
       esac
     done
 
     if [[ "$pending" -eq 0 ]]; then
-      printf 'PASS: convergenza policy raggiunta per lo stato %s.\n' \
-        "$expected_state"
+      printf 'PASS: dataplane %s convergente per lo stato %s su %s nodi.\n' \
+        "$dataplane" "$expected_state" "${#workload_nodes[@]}"
       return 0
     fi
     if [[ "$SECONDS" -ge "$deadline" ]]; then
