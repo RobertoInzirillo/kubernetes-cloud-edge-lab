@@ -2182,10 +2182,59 @@ IPAM, tunnel e strumenti locali. Le **mappe eBPF** sono strutture del kernel
 usate da Cilium per conservare endpoint, policy, load balancing e conntrack.
 **Hubble** legge la telemetria Cilium e permette di correlare identità,
 verdetti e connessioni senza introdurre un Relay nel laboratorio.
+Il rollout del DaemonSet dispone di 600 secondi per coprire anche bootstrap e
+pull iniziali su host con cache immagini fredda.
 
 ```bash
+wait_for_cilium_daemonset_ready() {
+  local DAEMONSET_STATUS
+  local DESIRED
+  local CURRENT
+  local READY
+  local AVAILABLE
+  local EXTRA
+
+  if ! kubectl --context "$TESI_CONTEXT" \
+      rollout status daemonset/cilium \
+      -n kube-system \
+      --timeout=600s
+  then
+    printf 'ERROR: rollout del DaemonSet Cilium non completato entro il timeout.\n' >&2
+    return 1
+  fi
+
+  if ! DAEMONSET_STATUS="$(kubectl --context "$TESI_CONTEXT" get \
+      daemonset -n kube-system cilium \
+      -o jsonpath='{.status.desiredNumberScheduled}{"|"}{.status.currentNumberScheduled}{"|"}{.status.numberReady}{"|"}{.status.numberAvailable}')"
+  then
+    printf 'ERROR: lettura strutturata dello stato DaemonSet Cilium fallita.\n' >&2
+    return 2
+  fi
+
+  IFS='|' read -r DESIRED CURRENT READY AVAILABLE EXTRA \
+    <<< "$DAEMONSET_STATUS"
+  if [[ ! "$DESIRED" =~ ^[0-9]+$ || ! "$CURRENT" =~ ^[0-9]+$ ||
+        ! "$READY" =~ ^[0-9]+$ || ! "$AVAILABLE" =~ ^[0-9]+$ ||
+        -n "$EXTRA" ]]
+  then
+    printf 'ERROR: stato DaemonSet Cilium mancante o malformato: %q.\n' \
+      "$DAEMONSET_STATUS" >&2
+    return 2
+  fi
+  if [[ "$DESIRED" -ne 3 || "$CURRENT" -ne 3 ||
+        "$READY" -ne 3 || "$AVAILABLE" -ne 3 ]]
+  then
+    printf 'FAIL: DaemonSet Cilium non convergente: desired=%s current=%s ready=%s available=%s.\n' \
+      "$DESIRED" "$CURRENT" "$READY" "$AVAILABLE" >&2
+    return 1
+  fi
+
+  printf 'PASS: DaemonSet Cilium convergente: desired=3 current=3 ready=3 available=3.\n'
+}
+
 kubectl --context "$TESI_CONTEXT" wait \
   --for=condition=Ready node --all --timeout=300s
+wait_for_cilium_daemonset_ready && {
 kubectl --context "$TESI_CONTEXT" get nodes -o wide
 kubectl --context "$TESI_CONTEXT" get pods -A -o wide
 kubectl --context "$TESI_CONTEXT" get daemonset -n kube-system cilium
@@ -2204,6 +2253,7 @@ kubectl --context "$TESI_CONTEXT" exec -n kube-system \
 kubectl --context "$TESI_CONTEXT" exec -n kube-system \
   "$CILIUM_AGENT0" -- hubble status \
   --server unix:///var/run/cilium/hubble.sock
+}
 ```
 
 Ispezionare CNI, route, VXLAN e attach eBPF in ogni nodo:
