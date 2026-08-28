@@ -765,4 +765,742 @@ capture_service_iptables_snapshot() {
   fi
 }
 
+_tesi_parse_service_http_observations() {
+  if [[ "$#" -ne 1 ]]; then
+    printf 'Uso interno: _tesi_parse_service_http_observations FILE.\n' >&2
+    return 2
+  fi
+  if [[ ! -s "$1" ]]; then
+    printf 'ERROR: output HTTP Service assente o vuoto: %s.\n' "$1" >&2
+    return 2
+  fi
+
+  awk '
+    function fail(message) {
+      print "ERROR: output HTTP Service ambiguo: " message "." > "/dev/stderr"
+      parser_error = 1
+      exit
+    }
+    function field_value(token, prefix) {
+      return substr(token, length(prefix) + 1)
+    }
+    function finish_record(    status) {
+      if (!active) return
+      if (attempt !~ /^[1-9][0-9]*$/ || seen_attempt[attempt]++)
+        fail("numero di tentativo non valido o duplicato")
+      if (backend != "server-a" && backend != "server-b")
+        fail("backend mancante o non valido al tentativo " attempt)
+      status = (probe_seen ? probe_rc : exit_rc)
+      if ((!probe_seen && !exit_seen) || status != "0" ||
+          (probe_seen && exit_seen && probe_rc != exit_rc))
+        fail("esito non riuscito o incoerente al tentativo " attempt)
+      attempts[++count] = attempt
+      backends[count] = backend
+      active = probe_seen = exit_seen = 0
+      attempt = backend = probe_rc = exit_rc = ""
+    }
+    /^[[:space:]]*$/ { next }
+    /^attempt=/ {
+      finish_record()
+      active = 1
+      for (i = 1; i <= NF; i++) {
+        if ($i ~ /^attempt=/) {
+          if (attempt != "") fail("campo attempt duplicato")
+          attempt = field_value($i, "attempt=")
+        } else if ($i ~ /^response=/) {
+          if (backend != "") fail("campo response duplicato")
+          backend = field_value($i, "response=")
+        } else if ($i ~ /^probe_rc=/) {
+          if (probe_seen) fail("campo probe_rc duplicato")
+          probe_seen = 1
+          probe_rc = field_value($i, "probe_rc=")
+        } else if ($i ~ /^exit=/) {
+          if (exit_seen) fail("campo exit duplicato")
+          exit_seen = 1
+          exit_rc = field_value($i, "exit=")
+        }
+      }
+      next
+    }
+    /^response=/ {
+      if (!active || backend != "" || NF != 1)
+        fail("riga response fuori record o ambigua")
+      backend = field_value($1, "response=")
+      next
+    }
+    /^exit_code=/ {
+      if (!active || exit_seen || NF != 1)
+        fail("riga exit_code fuori record o ambigua")
+      exit_seen = 1
+      exit_rc = field_value($1, "exit_code=")
+      next
+    }
+    { fail("riga non riconosciuta") }
+    END {
+      if (parser_error) exit 2
+      finish_record()
+      if (parser_error) exit 2
+      if (count == 0) {
+        print "ERROR: nessuna osservazione HTTP Service valida." > "/dev/stderr"
+        exit 2
+      }
+      for (i = 1; i <= count; i++)
+        print attempts[i], backends[i]
+    }
+  ' "$1"
+}
+
+_tesi_verify_service_iptables_counters() {
+  if [[ "$#" -ne 9 ]]; then
+    printf 'Uso interno: _tesi_verify_service_iptables_counters MODE SERVICE_IP PORTA IP_A IP_B OSS_A OSS_B PRIMA DOPO.\n' >&2
+    return 2
+  fi
+
+  local mode="$1"
+  local service_ip="$2"
+  local service_port="$3"
+  local server_a_ip="$4"
+  local server_b_ip="$5"
+  local observed_a="$6"
+  local observed_b="$7"
+  local before_file="$8"
+  local after_file="$9"
+
+  if [[ "$mode" != attribution && "$mode" != invariant ]]; then
+    printf 'ERROR: modalità confronto iptables non valida: %s.\n' "$mode" >&2
+    return 2
+  fi
+  if ! _tesi_is_ipv4 "$service_ip" || ! _tesi_is_ipv4 "$server_a_ip" ||
+      ! _tesi_is_ipv4 "$server_b_ip" ||
+      [[ ! "$service_port" =~ ^[1-9][0-9]*$ ]] ||
+      [[ ! "$observed_a" =~ ^[0-9]+$ ]] ||
+      [[ ! "$observed_b" =~ ^[0-9]+$ ]]; then
+    printf 'ERROR: parametri del confronto iptables non validi.\n' >&2
+    return 2
+  fi
+  if [[ ! -s "$before_file" || ! -s "$after_file" ]]; then
+    printf 'ERROR: snapshot iptables prima/dopo assente o vuoto.\n' >&2
+    return 2
+  fi
+
+  awk -v mode="$mode" -v service_ip="$service_ip" \
+      -v port="$service_port" -v ip_a="$server_a_ip" \
+      -v ip_b="$server_b_ip" -v observed_a="$observed_a" \
+      -v observed_b="$observed_b" -v before_file="$before_file" '
+    function error(message) {
+      print "ERROR: parser iptables Service: " message "." > "/dev/stderr"
+      parser_error = 1
+    }
+    function causal_fail(message) {
+      print "FAIL: attribuzione Service: " message "." > "/dev/stderr"
+      causal_error = 1
+    }
+    function jump_target(rule,    fields, count, i) {
+      count = split(rule, fields, /[[:space:]]+/)
+      for (i = 1; i < count; i++)
+        if (fields[i] == "-j") return fields[i + 1]
+      return ""
+    }
+    function source_chain(rule,    fields) {
+      split(rule, fields, /[[:space:]]+/)
+      return (fields[1] == "-A" ? fields[2] : "")
+    }
+    function packet_delta(key) {
+      return packet[2, key] - packet[1, key]
+    }
+    function byte_delta(key) {
+      return bytes[2, key] - bytes[1, key]
+    }
+    {
+      if (index($0, "net-lab/servers:http") == 0) next
+      side = (FILENAME == before_file ? 1 : 2)
+      first = $1
+      if (first !~ /^\[[0-9][0-9]*:[0-9][0-9]*\]$/) {
+        error("contatore non numerico in " FILENAME " riga " FNR)
+        next
+      }
+      counters = first
+      sub(/^\[/, "", counters)
+      sub(/\]$/, "", counters)
+      split(counters, values, ":")
+      rule = $0
+      sub(/^[^[:space:]]+[[:space:]]+/, "", rule)
+      if ((side, rule) in packet) {
+        error("regola duplicata in " FILENAME)
+        next
+      }
+      packet[side, rule] = values[1] + 0
+      bytes[side, rule] = values[2] + 0
+      rules[rule] = 1
+      count[side]++
+    }
+    END {
+      if (parser_error) exit 2
+      if (count[1] == 0 || count[2] == 0) {
+        error("nessuna regola pertinente in uno snapshot")
+        exit 2
+      }
+      for (rule in rules) {
+        if (!((1, rule) in packet) || !((2, rule) in packet)) {
+          error("snapshot strutturalmente incompatibili")
+          continue
+        }
+        if (packet[2, rule] < packet[1, rule] ||
+            bytes[2, rule] < bytes[1, rule])
+          error("contatore diminuito")
+        chain = source_chain(rule)
+        target = jump_target(rule)
+        if (chain == "KUBE-SERVICES" &&
+            index(rule, "-d " service_ip "/32") &&
+            index(rule, "--dport " port) && target ~ /^KUBE-SVC-/) {
+          service_matches++
+          service_rule = rule
+          service_chain = target
+        }
+      }
+      if (parser_error) exit 2
+      if (service_matches != 1) {
+        error("regola KUBE-SERVICES assente o ambigua")
+        exit 2
+      }
+      for (rule in rules) {
+        chain = source_chain(rule)
+        target = jump_target(rule)
+        if (chain == service_chain && target ~ /^KUBE-SEP-/) {
+          if (index(rule, "net-lab/servers:http -> " ip_a ":" port)) {
+            branch_a_matches++
+            branch_a = rule
+            sep_a = target
+          }
+          if (index(rule, "net-lab/servers:http -> " ip_b ":" port)) {
+            branch_b_matches++
+            branch_b = rule
+            sep_b = target
+          }
+        }
+      }
+      if (branch_a_matches != 1 || branch_b_matches != 1 || sep_a == sep_b) {
+        error("mapping backend KUBE-SVC/KUBE-SEP assente o ambiguo")
+        exit 2
+      }
+      for (rule in rules) {
+        chain = source_chain(rule)
+        target = jump_target(rule)
+        if (target == "DNAT" &&
+            index(rule, "--to-destination " ip_a ":" port) &&
+            chain == sep_a) {
+          dnat_a_matches++
+          dnat_a = rule
+        }
+        if (target == "DNAT" &&
+            index(rule, "--to-destination " ip_b ":" port) &&
+            chain == sep_b) {
+          dnat_b_matches++
+          dnat_b = rule
+        }
+      }
+      if (dnat_a_matches != 1 || dnat_b_matches != 1) {
+        error("regola DNAT KUBE-SEP assente o ambigua")
+        exit 2
+      }
+
+      service_packets = packet_delta(service_rule)
+      service_bytes = byte_delta(service_rule)
+      delta_a = packet_delta(dnat_a)
+      delta_b = packet_delta(dnat_b)
+      printf "delta_kube_services_packets=%s bytes=%s\n", service_packets, service_bytes
+      printf "delta_kube_sep backend=server-a ip=%s packets=%s bytes=%s\n", \
+        ip_a, delta_a, byte_delta(dnat_a)
+      printf "delta_kube_sep backend=server-b ip=%s packets=%s bytes=%s\n", \
+        ip_b, delta_b, byte_delta(dnat_b)
+
+      if (mode == "attribution") {
+        if (observed_a + observed_b == 0)
+          error("nessun backend HTTP osservato")
+        if (service_packets <= 0 || service_bytes <= 0)
+          causal_fail("nessun delta positivo sulla regola KUBE-SERVICES")
+        if (observed_a > 0 && delta_a <= 0)
+          causal_fail("backend HTTP server-a senza delta DNAT coerente")
+        if (observed_b > 0 && delta_b <= 0)
+          causal_fail("backend HTTP server-b senza delta DNAT coerente")
+      } else {
+        for (rule in rules)
+          if (packet_delta(rule) != 0 || byte_delta(rule) != 0)
+            causal_fail("contatore kube-proxy pertinente variato")
+      }
+      if (parser_error) exit 2
+      if (causal_error) exit 1
+      if (mode == "attribution")
+        print "PASS: attribuzione kube-proxy/iptables causalmente verificata."
+      else
+        print "PASS: contatori kube-proxy pertinenti invariati."
+    }
+  ' "$before_file" "$after_file"
+}
+
+verify_kube_proxy_service_attribution() {
+  if [[ "$#" -ne 7 ]]; then
+    printf 'Uso: verify_kube_proxy_service_attribution SERVICE_IP PORTA IP_A IP_B HTTP PRIMA DOPO.\n' >&2
+    return 2
+  fi
+  local observations
+  local parser_rc
+  local observed_a=0
+  local observed_b=0
+  local attempt
+  local backend
+
+  if observations="$(_tesi_parse_service_http_observations "$5")"; then
+    :
+  else
+    parser_rc=$?
+    return "$parser_rc"
+  fi
+  while read -r attempt backend; do
+    case "$backend" in
+      server-a) observed_a=$((observed_a + 1)) ;;
+      server-b) observed_b=$((observed_b + 1)) ;;
+      *)
+        printf 'ERROR: backend HTTP normalizzato non riconosciuto: %s.\n' \
+          "$backend" >&2
+        return 2
+        ;;
+    esac
+  done <<< "$observations"
+  printf 'backend_http_osservati server-a=%s server-b=%s\n' \
+    "$observed_a" "$observed_b"
+
+  _tesi_verify_service_iptables_counters attribution \
+    "$1" "$2" "$3" "$4" "$observed_a" "$observed_b" "$6" "$7"
+}
+
+verify_kube_proxy_service_invariance() {
+  if [[ "$#" -ne 6 ]]; then
+    printf 'Uso: verify_kube_proxy_service_invariance SERVICE_IP PORTA IP_A IP_B PRIMA DOPO.\n' >&2
+    return 2
+  fi
+  _tesi_verify_service_iptables_counters invariant \
+    "$1" "$2" "$3" "$4" 0 0 "$5" "$6"
+}
+
+verify_cilium_service_ct_lb() {
+  if [[ "$#" -ne 12 ]]; then
+    printf 'Uso: verify_cilium_service_ct_lb SERVICE_IP PORTA CLIENT_IP IP_A IP_B HTTP CT_PRIMA CT_DOPO FRONTEND BACKEND REVNAT CORRELAZIONE.\n' >&2
+    return 2
+  fi
+
+  local service_ip="$1"
+  local service_port="$2"
+  local client_ip="$3"
+  local server_a_ip="$4"
+  local server_b_ip="$5"
+  local http_file="$6"
+  local ct_before="$7"
+  local ct_after="$8"
+  local frontend_file="$9"
+  local backend_file="${10}"
+  local revnat_file="${11}"
+  local correlation_file="${12}"
+  local observations
+  local parser_rc
+  local required_file
+  local expected_a=0
+  local expected_b=0
+  local attempt
+  local backend
+  local correlation_temp
+
+  if ! _tesi_is_ipv4 "$service_ip" || ! _tesi_is_ipv4 "$client_ip" ||
+      ! _tesi_is_ipv4 "$server_a_ip" || ! _tesi_is_ipv4 "$server_b_ip" ||
+      [[ ! "$service_port" =~ ^[1-9][0-9]*$ ]]; then
+    printf 'ERROR: parametri Cilium Service non validi.\n' >&2
+    return 2
+  fi
+  for required_file in "$http_file" "$ct_before" "$ct_after" \
+      "$frontend_file" "$backend_file" "$revnat_file"; do
+    if [[ ! -s "$required_file" ]]; then
+      printf 'ERROR: fixture Cilium Service assente o vuota: %s.\n' \
+        "$required_file" >&2
+      return 2
+    fi
+  done
+  if observations="$(_tesi_parse_service_http_observations "$http_file")"; then
+    :
+  else
+    parser_rc=$?
+    return "$parser_rc"
+  fi
+  while read -r attempt backend; do
+    case "$backend" in
+      server-a) expected_a=$((expected_a + 1)) ;;
+      server-b) expected_b=$((expected_b + 1)) ;;
+      *)
+        printf 'ERROR: backend HTTP Cilium non riconosciuto: %s.\n' \
+          "$backend" >&2
+        return 2
+        ;;
+    esac
+  done <<< "$observations"
+  printf 'backend_http_osservati server-a=%s server-b=%s\n' \
+    "$expected_a" "$expected_b"
+
+  if ! correlation_temp="$(mktemp "${correlation_file}.XXXXXX")"; then
+    printf 'ERROR: creazione correlazione CT temporanea fallita.\n' >&2
+    return 2
+  fi
+
+  if awk -v service_ip="$service_ip" -v port="$service_port" \
+      -v client_ip="$client_ip" -v ip_a="$server_a_ip" \
+      -v ip_b="$server_b_ip" -v expected_a="$expected_a" \
+      -v expected_b="$expected_b" -v before_file="$ct_before" '
+    function parser_error(message) {
+      print "ERROR: parser Cilium CT: " message "." > "/dev/stderr"
+      malformed = 1
+    }
+    function causal_fail(message) {
+      print "FAIL: attribuzione Cilium CT: " message "." > "/dev/stderr"
+      causal = 1
+    }
+    function value(prefix,    i) {
+      for (i = 1; i <= NF; i++)
+        if (index($i, prefix) == 1) return substr($i, length(prefix) + 1)
+      return ""
+    }
+    function endpoint_port(endpoint,    parts, count) {
+      count = split(endpoint, parts, ":")
+      return (count == 2 ? parts[2] : "")
+    }
+    function endpoint_ip(endpoint,    parts, count) {
+      count = split(endpoint, parts, ":")
+      return (count == 2 ? parts[1] : "")
+    }
+    {
+      side = (FILENAME == before_file ? 1 : 2)
+      source = client_ip ":"
+      destination = service_ip ":" port
+      if ($1 == "TCP" && $2 == "SVC" && index($3, source) == 1 &&
+          $4 == "->" && $5 == destination) {
+        source_port = endpoint_port($3)
+        revnat = value("RevNAT=")
+        backend_id = value("BackendID=")
+        flags = value("Flags=")
+        tx_flags = value("TxFlagsSeen=")
+        if (source_port !~ /^[1-9][0-9]*$/ ||
+            revnat !~ /^[1-9][0-9]*$/ ||
+            backend_id !~ /^[1-9][0-9]*$/ ||
+            flags !~ /^0x[0-9a-fA-F][0-9a-fA-F]*$/ ||
+            tx_flags !~ /^0x[0-9a-fA-F][0-9a-fA-F]*$/) {
+          parser_error("entry TCP SVC pertinente malformata")
+          next
+        }
+        key = source_port SUBSEP revnat SUBSEP backend_id
+        if ((side, key) in svc) {
+          parser_error("entry TCP SVC pertinente duplicata")
+          next
+        }
+        svc[side, key] = 1
+        svc_tx[side, key] = tx_flags
+        svc_keys[key] = 1
+        if (side == 2) {
+          svc_port[key] = source_port
+          svc_revnat[key] = revnat
+          svc_backend[key] = backend_id
+        }
+        next
+      }
+      if (side == 2 && $1 == "TCP" && $2 == "OUT" &&
+          index($3, source) == 1 && $4 == "->" &&
+          endpoint_port($5) == port) {
+        source_port = endpoint_port($3)
+        backend_ip = endpoint_ip($5)
+        revnat = value("RevNAT=")
+        if (source_port !~ /^[1-9][0-9]*$/ ||
+            (backend_ip != ip_a && backend_ip != ip_b) ||
+            revnat !~ /^[1-9][0-9]*$/) next
+        out_count[source_port]++
+        out_ip[source_port] = backend_ip
+        out_revnat[source_port] = revnat
+      }
+    }
+    END {
+      if (malformed) exit 2
+      for (key in svc_keys) {
+        if ((2, key) in svc && !((1, key) in svc)) {
+          new_count++
+          source_port = svc_port[key]
+          if (svc_tx[2, key] == "0x00" || svc_tx[2, key] == "0x0") {
+            causal_fail("entry TCP SVC senza stato trasmesso coerente")
+            continue
+          }
+          if (out_count[source_port] != 1) {
+            parser_error("mapping TCP SVC/TCP OUT assente o ambiguo")
+            continue
+          }
+          if (out_revnat[source_port] != svc_revnat[key]) {
+            parser_error("RevNAT incoerente fra TCP SVC e TCP OUT")
+            continue
+          }
+          backend_ip = out_ip[source_port]
+          backend_name = (backend_ip == ip_a ? "server-a" : "server-b")
+          if (backend_name == "server-a") actual_a++
+          else actual_b++
+          records[new_count] = source_port " " backend_ip " " backend_name \
+            " " svc_backend[key] " " svc_revnat[key]
+        }
+      }
+      if (malformed) exit 2
+      if (new_count == 0)
+        causal_fail("nessuna nuova entry TCP SVC pertinente")
+      if (new_count != expected_a + expected_b)
+        causal_fail("numero di nuove entry TCP SVC diverso dai flussi HTTP")
+      if (actual_a != expected_a || actual_b != expected_b)
+        causal_fail("backend CT non coerenti con le risposte HTTP")
+      if (causal) exit 1
+      for (i = 1; i <= new_count; i++) print records[i]
+    }
+  ' "$ct_before" "$ct_after" >"$correlation_temp"; then
+    :
+  else
+    parser_rc=$?
+    rm -f -- "$correlation_temp"
+    return "$parser_rc"
+  fi
+
+  if awk -v service_ip="$service_ip" -v port="$service_port" \
+      -v correlation_file="$correlation_temp" \
+      -v frontend_file="$frontend_file" -v backend_file="$backend_file" '
+    function parser_error(message) {
+      print "ERROR: parser mappe Cilium LB: " message "." > "/dev/stderr"
+      malformed = 1
+    }
+    function causal_fail(message) {
+      print "FAIL: attribuzione Cilium LB: " message "." > "/dev/stderr"
+      causal = 1
+    }
+    function numeric_parenthesis(value,    copy) {
+      copy = value
+      sub(/^\(/, "", copy)
+      sub(/\)$/, "", copy)
+      return (copy ~ /^[0-9][0-9]*$/ ? copy : "")
+    }
+    FILENAME == correlation_file {
+      if (NF != 5 || $1 !~ /^[1-9][0-9]*$/ ||
+          $4 !~ /^[1-9][0-9]*$/ || $5 !~ /^[1-9][0-9]*$/) {
+        parser_error("record CT normalizzato malformato")
+        next
+      }
+      ct_count++
+      ct_source_port[ct_count] = $1
+      ct_backend[ct_count] = $4
+      ct_ip[ct_count] = $2
+      ct_name[ct_count] = $3
+      ct_revnat[ct_count] = $5
+      next
+    }
+    FILENAME == frontend_file && $1 == service_ip ":" port "/TCP" {
+      slot = numeric_parenthesis($2)
+      backend_id = $3
+      revnat = ""
+      for (i = 4; i <= NF; i++) {
+        candidate = numeric_parenthesis($i)
+        if (candidate != "") revnat = candidate
+      }
+      if (slot == "" || backend_id !~ /^[0-9][0-9]*$/ ||
+          revnat !~ /^[1-9][0-9]*$/) {
+        parser_error("frontend Service malformato")
+        next
+      }
+      if (slot == 0) {
+        main_count++
+        main_revnat = revnat
+      } else {
+        frontend_backend[backend_id]++
+        frontend_revnat[backend_id] = revnat
+      }
+      next
+    }
+    FILENAME == backend_file && $1 ~ /^[1-9][0-9]*$/ {
+      endpoint_count = split($2, endpoint, ":")
+      sub(/\/TCP$/, "", endpoint[2])
+      if (endpoint_count == 2 && endpoint[1] ~ /^[0-9.]+$/ &&
+          endpoint[2] ~ /^[1-9][0-9]*$/) {
+        backend_map[$1]++
+        backend_ip[$1] = endpoint[1]
+        backend_port[$1] = endpoint[2]
+      }
+      next
+    }
+    FILENAME != correlation_file && FILENAME != frontend_file &&
+        FILENAME != backend_file && $1 ~ /^[1-9][0-9]*$/ {
+      endpoint_count = split($2, endpoint, ":")
+      sub(/\/TCP$/, "", endpoint[2])
+      if (endpoint_count == 2 && endpoint[1] == service_ip &&
+          endpoint[2] == port) {
+        revnat_map[$1]++
+      }
+    }
+    END {
+      if (malformed) exit 2
+      if (ct_count == 0) {
+        parser_error("nessuna correlazione CT")
+        exit 2
+      }
+      if (main_count != 1) {
+        causal_fail("frontend principale del Service assente o ambiguo")
+      }
+      if (revnat_map[main_revnat] != 1) {
+        causal_fail("mappa RevNAT del Service assente o ambigua")
+      }
+      for (i = 1; i <= ct_count; i++) {
+        id = ct_backend[i]
+        if (frontend_backend[id] != 1) {
+          causal_fail("backend ID CT non correlabile al frontend Service")
+          continue
+        }
+        if (backend_map[id] != 1 || backend_ip[id] != ct_ip[i] ||
+            backend_port[id] != port) {
+          causal_fail("backend ID/IP CT non correlabile alla backend map")
+          continue
+        }
+        if (ct_revnat[i] != main_revnat ||
+            frontend_revnat[id] != main_revnat) {
+          causal_fail("RevNAT incoerente fra CT e mappe LB")
+          continue
+        }
+      }
+      if (malformed) exit 2
+      if (causal) exit 1
+      printf "cilium_lb_service=%s:%s revnat_id=%s ct_service_entries=%s\n", \
+        service_ip, port, main_revnat, ct_count
+      for (i = 1; i <= ct_count; i++)
+        printf "cilium_backend source_port=%s backend=%s ip=%s backend_id=%s\n", \
+          ct_source_port[i], ct_name[i], ct_ip[i], ct_backend[i]
+    }
+  ' "$correlation_temp" "$frontend_file" "$backend_file" "$revnat_file"; then
+    :
+  else
+    parser_rc=$?
+    rm -f -- "$correlation_temp"
+    return "$parser_rc"
+  fi
+
+  if ! mv -f -- "$correlation_temp" "$correlation_file"; then
+    printf 'ERROR: promozione correlazione CT/LB fallita.\n' >&2
+    rm -f -- "$correlation_temp"
+    return 2
+  fi
+  printf 'PASS: CT Service e mappe Cilium LB/backend/RevNAT coerenti.\n'
+}
+
+verify_cilium_service_hubble() {
+  if [[ "$#" -ne 6 ]]; then
+    printf 'Uso: verify_cilium_service_hubble HUBBLE CORRELAZIONE SINCE UNTIL CLIENT_IP PORTA.\n' >&2
+    return 2
+  fi
+  if [[ ! -s "$2" ]] || ! _tesi_is_ipv4 "$5" ||
+      [[ ! "$6" =~ ^[1-9][0-9]*$ ]]; then
+    printf 'ERROR: correlazione CT/Hubble assente o parametri non validi.\n' >&2
+    return 2
+  fi
+
+  awk -v correlation_file="$2" -v since="$3" -v until="$4" \
+      -v client_ip="$5" -v port="$6" '
+    function valid_timestamp(value) {
+      return value ~ /^[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]T[0-9][0-9]:[0-9][0-9]:[0-9][0-9]\.[0-9]+Z$/
+    }
+    function valid_json_record(value,    i, char, quoted, escaped, braces, brackets) {
+      if (substr(value, 1, 1) != "{" ||
+          substr(value, length(value), 1) != "}") return 0
+      for (i = 1; i <= length(value); i++) {
+        char = substr(value, i, 1)
+        if (quoted) {
+          if (escaped) escaped = 0
+          else if (char == "\\") escaped = 1
+          else if (char == "\"") quoted = 0
+          continue
+        }
+        if (char == "\"") quoted = 1
+        else if (char == "{") braces++
+        else if (char == "}") braces--
+        else if (char == "[") brackets++
+        else if (char == "]") brackets--
+        if (braces < 0 || brackets < 0) return 0
+      }
+      return !quoted && !escaped && braces == 0 && brackets == 0
+    }
+    function extract_after(value, marker,    start, tail, finish) {
+      start = index(value, marker)
+      if (!start) return ""
+      tail = substr(value, start + length(marker))
+      finish = index(tail, "\"")
+      return (finish ? substr(tail, 1, finish - 1) : "")
+    }
+    FILENAME == correlation_file {
+      if (NF != 5 || $1 !~ /^[1-9][0-9]*$/) {
+        parser_error = 1
+        next
+      }
+      expected++
+      expected_port[expected] = $1
+      expected_ip[expected] = $2
+      expected_name[expected] = $3
+      next
+    }
+    {
+      sub(/\r$/, "")
+      if ($0 == "") next
+      records++
+      if (!valid_json_record($0)) {
+        parser_error = 1
+        next
+      }
+      compact = $0
+      gsub(/[[:space:]]/, "", compact)
+      timestamp = extract_after(compact, "\"flow\":{\"time\":\"")
+      if (!valid_timestamp(timestamp)) {
+        parser_error = 1
+        next
+      }
+      if (timestamp < since || timestamp > until) next
+      source_start = index(compact, "\"source\":{")
+      destination_start = index(compact, "\"destination\":{")
+      if (!source_start || !destination_start || destination_start <= source_start) {
+        parser_error = 1
+        next
+      }
+      source_object = substr(compact, source_start,
+        destination_start - source_start)
+      destination_object = substr(compact, destination_start)
+      for (i = 1; i <= expected; i++) {
+        ip_marker = "\"IP\":{\"source\":\"" client_ip \
+          "\",\"destination\":\"" expected_ip[i] "\""
+        tcp_marker = "\"TCP\":{\"source_port\":" expected_port[i] \
+          ",\"destination_port\":" port
+        if (index(compact, ip_marker) && index(compact, tcp_marker) &&
+            index(compact, "\"verdict\":\"FORWARDED\"") &&
+            index(source_object, "\"namespace\":\"net-lab\"") &&
+            index(source_object, "\"pod_name\":\"client\"") &&
+            index(destination_object, "\"namespace\":\"net-lab\"") &&
+            index(destination_object,
+              "\"pod_name\":\"" expected_name[i] "\""))
+          found[i] = 1
+      }
+    }
+    END {
+      if (!valid_timestamp(since) || !valid_timestamp(until) || since > until)
+        parser_error = 1
+      if (parser_error) {
+        print "ERROR: parser Hubble Service: JSONPB o finestra temporale non validi." > "/dev/stderr"
+        exit 2
+      }
+      if (records == 0) exit 1
+      for (i = 1; i <= expected; i++)
+        if (!found[i]) missing++
+      if (missing) exit 1
+      printf "PASS: Hubble correla %s flussi CT controllati nella finestra %s / %s.\n", \
+        expected, since, until
+    }
+  ' "$2" "$1"
+}
+
 printf 'Ambiente comune caricato: repo=%s\n' "$TESI_REPO_ROOT"

@@ -1851,6 +1851,7 @@ export SERVICE_DIR="$(mktemp -d)"
 
 run_e10_service_attribution() {
   local GREP_RC
+  local VERIFY_RC
 
   verify_service_backends || return 1
 
@@ -1891,6 +1892,17 @@ run_e10_service_attribution() {
     "$SERVICE_DIR/iptables-after.log" || return 1
 
   cat "$SERVICE_DIR/http-flows.log" || return 1
+  if verify_kube_proxy_service_attribution \
+      "$SERVICE_IP" 8080 "$SERVER_A_IP" "$SERVER_B_IP" \
+      "$SERVICE_DIR/http-flows.log" \
+      "$SERVICE_DIR/iptables-before.log" \
+      "$SERVICE_DIR/iptables-after.log"
+  then
+    :
+  else
+    VERIFY_RC=$?
+    return "$VERIFY_RC"
+  fi
   show_informative_diff "$SERVICE_DIR/iptables-before.log" \
     "$SERVICE_DIR/iptables-after.log" || return 1
 }
@@ -2375,30 +2387,105 @@ kube-proxy ed eBPF prima di nuove connessioni:
 ```bash
 export CILIUM_NODE='k3d-tesi-e20-cilium-vxlan-agent-0'
 export SERVICE_DIR="$(mktemp -d)"
+export CILIUM_SERVICE_HUBBLE_TIMEOUT=20
+
+wait_for_cilium_service_hubble() {
+  if [[ "$#" -ne 4 ]]
+  then
+    printf 'Uso: wait_for_cilium_service_hubble SINCE UNTIL CORRELAZIONE OUTPUT.\n' >&2
+    return 2
+  fi
+  local SINCE="$1"
+  local UNTIL="$2"
+  local CORRELATION_FILE="$3"
+  local HUBBLE_FINAL="$4"
+  local HUBBLE_TEMP
+  local VERIFY_RC
+  local DEADLINE=$((SECONDS + CILIUM_SERVICE_HUBBLE_TIMEOUT))
+
+  if ! HUBBLE_TEMP="$(mktemp "$SERVICE_DIR/.hubble-service.XXXXXX")"
+  then
+    printf 'ERROR: creazione file Hubble Service temporaneo fallita.\n' >&2
+    return 2
+  fi
+  while true
+  do
+    if ! kubectl --context "$TESI_CONTEXT" exec -n kube-system \
+        "$CILIUM_AGENT0" -- hubble observe \
+        --server unix:///var/run/cilium/hubble.sock \
+        --since "$SINCE" --until "$UNTIL" \
+        --from-pod net-lab/client --port 8080 -o jsonpb \
+        >"$HUBBLE_TEMP"
+    then
+      printf 'ERROR: observer Hubble Service fallito.\n' >&2
+      rm -f -- "$HUBBLE_TEMP"
+      return 2
+    fi
+    if verify_cilium_service_hubble \
+        "$HUBBLE_TEMP" "$CORRELATION_FILE" "$SINCE" "$UNTIL" \
+        "$CLIENT_IP" 8080
+    then
+      if ! mv -f -- "$HUBBLE_TEMP" "$HUBBLE_FINAL"
+      then
+        printf 'ERROR: promozione output Hubble Service fallita.\n' >&2
+        rm -f -- "$HUBBLE_TEMP"
+        return 2
+      fi
+      return 0
+    else
+      VERIFY_RC=$?
+    fi
+    if [[ "$VERIFY_RC" -eq 2 ]]
+    then
+      rm -f -- "$HUBBLE_TEMP"
+      return 2
+    fi
+    if [[ "$SECONDS" -ge "$DEADLINE" ]]
+    then
+      printf 'FAIL: Hubble non ha esposto tutti i flussi Service controllati entro %ss.\n' \
+        "$CILIUM_SERVICE_HUBBLE_TIMEOUT" >&2
+      rm -f -- "$HUBBLE_TEMP"
+      return 1
+    fi
+    sleep 0.5
+  done
+}
 
 run_e20_service_attribution() {
   local START_UTC
   local END_UTC
   local required_file
+  local VERIFY_RC
 
   verify_service_backends || return 1
-  START_UTC="$(date -u --iso-8601=seconds)" || return 1
 
   capture_service_iptables_snapshot "$CILIUM_NODE" \
     "$SERVICE_DIR/kube-proxy-before-full.log" \
     "$SERVICE_DIR/kube-proxy-before.log" || return 1
   kubectl --context "$TESI_CONTEXT" exec -n kube-system \
     "$CILIUM_AGENT0" -- cilium-dbg bpf lb list --frontends \
-    >"$SERVICE_DIR/lb-frontends-before.log" || return 1
+    >"$SERVICE_DIR/lb-frontends-before.log" || {
+      printf 'ERROR: observer frontend LB Cilium fallito.\n' >&2
+      return 2
+    }
   kubectl --context "$TESI_CONTEXT" exec -n kube-system \
     "$CILIUM_AGENT0" -- cilium-dbg bpf lb list --backends \
-    >"$SERVICE_DIR/lb-backends-before.log" || return 1
+    >"$SERVICE_DIR/lb-backends-before.log" || {
+      printf 'ERROR: observer backend LB Cilium fallito.\n' >&2
+      return 2
+    }
   kubectl --context "$TESI_CONTEXT" exec -n kube-system \
     "$CILIUM_AGENT0" -- cilium-dbg bpf lb list --revnat \
-    >"$SERVICE_DIR/lb-revnat-before.log" || return 1
+    >"$SERVICE_DIR/lb-revnat-before.log" || {
+      printf 'ERROR: observer RevNAT Cilium fallito.\n' >&2
+      return 2
+    }
   kubectl --context "$TESI_CONTEXT" exec -n kube-system \
     "$CILIUM_AGENT0" -- cilium-dbg bpf ct list global \
-    >"$SERVICE_DIR/ct-before.log" || return 1
+    >"$SERVICE_DIR/ct-before.log" || {
+      printf 'ERROR: observer Cilium CT iniziale fallito.\n' >&2
+      return 2
+    }
 
   for required_file in \
     "$SERVICE_DIR/lb-frontends-before.log" \
@@ -2414,30 +2501,27 @@ run_e20_service_attribution() {
     fi
   done
 
+  START_UTC="$(date -u '+%Y-%m-%dT%H:%M:%S.%NZ')" || return 1
   if ! service_http_flows 6 >"$SERVICE_DIR/http-flows.log"
   then
     printf 'ERROR: almeno un flusso Service E20 è fallito; snapshot successivi non acquisiti.\n' >&2
     return 1
   fi
-  END_UTC="$(date -u --iso-8601=seconds)" || return 1
+  END_UTC="$(date -u '+%Y-%m-%dT%H:%M:%S.%NZ')" || return 1
 
   capture_service_iptables_snapshot "$CILIUM_NODE" \
     "$SERVICE_DIR/kube-proxy-after-full.log" \
     "$SERVICE_DIR/kube-proxy-after.log" || return 1
   kubectl --context "$TESI_CONTEXT" exec -n kube-system \
     "$CILIUM_AGENT0" -- cilium-dbg bpf ct list global \
-    >"$SERVICE_DIR/ct-after.log" || return 1
-  kubectl --context "$TESI_CONTEXT" exec -n kube-system \
-    "$CILIUM_AGENT0" -- hubble observe \
-    --server unix:///var/run/cilium/hubble.sock \
-    --since "$START_UTC" --until "$END_UTC" \
-    --from-pod net-lab/client --port 8080 -o jsonpb \
-    >"$SERVICE_DIR/hubble-service.json" || return 1
+    >"$SERVICE_DIR/ct-after.log" || {
+      printf 'ERROR: observer Cilium CT successivo fallito.\n' >&2
+      return 2
+    }
 
   for required_file in \
     "$SERVICE_DIR/http-flows.log" \
-    "$SERVICE_DIR/ct-after.log" \
-    "$SERVICE_DIR/hubble-service.json"
+    "$SERVICE_DIR/ct-after.log"
   do
     if [[ ! -s "$required_file" ]]
     then
@@ -2447,11 +2531,48 @@ run_e20_service_attribution() {
     fi
   done
 
+  if verify_cilium_service_ct_lb \
+      "$SERVICE_IP" 8080 "$CLIENT_IP" "$SERVER_A_IP" "$SERVER_B_IP" \
+      "$SERVICE_DIR/http-flows.log" \
+      "$SERVICE_DIR/ct-before.log" "$SERVICE_DIR/ct-after.log" \
+      "$SERVICE_DIR/lb-frontends-before.log" \
+      "$SERVICE_DIR/lb-backends-before.log" \
+      "$SERVICE_DIR/lb-revnat-before.log" \
+      "$SERVICE_DIR/ct-service-correlation.log"
+  then
+    :
+  else
+    VERIFY_RC=$?
+    return "$VERIFY_RC"
+  fi
+  if verify_kube_proxy_service_invariance \
+      "$SERVICE_IP" 8080 "$SERVER_A_IP" "$SERVER_B_IP" \
+      "$SERVICE_DIR/kube-proxy-before.log" \
+      "$SERVICE_DIR/kube-proxy-after.log"
+  then
+    :
+  else
+    VERIFY_RC=$?
+    return "$VERIFY_RC"
+  fi
+  if wait_for_cilium_service_hubble \
+      "$START_UTC" "$END_UTC" \
+      "$SERVICE_DIR/ct-service-correlation.log" \
+      "$SERVICE_DIR/hubble-service.json"
+  then
+    :
+  else
+    VERIFY_RC=$?
+    return "$VERIFY_RC"
+  fi
+
   cat "$SERVICE_DIR/http-flows.log" || return 1
+  cat "$SERVICE_DIR/ct-service-correlation.log" || return 1
   show_informative_diff "$SERVICE_DIR/kube-proxy-before.log" \
     "$SERVICE_DIR/kube-proxy-after.log" || return 1
   show_informative_diff "$SERVICE_DIR/ct-before.log" \
     "$SERVICE_DIR/ct-after.log" || return 1
+  printf 'PASS: per i flussi ClusterIP controllati, CT/mappe/Hubble attribuiscono il percorso a Cilium e i contatori kube-proxy pertinenti restano invariati.\n'
 }
 
 run_e20_service_attribution
