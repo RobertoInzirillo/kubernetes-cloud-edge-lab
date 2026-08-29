@@ -187,15 +187,27 @@ validation.
 Controllare quindi tutte le utility richieste:
 
 ```bash
-command -v gpg file sha256sum diff tar gzip grep sed awk
-command -v tcpdump nsenter timeout ip bridge ss
-command -v iptables nft pgrep lsmod sysctl
+for cmd in gpg file sha256sum diff tar gzip grep sed awk \
+  tcpdump nsenter timeout ip bridge ss iptables nft pgrep lsmod sysctl
+do
+  path="$(type -P "$cmd")" || {
+    printf 'ERROR: utility non trovata nel PATH: %s\n' "$cmd" >&2
+    exit 1
+  }
+  if test -z "$path" || ! test -x "$path"
+  then
+    printf 'ERROR: utility non eseguibile nel PATH: %s\n' "$cmd" >&2
+    exit 1
+  fi
+  printf '%s\n' "$path"
+done
 iptables --version
 nft --version
 ```
 
-Ogni chiamata a `command -v` deve produrre un percorso. Le sezioni successive
-usano anche i percorsi assoluti previsti dai pacchetti Ubuntu Noble.
+Il ciclo deve produrre per ogni utility il percorso dell'eseguibile risolto
+tramite `PATH`. Le sezioni successive usano anche i percorsi assoluti previsti
+dai pacchetti Ubuntu Noble.
 
 ## 5. Installazione della toolchain
 
