@@ -28,10 +28,10 @@ git status --short --branch
 git rev-parse --verify HEAD
 ```
 
-Per la validation immediata si può usare il branch corrente. Una riproduzione
-destinata a essere archiviata o citata deve invece registrare un tag di
-baseline o il commit restituito da `git rev-parse`; quando verrà pubblicato un
-tag stabile, questo è il punto nel quale selezionarlo prima di proseguire.
+La validation end-to-end documentata nella sezione successiva ha usato il
+commit `1dbcb290f10cc8dfa51715db03d2ba7da71bd57e`. Una riproduzione destinata a
+essere archiviata o citata deve registrare il tag o il commit selezionato e il
+valore restituito da `git rev-parse`.
 
 ### 1.2 Percorso della guida
 
@@ -58,19 +58,30 @@ Percorso di lavoro:
 6. controllare la rimozione dei cluster creati.
 
 La configurazione sperimentale descritta è quella validata nel laboratorio.
-La procedura pubblica è stata controllata staticamente, ma non è ancora stata
-validata end-to-end su un secondo sistema pulito. Gli output indicati come
-risultati appartengono agli esperimenti pubblicati e non vanno assunti come
-esito di una nuova replica.
+Una prima validation incrementale di E01, E02, E10 ed E20 è stata completata
+e marcata con il tag `validation-pass-2026-08` sul commit
+`ac33de8c31dc3d27efe1542b79ec05e4a4d886ae`. Dopo quel tag sono state
+introdotte ulteriori correzioni tecniche e metodologiche, verificate
+inizialmente con esecuzioni mirate o incrementali.
+
+Successivamente, la guida sul singolo commit
+`1dbcb290f10cc8dfa51715db03d2ba7da71bd57e` è stata eseguita integralmente da
+stato sperimentale pulito sul validator già predisposto, con verifica della
+toolchain e delle versioni previste. E01, E02, E10, E20 e il cleanup finale
+hanno avuto esito PASS. Questa esecuzione end-to-end non è partita da una
+nuova installazione Linux vergine. Gli output indicati come risultati
+appartengono agli esperimenti pubblicati e non vanno assunti come output
+dell'esecuzione end-to-end appena descritta.
 
 ## 2. Ambiente di riferimento
 
-La piattaforma validata era Zorin OS 18.1, basato su Ubuntu 24.04 Noble,
-architettura `amd64`, kernel `7.0.0-28-generic`, control group v2 (cgroup v2)
-e Berkeley Packet Filter filesystem (bpffs). La procedura Advanced Package
-Tool (APT) seguente è scritta per Ubuntu Noble `amd64` e per il sistema
-compatibile usato nel laboratorio. Altre distribuzioni Linux possono essere
-compatibili, ma i loro comandi di installazione non sono stati verificati.
+Il validator già predisposto usato per la validation end-to-end eseguiva Zorin
+OS 18.1, basato su Ubuntu 24.04 Noble, architettura `amd64`, kernel
+`7.0.0-28-generic`, control group v2 (cgroup v2) e Berkeley Packet Filter
+filesystem (bpffs). La procedura Advanced Package Tool (APT) seguente è
+scritta per Ubuntu Noble `amd64` e per il sistema compatibile usato nel
+laboratorio. Altre distribuzioni Linux possono essere compatibili, ma i loro
+comandi di installazione non sono stati verificati.
 
 La macchina deve avere accesso a Internet per repository APT, registry delle
 immagini, release binarie e chart Helm. Le catture richiedono `sudo` perché
@@ -139,7 +150,7 @@ sudo apt-get install -y \
 Questo passaggio prepara utility di download e verifica, strumenti per
 namespace e rete, diagnostica dei processi e ispezione del kernel. È un
 prerequisito operativo della guida pubblica, non una variabile scientifica.
-Il blocco APT fa parte della procedura da sottoporre alla validation
+Il blocco APT fa parte della procedura ed è stato incluso nella validation
 end-to-end.
 
 Verificare sistema operativo, architettura, risorse e caratteristiche di base:
@@ -182,7 +193,7 @@ Per questo laboratorio a tre nodi sono raccomandati operativamente almeno 4
 thread CPU, 8 GiB di RAM e 20 GiB liberi. Non sono minimi ufficiali di
 Kubernetes o Cilium: se la macchina offre meno risorse, ridurre il carico
 estraneo o prevedere timeout e possibili mancate convergenze durante la
-validation.
+replica.
 
 Controllare quindi tutte le utility richieste:
 
@@ -544,12 +555,12 @@ unset TOOLCHAIN_DIR KUBECTL_FILE KUBECTL_SHA256 \
 | Calico | `v3.32.1` |
 | Cilium | `1.19.6` |
 
-Docker era `29.6.2` in E01/E02, `29.7.1` in E10 e `29.7.2` in E20. La guida
-propone `29.6.2` come baseline consolidata per la nuova riproduzione, senza
-ricreare la cronologia degli aggiornamenti intermedi. La variazione delle
-evidence originali resta una limitazione ambientale; l'equivalenza pratica
-della baseline sarà valutata dalla futura validation end-to-end e non è qui
-presentata come già confermata.
+Le versioni Docker associate alle evidence storiche erano `29.6.2` in
+E01/E02, `29.7.1` in E10 e `29.7.2` in E20. La validation end-to-end al commit
+`1dbcb290f10cc8dfa51715db03d2ba7da71bd57e` ha invece usato `29.6.2` come
+baseline consolidata per l'intera guida. Questo ne conferma l'operatività con
+la baseline corrente, senza uniformare retroattivamente i runtime delle
+evidence originali né ricreare la cronologia degli aggiornamenti intermedi.
 
 ### 6.1 Immagine K3s
 
@@ -972,7 +983,7 @@ map_pod_veth server-b k3d-tesi-flannel-vxlan-agent-1
 
 Per ogni Pod controllare che `eth0` mostri il Pod IP corrente e che l'ultima
 riga individui una sola veth del nodo. Questo controllo fa parte della
-procedura da sottoporre alla validation end-to-end.
+procedura ed è stato incluso nella validation end-to-end.
 
 Per correlare il GET inter-node al traffico VXLAN UDP 8472, leggiamo poi PID
 host dei nodi e indirizzi underlay correnti:
@@ -1632,10 +1643,10 @@ kubectl --context "$TESI_CONTEXT" apply \
   -f manifests/cni/calico/installation.yaml
 ```
 
-La sequenza applica direttamente la configurazione finale consolidata. È stata
-controllata staticamente, ma non è ancora stata validata end-to-end in questa
-forma su un sistema pulito. Se non converge, fermarsi e conservare lo stato per
-la diagnosi.
+La sequenza applica direttamente la configurazione finale consolidata ed è
+stata eseguita nella validation end-to-end al commit
+`1dbcb290f10cc8dfa51715db03d2ba7da71bd57e`. Se non converge in una replica,
+fermarsi e conservare lo stato per la diagnosi.
 
 ### 10.3 Verifica di Calico, CNI e IPAM
 

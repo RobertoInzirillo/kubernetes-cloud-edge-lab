@@ -262,9 +262,12 @@ Service. `antctl`, Traceflow e l'ispezione OpenFlow sono strumenti centrali.
 L'[architettura OVN-Kubernetes](https://ovn-kubernetes.io/1.3/design/architecture/)
 traduce oggetti Kubernetes in switch, router, Access Control
 List (ACL) e load balancer logici OVN; OVS realizza il forwarding sui nodi.
-L'overlay predefinito usa Geneve e la documentazione considerata descrive
-anche modalità no-overlay con BGP/EVPN. Policy e Service appartengono al
-modello logico OVN.
+L'overlay predefinito usa Geneve; la
+[modalità no-overlay](https://ovn-kubernetes.io/1.3/okeps/okep-5259-no-overlay/)
+usa routing diretto L3 e BGP per scambiare le route delle subnet Pod. EVPN è
+un [meccanismo BGP distinto](https://ovn-kubernetes.io/1.2/okeps/okep-5088-evpn/)
+per integrare reti primarie user-defined L2 o L3 con fabric esterni. Policy e
+Service appartengono al modello logico OVN.
 
 **Ambito:** descrizione teorica; non incluso nel laboratorio.
 

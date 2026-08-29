@@ -31,7 +31,11 @@ e un Service non permette conclusioni sulla scala o sull'alta disponibilità.
 K3s, topologia e manifest sono rimasti controllati, mentre Docker Engine/CLI
 era `29.6.2` in E01 ed E02, `29.7.1` in E10 e `29.7.2` in E20. I controlli di
 salute non hanno mostrato divergenze capaci di invalidare i singoli casi, ma
-il confronto non è quindi byte-identico a livello di runtime host.
+il confronto non è quindi byte-identico a livello di runtime host. Queste
+versioni appartengono alle sessioni da cui derivano le evidence storiche; la
+validation end-to-end della guida al commit
+`1dbcb290f10cc8dfa51715db03d2ba7da71bd57e` ha usato Docker `29.6.2` per tutti
+e quattro gli esperimenti e non modifica gli output storici.
 
 ## Ambito delle prove Service e NetworkPolicy
 

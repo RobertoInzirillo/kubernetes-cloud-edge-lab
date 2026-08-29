@@ -84,9 +84,10 @@ intra-node e inter-node, il GET correlato e il riepilogo della procedura. Il
 relativo indice collega ciascun file alle affermazioni sostenute e ne esplicita
 i limiti; `SHA256SUMS` permette di verificarne l'integrità. La selezione non
 contiene output autonomi per readiness, configurazione CNI completa, matrice
-di connettività o Service/DNS; tali controlli restano nella procedura da
-sottoporre alla nuova validation e non sono elencati qui come risultati
-pubblicamente dimostrati.
+di connettività o Service/DNS. Tali controlli sono stati eseguiti nella
+validation end-to-end della guida, ma, non avendo aggiunto output alla
+selezione storica, non sono elencati qui come risultati pubblicamente
+dimostrati.
 
 ## 9. Limiti
 

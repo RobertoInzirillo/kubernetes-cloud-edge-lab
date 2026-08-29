@@ -85,6 +85,12 @@ usato per bloccare l'immagine del Tigera Operator.
 Per chi vuole replicare il laboratorio, la
 [guida di riproduzione](docs/reproduction-guide.md) descrive la procedura
 completa per preparare un sistema pulito ed eseguire E01, E02, E10 ed E20.
+La procedura consolidata al commit
+`1dbcb290f10cc8dfa51715db03d2ba7da71bd57e` è stata inoltre eseguita
+integralmente da stato sperimentale pulito sul validator già predisposto, con
+toolchain e versioni verificate: E01, E02, E10, E20 e cleanup finale hanno
+avuto esito PASS. Non si è trattato di una nuova installazione Linux vergine;
+la cronologia completa della validation è registrata nella guida.
 
 La baseline usa k3d `v5.9.0`, K3s `v1.34.9+k3s1`, Kubernetes `1.34.9`,
 `kubectl` `v1.34.9`, Helm `v3.21.3` e BusyBox `1.38.0`. Le immagini K3s e
