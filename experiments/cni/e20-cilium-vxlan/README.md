@@ -35,9 +35,12 @@ I valori completi sono in
 | agente Cilium | manifest list SHA-256 `0df5b2750b64c49843aba1d649e9eaf61467cb0645ad3171db6f6962c095ac92` |
 | operator generic | manifest list SHA-256 `0db4ca4e06969d8904ee036617795d0e9c3228cf7b8d902ba74fc2bb98d2d665` |
 
-Il kernel host osservato era `7.0.0-28-generic`, con cgroup v2, Berkeley
-Packet Filter filesystem (bpffs), BPF Type Format (BTF), hook traffic control
-e supporto VXLAN. I prerequisiti sono stati verificati anche dentro ogni nodo.
+Le evidence storiche
+[`node-ebpf-prerequisites.log`](evidence/node-ebpf-prerequisites.log) e
+[`policy-final-gate.log`](evidence/policy-final-gate.log) registrano il kernel
+host `7.0.0-28-generic`, con cgroup v2, Berkeley Packet Filter filesystem
+(bpffs), BPF Type Format (BTF), hook traffic control e supporto VXLAN. I
+prerequisiti sono stati verificati anche dentro ogni nodo.
 
 ## 4. Topologia
 

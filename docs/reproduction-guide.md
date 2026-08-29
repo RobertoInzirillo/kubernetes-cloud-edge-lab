@@ -76,12 +76,16 @@ dell'esecuzione end-to-end appena descritta.
 ## 2. Ambiente di riferimento
 
 Il validator già predisposto usato per la validation end-to-end eseguiva Zorin
-OS 18.1, basato su Ubuntu 24.04 Noble, architettura `amd64`, kernel
-`7.0.0-28-generic`, control group v2 (cgroup v2) e Berkeley Packet Filter
-filesystem (bpffs). La procedura Advanced Package Tool (APT) seguente è
-scritta per Ubuntu Noble `amd64` e per il sistema compatibile usato nel
-laboratorio. Altre distribuzioni Linux possono essere compatibili, ma i loro
-comandi di installazione non sono stati verificati.
+OS 18.1, basato su Ubuntu 24.04 Noble, architettura `amd64`, control group v2
+(cgroup v2) e Berkeley Packet Filter filesystem (bpffs). Prima della full
+validation vi era stato osservato il kernel `7.0.0-30-generic`; la repository
+non conserva però un output della full validation che permetta di attribuire
+con certezza quella release all'intera esecuzione. Le evidence storiche E20
+registrano invece `7.0.0-28-generic` e non vengono uniformate alla sessione
+successiva. La procedura Advanced Package Tool (APT) seguente è scritta per
+Ubuntu Noble `amd64` e per il sistema compatibile usato nel laboratorio. Altre
+distribuzioni Linux possono essere compatibili, ma i loro comandi di
+installazione non sono stati verificati.
 
 La macchina deve avere accesso a Internet per repository APT, registry delle
 immagini, release binarie e chart Helm. Le catture richiedono `sudo` perché

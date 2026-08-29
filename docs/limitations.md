@@ -18,6 +18,15 @@ router fisici, percorsi Equal-Cost Multi-Path (ECMP), Maximum Transmission
 Unit (MTU) eterogenee o integrazioni con un cloud provider. Gli indirizzi dei
 container nodo sono inoltre effimeri e possono cambiare dopo un riavvio.
 
+## Famiglie IP e sistema operativo
+
+Il laboratorio valuta networking IPv4 single-stack. Non valida IPv6 o
+[dual-stack IPv4/IPv6](https://kubernetes.io/docs/concepts/services-networking/dual-stack/).
+Host e nodi sono Linux; non vengono valutati nodi Windows né il relativo
+[networking basato su Host Networking Service (HNS)](https://kubernetes.io/docs/concepts/services-networking/windows-networking/).
+Questi confini definiscono lo scope della fase corrente e non implicano un
+giudizio negativo sulle configurazioni escluse.
+
 ## Assenza di WAN, benchmark e scala
 
 Il laboratorio non include Wide Area Network (WAN), siti edge fisicamente
@@ -36,6 +45,12 @@ versioni appartengono alle sessioni da cui derivano le evidence storiche; la
 validation end-to-end della guida al commit
 `1dbcb290f10cc8dfa51715db03d2ba7da71bd57e` ha usato Docker `29.6.2` per tutti
 e quattro gli esperimenti e non modifica gli output storici.
+
+Le evidence storiche E20 registrano il kernel `7.0.0-28-generic`. Prima della
+full validation sul validator era stato osservato `7.0.0-30-generic`, ma la
+repository non conserva un output della full validation sufficiente ad
+attribuirle con certezza una release kernel precisa. Le due osservazioni non
+vengono quindi uniformate.
 
 ## Ambito delle prove Service e NetworkPolicy
 

@@ -5,7 +5,7 @@
 Questa panoramica separa due piani:
 
 - **documentazione ufficiale**: architetture e capacità descritte dalle fonti
-  ufficiali consultate tra il 28 luglio e il 6 agosto 2026;
+  ufficiali consultate e verificate fino al 29 agosto 2026;
 - **risultati sperimentali**: configurazioni osservate nel laboratorio k3d con
   Flannel, Calico e Cilium.
 
@@ -55,6 +55,26 @@ CNI non prescrive Virtual Extensible LAN (VXLAN), Border Gateway Protocol
 vSwitch (OVS). Queste sono scelte della soluzione e della sua configurazione.
 Per questo “soluzione di networking Kubernetes” è spesso più preciso di
 “plugin CNI”.
+
+### Ruoli dei plugin e concatenazione
+
+Il termine CNI copre ruoli differenti; questa tassonomia sintetica non è un
+catalogo esaustivo:
+
+- i plugin di **interfaccia/rete**, come `bridge`, `ptp`, `macvlan`, `ipvlan`,
+  `vlan` e `host-device`, collegano il namespace a una rete o a un dispositivo;
+- i plugin **IPAM**, come `host-local`, `static` e DHCP, assegnano gli
+  indirizzi e restituiscono gateway e route;
+- i **meta-plugin o plugin concatenati**, come `portmap`, `bandwidth` e
+  `tuning`, elaborano il risultato o l'interfaccia creati da altri plugin;
+  Multus è invece un meta-CNI che invoca più delegate per associare più reti;
+- le **soluzioni o provider di networking Kubernetes**, come Flannel, Calico,
+  Cilium, Antrea, OVN-Kubernetes e kube-router, coordinano più funzioni di rete,
+  con confini diversi fra CNI, IPAM, routing, policy e Service.
+
+Un file `conflist` può quindi concatenare più plugin. Lo stack K3s/Flannel
+studiato combina già Flannel con `bridge`, `host-local`, `portmap` e
+`bandwidth`, anziché affidare tutte le funzioni a un singolo eseguibile.
 
 ## IP Address Management
 
@@ -180,6 +200,14 @@ E10 e E20 hanno applicato gli stessi manifest con motori differenti: Felix e
 il data plane Linux iptables in Calico; revisioni endpoint, policy map e
 programmi eBPF in Cilium, con verdetti Hubble sui flussi.
 
+Trasporto/routing inter-node e data plane sono assi distinti. Il primo
+stabilisce come raggiungere le reti remote, per esempio mediante VXLAN,
+Geneve, IP-in-IP o routing nativo con route distribuite da BGP; il secondo
+descrive come i pacchetti vengono elaborati, per esempio con bridge e routing
+Linux, iptables/nftables, OVS/OVN o eBPF. Una soluzione può quindi combinare
+VXLAN con iptables oppure con eBPF. Nei profili provati tutte e tre usano
+VXLAN, ma il packet processing osservato rimane specifico di E01, E10 ed E20.
+
 ## Matrice dei ruoli architetturali
 
 Legenda: **N** = funzione nativa; **O** = modalità o modulo opzionale; **D** =
@@ -187,17 +215,17 @@ delegata; **C** = composizione; **—** = non è un obiettivo proprio. La matric
 riassume famiglie di configurazioni documentate e non sostituisce la modalità
 effettivamente installata.
 
-| Soluzione | Ruolo | Rete Pod e IPAM | Inter-node/data plane | Policy | Service |
-|---|---|---|---|---|---|
-| Flannel | fabric L3 essenziale | C/D | N: VXLAN, `host-gw`, WireGuard | D | D |
-| Calico | networking L3, sicurezza e IPAM | N, `host-local` O | N: Linux con VXLAN, IP-in-IP o no-overlay; eBPF O | N | D con Linux; N/O con eBPF |
-| Cilium | piattaforma eBPF dai livelli 3–7 | N, più modalità | N: VXLAN/Geneve o native routing | N | N/O; può convivere con kube-proxy |
-| Antrea | piattaforma L3/L4 basata su OVS | N/D | N: Encap, NoEncap, Hybrid | N | N/O tramite AntreaProxy |
-| OVN-Kubernetes | Software Defined Network OVN/OVS | N | N: Geneve; no-overlay O | N tramite Access Control List | N tramite load balancer OVN |
-| kube-router | agente Linux modulare | D | N/O: BGP, IP-in-IP, Foo-over-UDP | N/O | N/O tramite IP Virtual Server |
-| Canal | composizione Flannel e Calico | C | C | C | D |
-| Multus | meta-plugin per più reti | D | D | D | D |
-| CNI cloud | integrazione con il provider | N/C | N/C, underlay o overlay gestito | N/O/D | N/D |
+| Soluzione | Ruolo | Rete Pod e IPAM | Trasporto/routing inter-node | Data plane / packet processing | Policy | Service |
+|---|---|---|---|---|---|---|
+| Flannel | fabric L3 essenziale | C/D | N: VXLAN, `host-gw`, WireGuard | C: routing/bridge Linux e plugin delegati | D | D |
+| Calico | networking L3, sicurezza e IPAM | N, `host-local` O | N: VXLAN, IP-in-IP o routing nativo/BGP | N: Linux iptables/nftables; eBPF o VPP O | N | D con Linux; N/O con eBPF |
+| Cilium | piattaforma eBPF dai livelli 3–7 | N, più modalità | N: VXLAN/Geneve o routing nativo | N: eBPF e routing Linux | N | N/O; può convivere con kube-proxy |
+| Antrea | piattaforma L3/L4 basata su OVS | N/D | N: Encap, NoEncap, Hybrid | N: OVS/OpenFlow | N | N/O tramite AntreaProxy |
+| OVN-Kubernetes | Software Defined Network OVN/OVS | N | N: Geneve; no-overlay L3/BGP O | N: OVN/OVS | N tramite Access Control List | N tramite load balancer OVN |
+| kube-router | agente Linux modulare | D | N/O: BGP, IP-in-IP, Foo-over-UDP | N/O: routing Linux, iptables, IPVS | N/O | N/O tramite IP Virtual Server |
+| Canal | composizione Flannel e Calico | C | C: backend Flannel | C: bridge/routing Linux e netfilter Calico | C | D |
+| Multus | meta-plugin per più reti | D | D | D | D | D |
+| CNI cloud | integrazione con il provider | N/C | N/C: underlay o overlay gestito | N/C/D: provider, kernel o eBPF | N/O/D | N/D |
 
 ## Soluzioni e famiglie
 
@@ -296,10 +324,15 @@ kube-proxy.
 ### Multus
 
 La [documentazione Multus](https://k8snetworkplumbingwg.github.io/multus-cni/)
-lo definisce come meta-plugin: riceve la chiamata CNI e delega a una rete primaria e
-a plugin aggiuntivi descritti da `NetworkAttachmentDefinition`. Abilita il
-multi-homing, ma non decide autonomamente IPAM, trasporto inter-node, policy o
-Service; tali proprietà appartengono ai delegate.
+lo definisce come meta-plugin: riceve la chiamata CNI e delega a una rete
+primaria e a reti secondarie descritte da `NetworkAttachmentDefinition`,
+associando più interfacce allo stesso Pod. Le reti aggiuntive possono essere
+realizzate, per esempio, con `macvlan` o `ipvlan`; con SR-IOV, Multus passa al
+plugin delegato l'identificativo del dispositivo assegnato. Questa composizione
+è pertinente a workload multi-homed e a scenari NFV/telco o industriali che
+richiedono reti separate o accesso diretto a dispositivi. Multus non decide
+autonomamente IPAM, trasporto inter-node, policy o Service: tali proprietà
+appartengono ai delegate.
 
 **Ambito:** descrizione teorica; non incluso nel laboratorio.
 
@@ -327,6 +360,7 @@ non incluse nel laboratorio.
 
 - [Kubernetes: Services, Load Balancing, and Networking](https://kubernetes.io/docs/concepts/services-networking/)
 - [CNI Specification](https://www.cni.dev/docs/spec/)
+- [CNI reference plugins](https://github.com/containernetworking/plugins)
 - [Flannel](https://github.com/flannel-io/flannel)
 - [Calico: architecture](https://docs.tigera.io/calico/latest/reference/architecture/overview)
 - [Calico: networking options](https://docs.tigera.io/calico/latest/networking/determine-best-networking)
@@ -337,6 +371,7 @@ non incluse nel laboratorio.
 - [kube-router: how it works](https://www.kube-router.io/docs/how-it-works/)
 - [Calico 3.32.1: Canal](https://docs.tigera.io/calico/latest/getting-started/kubernetes/flannel/install-for-flannel)
 - [Multus documentation](https://k8snetworkplumbingwg.github.io/multus-cni/)
+- [SR-IOV CNI](https://github.com/k8snetworkplumbingwg/sriov-cni)
 - [Amazon EKS VPC CNI](https://docs.aws.amazon.com/eks/latest/best-practices/vpc-cni.html)
 - [Azure CNI](https://learn.microsoft.com/en-us/azure/aks/concepts-network-cni-overview)
 - [GKE VPC-native](https://docs.cloud.google.com/kubernetes-engine/docs/concepts/alias-ips)

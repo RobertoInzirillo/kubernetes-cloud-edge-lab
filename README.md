@@ -5,11 +5,25 @@ Repository tecnica della tesi magistrale:
 > **Federated Multicluster Orchestration and Networking in the Cloud–Edge
 > Continuum**
 
-Questa versione documenta lo studio del networking Kubernetes e della
-Container Network Interface (CNI). Il campione sperimentale comprende Flannel
-VXLAN nello stack K3s, Calico Open Source 3.32.1 con VXLAN e data plane Linux
-iptables, e Cilium 1.19.6 con VXLAN e data plane eBPF. Il confronto riguarda
-configurazioni precise, non i progetti in astratto.
+Questa versione documenta la prima fase dello studio, dedicata al networking
+Kubernetes e alla Container Network Interface (CNI) in ambito single-cluster.
+Il campione sperimentale comprende Flannel VXLAN nello stack K3s, Calico Open
+Source 3.32.1 con VXLAN e data plane Linux iptables, e Cilium 1.19.6 con VXLAN
+e data plane eBPF. Il confronto riguarda configurazioni precise, non i
+progetti in astratto.
+
+Il campione rappresenta tre profili architetturali: Flannel come baseline
+semplice di networking L3 con overlay VXLAN, senza enforcement NetworkPolicy
+proprio; Calico come soluzione più estesa e modulare, con IPAM, policy e data
+plane Linux tradizionale nel profilo provato; Cilium come approccio eBPF, con
+data plane e osservabilità significativamente differenti. La scelta non
+esaurisce l'ecosistema CNI: la panoramica teorica copre altre famiglie senza
+moltiplicare gli esperimenti.
+
+Multicluster, federazione, cloud-edge e networking inter-cluster sono
+deliberatamente fuori dal perimetro di questa prima fase single-cluster.
+Saranno affrontati nel seguito della tesi sulla base delle indicazioni del
+correlatore.
 
 ## Risultati disponibili
 
