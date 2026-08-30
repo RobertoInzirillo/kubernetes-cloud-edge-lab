@@ -149,7 +149,7 @@ _tesi_parse_service_http_observations() {
     function fail(message) {
       print "ERROR: output HTTP Service ambiguo: " message "." > "/dev/stderr"
       parser_error = 1
-      exit
+      exit 2
     }
     function field_value(token, prefix) {
       return substr(token, length(prefix) + 1)
