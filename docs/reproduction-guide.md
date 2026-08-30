@@ -628,6 +628,9 @@ test -f manifests/cni/calico/imageset.yaml
 test -f manifests/cni/calico/installation.yaml
 test -f manifests/cni/cilium/values.yaml
 test -f scripts/cni/common/lab-env.sh
+test -f scripts/cni/common/service.sh
+test -f scripts/cni/common/capture.sh
+test -f scripts/cni/calico/e10-service.sh
 test -x scripts/cni/calico/pin-tigera-operator-image.sh
 ```
 
@@ -644,13 +647,14 @@ source scripts/cni/common/lab-env.sh
 
 Lo script rileva e verifica la root, definisce l'immagine K3s bloccata e gli
 helper comuni. Può essere caricato più volte: non crea cluster, non modifica il
-sistema e non avvia test. Il modulo di cattura viene caricato esplicitamente nei
-punti di ingresso di E01, E10 ed E20; gli altri helper specifici di E02, E10 ed
-E20 restano nelle relative sezioni e vengono definiti prima dell'uso.
-`capture.sh` dipende dalle primitive `_tesi_is_ipv4` e `http_flow` già definite
-da `lab-env.sh`, quindi l'ordine dei due `source` è intenzionale. Il runner di
-cattura esegue il comando ricevuto dopo `--`: non sceglie CNI, device, filtro o
-porta VXLAN.
+sistema e non avvia test. I moduli Service e cattura vengono caricati
+esplicitamente nei punti di ingresso di E01, E10 ed E20; E10 carica inoltre la
+propria orchestrazione Service specifica. Gli altri helper specifici di E02,
+E10 ed E20 restano nelle relative sezioni e vengono definiti prima dell'uso.
+`service.sh` dipende dalle primitive di contesto, validazione IP e probe HTTP
+definite da `lab-env.sh`; `capture.sh` dipende da `_tesi_is_ipv4` e `http_flow`.
+L'ordine dei `source` è quindi intenzionale. Il runner di cattura esegue il
+comando ricevuto dopo `--`: non sceglie CNI, device, filtro o porta VXLAN.
 
 Prima di creare un cluster, ogni esperimento invoca:
 
@@ -722,6 +726,7 @@ una nuova shell:
 ```bash
 cd "$HOME/kubernetes-cloud-edge-lab"
 source scripts/cni/common/lab-env.sh
+source scripts/cni/common/service.sh
 source scripts/cni/common/capture.sh
 check_experiment_preflight tesi-flannel-vxlan 6445
 ```
@@ -1217,7 +1222,9 @@ Questo è il punto di ingresso E10 anche in una nuova shell:
 ```bash
 cd "$HOME/kubernetes-cloud-edge-lab"
 source scripts/cni/common/lab-env.sh
+source scripts/cni/common/service.sh
 source scripts/cni/common/capture.sh
+source scripts/cni/calico/e10-service.sh
 ```
 
 ### 10.1 Download e verifica dei chart
@@ -1692,70 +1699,29 @@ essere rimossa con `rm -rf -- "$CAPTURE_DIR"`.
 
 Per attribuire il Service verifichiamo separatamente i due backend Ready, poi
 confrontiamo catene e contatori kube-proxy prima e dopo nuove connessioni al
-ClusterIP.
+ClusterIP. Il modulo E10 mantiene questa orchestrazione specifica senza
+trasformarla in un helper Service generico. Gli observer effettivamente usati
+restano riconoscibili nei comandi sottostanti:
+
+```text
+kubectl --context "$TESI_CONTEXT" get endpointslice \
+  -n net-lab -l kubernetes.io/service-name=servers \
+  -o jsonpath='{range .items[*].endpoints[*]}{.targetRef.name}{"\t"}{.conditions.ready}{"\n"}{end}'
+
+docker exec "$CALICO_AGENT0" /bin/aux/iptables-save -c -t nat
+```
+
+Il primo comando alimenta il gate di readiness dei backend; il secondo produce
+gli snapshot completi dai quali vengono filtrate le regole
+`net-lab/servers:http`. La sequenza causale resta: snapshot `before`, sei nuove
+connessioni controllate, snapshot `after`, parsing delle sole osservazioni HTTP
+e confronto dei delta lungo
+`KUBE-SERVICES → KUBE-SVC-* → KUBE-SEP-* → DNAT`. Il parser non genera traffico
+e un delta positivo viene richiesto soltanto per i backend realmente osservati.
 
 ```bash
 export CALICO_AGENT0='k3d-tesi-e10-calico-vxlan-agent-0'
 export SERVICE_DIR="$(mktemp -d)"
-
-run_e10_service_attribution() {
-  local GREP_RC
-  local VERIFY_RC
-
-  verify_service_backends || return 1
-
-  if ! docker logs "$CALICO_AGENT0" \
-      >"$SERVICE_DIR/kube-proxy-full.log" 2>&1
-  then
-    printf 'ERROR: acquisizione log kube-proxy fallita.\n' >&2
-    return 1
-  fi
-  if grep -E 'kube-proxy|Using iptables Proxier' \
-      "$SERVICE_DIR/kube-proxy-full.log" \
-      >"$SERVICE_DIR/kube-proxy.log"
-  then
-    :
-  else
-    GREP_RC=$?
-    if [[ "$GREP_RC" -gt 1 ]]
-    then
-      printf 'ERROR: filtro log kube-proxy fallito (grep rc=%s).\n' \
-        "$GREP_RC" >&2
-      return 1
-    fi
-    printf 'INFO: nessuna riga kube-proxy trovata nel log; il file non viene usato come gate.\n'
-  fi
-
-  capture_service_iptables_snapshot "$CALICO_AGENT0" \
-    "$SERVICE_DIR/iptables-before-full.log" \
-    "$SERVICE_DIR/iptables-before.log" || return 1
-
-  if ! service_http_flows 6 >"$SERVICE_DIR/http-flows.log"
-  then
-    printf 'ERROR: almeno un flusso Service E10 è fallito; snapshot successivo non acquisito.\n' >&2
-    return 1
-  fi
-
-  capture_service_iptables_snapshot "$CALICO_AGENT0" \
-    "$SERVICE_DIR/iptables-after-full.log" \
-    "$SERVICE_DIR/iptables-after.log" || return 1
-
-  cat "$SERVICE_DIR/http-flows.log" || return 1
-  if verify_kube_proxy_service_attribution \
-      "$SERVICE_IP" 8080 "$SERVER_A_IP" "$SERVER_B_IP" \
-      "$SERVICE_DIR/http-flows.log" \
-      "$SERVICE_DIR/iptables-before.log" \
-      "$SERVICE_DIR/iptables-after.log"
-  then
-    :
-  else
-    VERIFY_RC=$?
-    return "$VERIFY_RC"
-  fi
-  show_informative_diff "$SERVICE_DIR/iptables-before.log" \
-    "$SERVICE_DIR/iptables-after.log" || return 1
-}
-
 run_e10_service_attribution
 ```
 
@@ -1938,6 +1904,7 @@ Questo è il punto di ingresso E20 anche in una nuova shell:
 ```bash
 cd "$HOME/kubernetes-cloud-edge-lab"
 source scripts/cni/common/lab-env.sh
+source scripts/cni/common/service.sh
 source scripts/cni/common/capture.sh
 ```
 
