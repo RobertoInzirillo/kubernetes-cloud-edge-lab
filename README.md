@@ -96,15 +96,8 @@ usato per bloccare l'immagine del Tigera Operator.
 4. I [limiti](docs/limitations.md) definiscono l'ambito nel quale i risultati
    possono essere interpretati e generalizzati.
 
-Per chi vuole replicare il laboratorio, la
-[guida di riproduzione](docs/reproduction-guide.md) descrive la procedura
-completa per preparare un sistema pulito ed eseguire E01, E02, E10 ed E20.
-La procedura consolidata al commit
-`1dbcb290f10cc8dfa51715db03d2ba7da71bd57e` è stata inoltre eseguita
-integralmente da stato sperimentale pulito sul validator già predisposto, con
-toolchain e versioni verificate: E01, E02, E10, E20 e cleanup finale hanno
-avuto esito PASS. Non si è trattato di una nuova installazione Linux vergine;
-la cronologia completa della validation è registrata nella guida.
+Per chi vuole replicare il laboratorio, la [guida di riproduzione](docs/reproduction-guide.md) descrive la procedura completa per preparare l'ambiente ed eseguire E01, E02, E10 ed E20. La riproducibilità è stata verificata su un secondo sistema Linux in due fasi: una prima replica è partita da un'installazione Linux pulita, includendo la preparazione e la verifica della toolchain, e ha validato la versione del laboratorio allora disponibile; successivamente, dopo il consolidamento metodologico degli esperimenti, la procedura aggiornata al commit `1dbcb290f10cc8dfa51715db03d2ba7da71bd57e` è stata rieseguita integralmente sullo stesso validator già predisposto, partendo da uno stato sperimentale pulito. In quest'ultima full validation, toolchain e versioni sono state nuovamente verificate ed E01, E02, E10, E20 e il cleanup finale hanno tutti avuto esito PASS. La cronologia e la distinzione tra le due validation sono documentate nella guida di riproduzione.
+
 
 La baseline usa k3d `v5.9.0`, K3s `v1.34.9+k3s1`, Kubernetes `1.34.9`,
 `kubectl` `v1.34.9`, Helm `v3.21.3` e BusyBox `1.38.0`. Le immagini K3s e

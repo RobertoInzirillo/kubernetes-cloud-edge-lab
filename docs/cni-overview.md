@@ -162,6 +162,19 @@ flussi ClusterIP controllati, nuove entry conntrack eBPF e contatori
 kube-proxy invariati hanno attribuito selezione del backend e reverse NAT a
 Cilium; la conclusione non viene estesa ad altri percorsi o tipi di Service.
 
+## Trasporto inter-node e packet processing: due assi distinti
+
+Il trasporto/routing inter-node descrive come il traffico raggiunge le reti
+remote: mediante VXLAN, Geneve o IP-in-IP, oppure tramite routing nativo con
+route statiche o distribuite da BGP. Il packet processing descrive invece come
+i pacchetti vengono elaborati: bridge e routing Linux, iptables/nftables,
+OVS/OVN o eBPF.
+
+I due assi sono ortogonali: una soluzione può combinare, per esempio, VXLAN
+con iptables oppure con eBPF. Nei profili provati tutte e tre le soluzioni
+usano VXLAN, ma il packet processing osservato rimane specifico di E01, E10 ed
+E20.
+
 ## Service Kubernetes
 
 Un Service fornisce un indirizzo virtuale stabile e seleziona endpoint pronti.
@@ -200,14 +213,6 @@ E10 e E20 hanno applicato gli stessi manifest con motori differenti: Felix e
 il data plane Linux iptables in Calico; revisioni endpoint, policy map e
 programmi eBPF in Cilium, con verdetti Hubble sui flussi.
 
-Trasporto/routing inter-node e data plane sono assi distinti. Il primo
-stabilisce come raggiungere le reti remote, per esempio mediante VXLAN,
-Geneve, IP-in-IP o routing nativo con route distribuite da BGP; il secondo
-descrive come i pacchetti vengono elaborati, per esempio con bridge e routing
-Linux, iptables/nftables, OVS/OVN o eBPF. Una soluzione può quindi combinare
-VXLAN con iptables oppure con eBPF. Nei profili provati tutte e tre usano
-VXLAN, ma il packet processing osservato rimane specifico di E01, E10 ed E20.
-
 ## Matrice dei ruoli architetturali
 
 Legenda: **N** = funzione nativa; **O** = modalità o modulo opzionale; **D** =
@@ -218,8 +223,8 @@ effettivamente installata.
 | Soluzione | Ruolo | Rete Pod e IPAM | Trasporto/routing inter-node | Data plane / packet processing | Policy | Service |
 |---|---|---|---|---|---|---|
 | Flannel | fabric L3 essenziale | C/D | N: VXLAN, `host-gw`, WireGuard | C: routing/bridge Linux e plugin delegati | D | D |
-| Calico | networking L3, sicurezza e IPAM | N, `host-local` O | N: VXLAN, IP-in-IP o routing nativo/BGP | N: Linux iptables/nftables; eBPF o VPP O | N | D con Linux; N/O con eBPF |
-| Cilium | piattaforma eBPF dai livelli 3–7 | N, più modalità | N: VXLAN/Geneve o routing nativo | N: eBPF e routing Linux | N | N/O; può convivere con kube-proxy |
+| Calico | networking L3, sicurezza e IPAM | N, `host-local` O | N: VXLAN, IP-in-IP o routing nativo/BGP | N: Linux iptables/nftables; eBPF o VPP O | N | D/cooperazione con kube-proxy nei data plane Linux iptables/nftables; N con eBPF o VPP |
+| Cilium | piattaforma eBPF dai livelli 3–7 | N, più modalità | N: VXLAN/Geneve o routing nativo | N: eBPF e routing Linux | N | N: ClusterIP in-cluster per-packet con `kubeProxyReplacement=false`; sostituzione completa con `true` |
 | Antrea | piattaforma L3/L4 basata su OVS | N/D | N: Encap, NoEncap, Hybrid | N: OVS/OpenFlow | N | N/O tramite AntreaProxy |
 | OVN-Kubernetes | Software Defined Network OVN/OVS | N | N: Geneve; no-overlay L3/BGP O | N: OVN/OVS | N tramite Access Control List | N tramite load balancer OVN |
 | kube-router | agente Linux modulare | D | N/O: BGP, IP-in-IP, Foo-over-UDP | N/O: routing Linux, iptables, IPVS | N/O | N/O tramite IP Virtual Server |
@@ -252,9 +257,12 @@ eBPF, nftables e VPP, che sono configurazioni distinte.
 
 Nel Kubernetes Datastore, Felix riceve gli aggiornamenti rilevanti e applica
 la policy; il policy controller di `calico-kube-controllers` documentato per
-il datastore etcd non va attribuito alla configurazione provata. Con il data
-plane Linux i Service restano normalmente a kube-proxy; il data plane eBPF può
-sostituirlo.
+il datastore etcd non va attribuito alla configurazione provata. Con i data
+plane Linux iptables/nftables i Service restano normalmente a kube-proxy; il
+[data plane eBPF](https://docs.tigera.io/calico/latest/operations/ebpf/use-cases-ebpf)
+può sostituirlo, mentre il
+[data plane VPP](https://docs.tigera.io/calico/latest/getting-started/kubernetes/vpp/getting-started)
+implementa nativamente i Service senza kube-proxy.
 
 **Verificato:** Calico Open Source 3.32.1, Calico IPAM, VXLAN, BGP
 disabilitato, Linux iptables, policy Felix e kube-proxy mantenuto in E10.
@@ -267,8 +275,10 @@ osservabilità. La documentazione della versione studiata descrive
 [routing e tunnel](https://github.com/cilium/cilium/blob/v1.19.6/Documentation/network/concepts/routing.rst),
 mentre [Hubble](https://github.com/cilium/cilium/blob/v1.19.6/Documentation/observability/hubble/index.rst)
 espone identità, flussi e motivi di drop. Le policy Kubernetes e quelle proprie
-sono realizzate in eBPF. La sostituzione di kube-proxy
-è una scelta esplicita, non una proprietà universale.
+sono realizzate in eBPF. In Cilium 1.19.6,
+[`kubeProxyReplacement=false`](https://github.com/cilium/cilium/blob/v1.19.6/Documentation/network/kubernetes/kubeproxy-free.rst)
+abilita comunque il bilanciamento per-packet dei ClusterIP in-cluster;
+`kubeProxyReplacement=true` abilita la sostituzione completa di kube-proxy.
 
 **Verificato:** Cilium 1.19.6, Cluster Pool IPAM, VXLAN, veth/eBPF, Hubble
 locale, normali NetworkPolicy Kubernetes e kube-proxy mantenuto in E20.

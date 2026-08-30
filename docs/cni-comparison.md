@@ -2,8 +2,9 @@
 
 ## Scopo e perimetro
 
-Questo documento presenta E30, confronto analitico derivato esclusivamente da
-quattro esperimenti:
+Questo documento presenta E30. Le osservazioni **O** e le interpretazioni
+**I** derivano esclusivamente da quattro esperimenti; gli elementi **T**
+aggiungono contesto teorico/documentale e non sono risultati sperimentali:
 
 - [E01 — Flannel VXLAN](../experiments/cni/e01-flannel-vxlan/README.md);
 - [E02 — attribuzione NetworkPolicy](../experiments/cni/e02-networkpolicy/README.md);
@@ -19,6 +20,10 @@ configurazioni precise:
   plane Linux iptables;
 - Cilium 1.19.6, Cluster Pool IPAM, VXLAN e data plane virtual Ethernet
   (veth)/extended Berkeley Packet Filter (eBPF), con kube-proxy mantenuto.
+
+Per il contesto architetturale generale si veda la
+[panoramica dei CNI](cni-overview.md); per il perimetro e i limiti delle
+conclusioni si veda [Limitazioni e lavoro futuro](limitations.md).
 
 ## Tipo di evidenza
 
@@ -50,7 +55,9 @@ Command Line Interface (CLI) erano `29.6.2` in E01/E02, `29.7.1` in E10 e
 `29.7.2` in E20. I controlli non hanno rilevato un cambiamento funzionale che
 invalidasse gli esperimenti, ma la variazione resta un limite. Indirizzi,
 veth, identità, contatori e altri identificativi runtime differiscono per
-definizione.
+definizione. Queste versioni appartengono alle sessioni che hanno prodotto le
+evidence storiche pubblicate; la successiva validation completa end-to-end ha
+rieseguito E01, E02, E10 ed E20 con Docker Engine/CLI `29.6.2`.
 
 ## Matrice principale
 
@@ -78,11 +85,17 @@ La matrice usa inoltre User Datagram Protocol (UDP), Virtual Tunnel Endpoint
 | **O/T — limiti specifici** | non provati `host-gw` e altri backend; Service non isolato causalmente | non provati BGP/no-overlay, IP-in-IP, nftables o eBPF | non provati native routing o kube-proxy replacement |
 
 WorkloadEndpoint rimane il modello logico con cui Calico rappresenta un
-endpoint di workload. Nella configurazione E10 con Kubernetes API datastore,
-gli workload endpoint sono basati sui Pod Kubernetes e non è esposta una CRD
-WorkloadEndpoint interrogabile direttamente con il comando `kubectl` usato in
-precedenza. Le osservazioni E10 correlano quindi Pod IP e nodo, interfacce
-`cali*`, route, IPAMBlock/BlockAffinity e dataplane Felix.
+endpoint di workload. Nel
+[Kubernetes API datastore (KDD)](https://docs.tigera.io/calico/latest/getting-started/kubernetes/hardway/the-calico-datastore),
+gli endpoint dei workload Kubernetes sono rappresentati internamente a
+partire dai Pod, non da una CRD WorkloadEndpoint dedicata nel datastore
+sottostante. Il
+[Calico API server](https://docs.tigera.io/calico/latest/reference/architecture/overview)
+può esporre tramite `kubectl` le API v3 aggregate `projectcalico.org/v3`: è un
+percorso distinto dalla query diretta delle CRD del datastore tentata nel
+laboratorio. In E10 quella query non ha esposto una CRD WorkloadEndpoint
+dedicata; le osservazioni correlano quindi Pod IP e nodo, interfacce `cali*`,
+route, IPAMBlock/BlockAffinity e dataplane Felix.
 
 I numeri del VNI non sono una metrica di qualità. Nei casi Flannel e Calico
 identificano il dominio VXLAN configurato. Nel caso Cilium osservato, il
