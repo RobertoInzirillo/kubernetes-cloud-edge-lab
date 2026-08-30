@@ -644,8 +644,13 @@ source scripts/cni/common/lab-env.sh
 
 Lo script rileva e verifica la root, definisce l'immagine K3s bloccata e gli
 helper comuni. Può essere caricato più volte: non crea cluster, non modifica il
-sistema e non avvia test. Gli helper specifici di E02, E10 ed E20 restano nelle
-relative sezioni e vengono definiti prima dell'uso.
+sistema e non avvia test. Il modulo di cattura viene caricato esplicitamente nei
+punti di ingresso di E01, E10 ed E20; gli altri helper specifici di E02, E10 ed
+E20 restano nelle relative sezioni e vengono definiti prima dell'uso.
+`capture.sh` dipende dalle primitive `_tesi_is_ipv4` e `http_flow` già definite
+da `lab-env.sh`, quindi l'ordine dei due `source` è intenzionale. Il runner di
+cattura esegue il comando ricevuto dopo `--`: non sceglie CNI, device, filtro o
+porta VXLAN.
 
 Prima di creare un cluster, ogni esperimento invoca:
 
@@ -717,6 +722,7 @@ una nuova shell:
 ```bash
 cd "$HOME/kubernetes-cloud-edge-lab"
 source scripts/cni/common/lab-env.sh
+source scripts/cni/common/capture.sh
 check_experiment_preflight tesi-flannel-vxlan 6445
 ```
 
@@ -851,135 +857,14 @@ provato; non costituisce un'analisi generale del DNS del cluster.
 
 ### 8.4 Identificativi runtime, veth e cattura inter-node
 
-Prima della cattura ricostruiamo l'associazione Pod–veth. La procedura individua
-la sandbox tramite Container Runtime Interface (CRI) ed estrae il PID runtime
-dalla chiave JSON esatta `pid`, così da non confonderlo con altri valori
-numerici. Entra quindi nel namespace e usa l'ifindex peer di `eth0` per trovare
-la veth nel nodo.
+Prima della cattura ricostruiamo l'associazione Pod–veth. L'helper
+`map_pod_veth`, fornito dal modulo di cattura caricato al punto di ingresso,
+individua la sandbox con `crictl pods`, legge il PID con `crictl inspectp`, entra
+nel namespace con `nsenter` e usa l'ifindex peer di `eth0` per trovare una sola
+veth nell'output `ip -o link` del nodo. Il Pod IP letto dall'API deve inoltre
+comparire su `eth0`.
 
 ```bash
-map_pod_veth() {
-  if [[ "$#" -ne 2 ]]; then
-    printf 'Uso: map_pod_veth POD NODO.\n' >&2
-    return 2
-  fi
-
-  local POD_NAME="$1"
-  local NODE_NAME="$2"
-  local SANDBOX_IDS
-  local SANDBOX_COUNT
-  local SANDBOX_ID
-  local SANDBOX_PID
-  local POD_IP
-  local POD_ETH0_LINK
-  local PEER_IFINDEX
-  local POD_LINK
-  local POD_LINK_IP_RC
-  local NODE_LINKS
-  local VETH_MATCHES
-  local VETH_COUNT
-
-  SANDBOX_IDS="$(docker exec "$NODE_NAME" crictl pods \
-    --name "^${POD_NAME}$" -q)" || return 1
-  SANDBOX_COUNT="$(awk 'NF { count++ } END { print count + 0 }' \
-    <<<"$SANDBOX_IDS")" || return 1
-  if [[ "$SANDBOX_COUNT" -ne 1 ]]; then
-    printf 'ERROR: attesa una sandbox per %s, trovate %s.\n' \
-      "$POD_NAME" "$SANDBOX_COUNT" >&2
-    return 1
-  fi
-  SANDBOX_ID="$(sed -n '/[^[:space:]]/p' <<<"$SANDBOX_IDS")" || return 1
-  if [[ -z "$SANDBOX_ID" || "$SANDBOX_ID" == *$'\n'* || \
-        ! "$SANDBOX_ID" =~ ^[[:alnum:]_.-]+$ ]]; then
-    printf 'ERROR: sandbox ID non valido per %s.\n' "$POD_NAME" >&2
-    return 1
-  fi
-
-  SANDBOX_PID="$(docker exec "$NODE_NAME" crictl inspectp \
-    -o go-template --template '{{.info.pid}}' "$SANDBOX_ID")" || return 1
-  if [[ ! "$SANDBOX_PID" =~ ^[1-9][0-9]*$ ]]; then
-    printf 'ERROR: PID sandbox non valido per %s: %q.\n' \
-      "$POD_NAME" "$SANDBOX_PID" >&2
-    return 1
-  fi
-
-  POD_IP="$(kubectl --context "$TESI_CONTEXT" get pod \
-    -n net-lab "$POD_NAME" -o jsonpath='{.status.podIP}')" || return 1
-  if ! _tesi_is_ipv4 "$POD_IP"; then
-    printf 'ERROR: Pod IP non valido per %s: %q.\n' "$POD_NAME" "$POD_IP" >&2
-    return 1
-  fi
-  POD_ETH0_LINK="$(docker exec "$NODE_NAME" nsenter \
-    -t "$SANDBOX_PID" -n ip -o link show dev eth0)" || {
-    printf 'ERROR: impossibile leggere eth0 nel namespace del Pod %s.\n' \
-      "$POD_NAME" >&2
-    return 1
-  }
-  if [[ -z "$POD_ETH0_LINK" || "$POD_ETH0_LINK" == *$'\n'* ]]; then
-    printf 'ERROR: output eth0 vuoto o ambiguo per il Pod %s: %q.\n' \
-      "$POD_NAME" "$POD_ETH0_LINK" >&2
-    return 1
-  fi
-  if [[ "$POD_ETH0_LINK" =~ ^[[:space:]]*[1-9][0-9]*:[[:space:]]+eth0@if([1-9][0-9]*): ]]; then
-    PEER_IFINDEX="${BASH_REMATCH[1]}"
-  else
-    printf 'ERROR: peer ifindex non estraibile da eth0 del Pod %s: %q.\n' \
-      "$POD_NAME" "$POD_ETH0_LINK" >&2
-    return 1
-  fi
-  if [[ ! "$PEER_IFINDEX" =~ ^[1-9][0-9]*$ ]]; then
-    printf 'ERROR: ifindex peer non valido per %s: %q.\n' \
-      "$POD_NAME" "$PEER_IFINDEX" >&2
-    return 1
-  fi
-
-  POD_LINK="$(docker exec "$NODE_NAME" nsenter -t "$SANDBOX_PID" -n \
-    ip -br address show eth0)" || return 1
-  if awk -v expected="$POD_IP" '
-      {
-        for (field=1; field<=NF; field++) {
-          split($field, address, "/")
-          if (address[1] == expected) { found=1 }
-        }
-      }
-      END { exit !found }
-    ' <<<"$POD_LINK"
-  then
-    POD_LINK_IP_RC=0
-  else
-    POD_LINK_IP_RC=$?
-  fi
-  case "$POD_LINK_IP_RC" in
-    0) ;;
-    1)
-      printf 'ERROR: eth0 di %s non contiene il Pod IP %s.\n' \
-        "$POD_NAME" "$POD_IP" >&2
-      return 1
-      ;;
-    *)
-      printf 'ERROR: parser indirizzi eth0 fallito per %s (awk rc=%s).\n' \
-        "$POD_NAME" "$POD_LINK_IP_RC" >&2
-      return 1
-      ;;
-  esac
-  NODE_LINKS="$(docker exec "$NODE_NAME" ip -o link show)" || return 1
-  VETH_MATCHES="$(awk -F': ' -v peer="$PEER_IFINDEX" \
-    '$1 + 0 == peer { print }' <<<"$NODE_LINKS")" || return 1
-  VETH_COUNT="$(awk 'NF { count++ } END { print count + 0 }' \
-    <<<"$VETH_MATCHES")" || return 1
-  if [[ "$VETH_COUNT" -ne 1 || \
-        ! "$VETH_MATCHES" =~ ^[[:space:]]*[0-9]+:[[:space:]]+veth ]]; then
-    printf 'ERROR: attesa una veth per %s/ifindex %s, trovate %s.\n' \
-      "$POD_NAME" "$PEER_IFINDEX" "$VETH_COUNT" >&2
-    return 1
-  fi
-
-  printf 'pod=%s node=%s pod_ip=%s sandbox=%s sandbox_pid=%s peer_ifindex=%s\n' \
-    "$POD_NAME" "$NODE_NAME" "$POD_IP" "$SANDBOX_ID" \
-    "$SANDBOX_PID" "$PEER_IFINDEX"
-  printf '%s\n%s\n' "$POD_LINK" "$VETH_MATCHES"
-}
-
 map_pod_veth client k3d-tesi-flannel-vxlan-agent-0 &&
 map_pod_veth server-a k3d-tesi-flannel-vxlan-agent-0 &&
 map_pod_veth server-b k3d-tesi-flannel-vxlan-agent-1
@@ -1024,62 +909,25 @@ limitata in primo piano:
 
 ```bash
 sudo -v
-(
-  sleep 2
-  http_flow client server-b
-) >"$CAPTURE_DIR/http-client.log" 2>&1 &
-export HTTP_JOB=$!
-
-if sudo /usr/bin/env LC_ALL=C \
+TCPDUMP_FILTER="((host $CLIENT_IP and host $SERVER_B_IP and tcp port 8080) or (host $SOURCE_UNDERLAY and host $DESTINATION_UNDERLAY and udp port 8472))"
+if run_dual_view_capture \
+  E01 \
+  "$CAPTURE_DIR/flannel-inter-node.log" \
+  "$CAPTURE_DIR/http-client.log" \
+  client server-b \
+  "$CLIENT_IP" "$SERVER_B_IP" \
+  "$SOURCE_UNDERLAY" "$DESTINATION_UNDERLAY" 8472 \
+  -- sudo /usr/bin/env LC_ALL=C \
     /usr/bin/nsenter --target "$SOURCE_PID" --net \
     /usr/bin/timeout --verbose --foreground --preserve-status \
     --signal=TERM --kill-after=2s 8s \
     /usr/bin/tcpdump -i any -tttt -nn -e -vv -A -s 0 -l \
-    "((host $CLIENT_IP and host $SERVER_B_IP and tcp port 8080) or (host $SOURCE_UNDERLAY and host $DESTINATION_UNDERLAY and udp port 8472))" \
-    >"$CAPTURE_DIR/flannel-inter-node.log" 2>&1
+    "$TCPDUMP_FILTER"
 then
-  export CAPTURE_RC=0
-else
-  export CAPTURE_RC=$?
-fi
-printf 'capture_exit=%s\n' "$CAPTURE_RC"
-if wait "$HTTP_JOB"
-then
-  export HTTP_RC=0
-else
-  export HTTP_RC=$?
-fi
-printf 'http_exit=%s\n' "$HTTP_RC"
-
-export CAPTURE_FAILED=0
-case "$CAPTURE_RC" in
-  0|124|143) ;;
-  *) printf 'FAIL: terminazione inattesa della cattura\n' >&2; CAPTURE_FAILED=1 ;;
-esac
-if [[ "$HTTP_RC" -ne 0 ]]
-then
-  printf 'FAIL: richiesta HTTP della cattura fallita\n' >&2
-  CAPTURE_FAILED=1
-fi
-if ! verify_no_tcpdump_processes
-then
-  CAPTURE_FAILED=1
-fi
-if ! verify_dual_view_capture \
-    "$CAPTURE_DIR/flannel-inter-node.log" \
-    "$CLIENT_IP" "$SERVER_B_IP" \
-    "$SOURCE_UNDERLAY" "$DESTINATION_UNDERLAY" 8472
-then
-  CAPTURE_FAILED=1
-fi
-
-if [[ "$CAPTURE_FAILED" -ne 0 ]]
-then
-  printf 'STOP: cattura E01 non valida; nessuna analisi successiva eseguita.\n' >&2
-  false
-else
   sed -n '1,260p' "$CAPTURE_DIR/flannel-inter-node.log" &&
     cat "$CAPTURE_DIR/http-client.log"
+else
+  false
 fi
 ```
 
@@ -1369,6 +1217,7 @@ Questo è il punto di ingresso E10 anche in una nuova shell:
 ```bash
 cd "$HOME/kubernetes-cloud-edge-lab"
 source scripts/cni/common/lab-env.sh
+source scripts/cni/common/capture.sh
 ```
 
 ### 10.1 Download e verifica dei chart
@@ -1810,64 +1659,26 @@ _tesi_export_runtime DESTINATION_UNDERLAY ipv4 docker inspect \
   -f '{{with index .NetworkSettings.Networks "k3d-tesi-e10-calico-vxlan"}}{{.IPAddress}}{{end}}' \
   "$DESTINATION_NODE" &&
 export CAPTURE_DIR="$(mktemp -d)" &&
-sudo -v && {
-(
-  sleep 2
-  http_flow client server-b
-) >"$CAPTURE_DIR/http-client.log" 2>&1 &
-export HTTP_JOB=$!
-
-if sudo -- /usr/bin/timeout --preserve-status --signal=TERM \
+sudo -v &&
+TCPDUMP_FILTER="((host $CLIENT_IP and host $SERVER_B_IP and tcp port 8080) or (host $SOURCE_UNDERLAY and host $DESTINATION_UNDERLAY and udp port 4789))" &&
+if run_dual_view_capture \
+  E10 \
+  "$CAPTURE_DIR/calico-inter-node.log" \
+  "$CAPTURE_DIR/http-client.log" \
+  client server-b \
+  "$CLIENT_IP" "$SERVER_B_IP" \
+  "$SOURCE_UNDERLAY" "$DESTINATION_UNDERLAY" 4789 \
+  -- sudo -- /usr/bin/timeout --preserve-status --signal=TERM \
     --kill-after=3s 10s \
     /usr/bin/nsenter --target "$SOURCE_PID" --net \
     /usr/bin/tcpdump -i any -tttt -nn -e -vv -A -s 0 -l \
-    "((host $CLIENT_IP and host $SERVER_B_IP and tcp port 8080) or (host $SOURCE_UNDERLAY and host $DESTINATION_UNDERLAY and udp port 4789))" \
-    >"$CAPTURE_DIR/calico-inter-node.log" 2>&1
+    "$TCPDUMP_FILTER"
 then
-  export CAPTURE_RC=0
-else
-  export CAPTURE_RC=$?
-fi
-printf 'capture_exit=%s\n' "$CAPTURE_RC"
-if wait "$HTTP_JOB"
-then
-  export HTTP_RC=0
-else
-  export HTTP_RC=$?
-fi
-printf 'http_exit=%s\n' "$HTTP_RC"
-
-export CAPTURE_FAILED=0
-case "$CAPTURE_RC" in
-  0|124|143) ;;
-  *) printf 'FAIL: terminazione inattesa della cattura\n' >&2; CAPTURE_FAILED=1 ;;
-esac
-if [[ "$HTTP_RC" -ne 0 ]]
-then
-  printf 'FAIL: richiesta HTTP della cattura fallita\n' >&2
-  CAPTURE_FAILED=1
-fi
-if ! verify_no_tcpdump_processes
-then
-  CAPTURE_FAILED=1
-fi
-if ! verify_dual_view_capture \
-    "$CAPTURE_DIR/calico-inter-node.log" \
-    "$CLIENT_IP" "$SERVER_B_IP" \
-    "$SOURCE_UNDERLAY" "$DESTINATION_UNDERLAY" 4789
-then
-  CAPTURE_FAILED=1
-fi
-
-if [[ "$CAPTURE_FAILED" -ne 0 ]]
-then
-  printf 'STOP: cattura E10 non valida; nessuna analisi successiva eseguita.\n' >&2
-  false
-else
   sed -n '1,260p' "$CAPTURE_DIR/calico-inter-node.log" &&
     cat "$CAPTURE_DIR/http-client.log"
+else
+  false
 fi
-}
 ```
 
 Correlare gli IP dei Pod all'interno e gli IP underlay all'esterno; cercare
@@ -2127,6 +1938,7 @@ Questo è il punto di ingresso E20 anche in una nuova shell:
 ```bash
 cd "$HOME/kubernetes-cloud-edge-lab"
 source scripts/cni/common/lab-env.sh
+source scripts/cni/common/capture.sh
 ```
 
 ### 11.1 Download e controllo statico del chart
@@ -2395,65 +2207,27 @@ export CAPTURE_DIR="$(mktemp -d)" &&
 sudo /usr/bin/nsenter --target "$SOURCE_PID" --net \
   /usr/sbin/ip -details link show cilium_vxlan &&
 
-sudo -v && {
-(
-  sleep 2
-  http_flow client server-b
-) >"$CAPTURE_DIR/http-client.log" 2>&1 &
-export HTTP_JOB=$!
-
-if sudo /usr/bin/env LC_ALL=C \
+sudo -v &&
+TCPDUMP_FILTER="((host $CLIENT_IP and host $SERVER_B_IP and tcp port 8080) or (host $SOURCE_UNDERLAY and host $DESTINATION_UNDERLAY and udp port 8472))" &&
+if run_dual_view_capture \
+  E20 \
+  "$CAPTURE_DIR/cilium-inter-node.log" \
+  "$CAPTURE_DIR/http-client.log" \
+  client server-b \
+  "$CLIENT_IP" "$SERVER_B_IP" \
+  "$SOURCE_UNDERLAY" "$DESTINATION_UNDERLAY" 8472 \
+  -- sudo /usr/bin/env LC_ALL=C \
     /usr/bin/nsenter --target "$SOURCE_PID" --net \
     /usr/bin/timeout --verbose --foreground --preserve-status \
     --signal=TERM --kill-after=2s 8s \
     /usr/bin/tcpdump -i any -tttt -nn -e -vv -A -s 0 -l \
-    "((host $CLIENT_IP and host $SERVER_B_IP and tcp port 8080) or (host $SOURCE_UNDERLAY and host $DESTINATION_UNDERLAY and udp port 8472))" \
-    >"$CAPTURE_DIR/cilium-inter-node.log" 2>&1
+    "$TCPDUMP_FILTER"
 then
-  export CAPTURE_RC=0
-else
-  export CAPTURE_RC=$?
-fi
-printf 'capture_exit=%s\n' "$CAPTURE_RC"
-if wait "$HTTP_JOB"
-then
-  export HTTP_RC=0
-else
-  export HTTP_RC=$?
-fi
-printf 'http_exit=%s\n' "$HTTP_RC"
-
-export CAPTURE_FAILED=0
-case "$CAPTURE_RC" in
-  0|124|143) ;;
-  *) printf 'FAIL: terminazione inattesa della cattura\n' >&2; CAPTURE_FAILED=1 ;;
-esac
-if [[ "$HTTP_RC" -ne 0 ]]
-then
-  printf 'FAIL: richiesta HTTP della cattura fallita\n' >&2
-  CAPTURE_FAILED=1
-fi
-if ! verify_no_tcpdump_processes
-then
-  CAPTURE_FAILED=1
-fi
-if ! verify_dual_view_capture \
-    "$CAPTURE_DIR/cilium-inter-node.log" \
-    "$CLIENT_IP" "$SERVER_B_IP" \
-    "$SOURCE_UNDERLAY" "$DESTINATION_UNDERLAY" 8472
-then
-  CAPTURE_FAILED=1
-fi
-
-if [[ "$CAPTURE_FAILED" -ne 0 ]]
-then
-  printf 'STOP: cattura E20 non valida; nessuna analisi successiva eseguita.\n' >&2
-  false
-else
   sed -n '1,360p' "$CAPTURE_DIR/cilium-inter-node.log" &&
     cat "$CAPTURE_DIR/http-client.log"
+else
+  false
 fi
-}
 ```
 
 Correlare il flusso su veth `lxc*`, `cilium_vxlan` ed `eth0`, con IP dei Pod
@@ -3567,9 +3341,13 @@ un residuo specifico.
 ### 12.1 Controllo conclusivo dell'host
 
 Dopo avere eliminato l'ultimo cluster, verificare che non restino i cluster,
-i container nodo o i listener API creati dalla guida:
+i container nodo o i listener API creati dalla guida. Il source idempotente del
+modulo di cattura rende disponibile anche il controllo dei processi `tcpdump`:
 
 ```bash
+source scripts/cni/common/lab-env.sh
+source scripts/cni/common/capture.sh
+
 run_final_host_check() {
   local cluster_list
   local container_list
