@@ -2165,24 +2165,35 @@ procedura non assume che ciò debba ripetersi.
 
 ### 11.7 Matrice NetworkPolicy
 
-Per ogni stato delimitiamo una finestra Hubble, eseguiamo le sei connessioni e
-acquisiamo oggetti, revisioni endpoint, policy map e verdetti. La funzione
-salva ogni stato in una directory separata. Prima delle matrici successive a
-una mutazione, un gate indipendente dal traffico attende al massimo 120 secondi
-la nuova revisione sugli agent Cilium che ospitano `client`, `server-a` o
-`server-b`, la policy importata attesa e gli endpoint `ready` con revisione
-richiesta e realizzata coincidenti. La cattura Hubble usa una finestra UTC
-RFC3339Nano congelata attorno alla singola matrice e attende per non più di 20
-secondi che le ring buffer locali degli agent interessati rendano disponibile
-l'evidence aggregata semanticamente attesa. Le policy map eBPF sono invece
-node-local: vengono salvate come output raw distinto per ciascuno degli stessi
-agent e accompagnate da un indice aggregato con intestazioni di provenienza.
-Poiché ogni agent selezionato ospita almeno uno degli endpoint workload già
-verificati, un dump BPF policy vuoto è trattato come errore di acquisizione.
-Hubble continua a interrogare direttamente le ring buffer locali; Relay resta
-disabilitato:
+Il protocollo mantiene separati quattro passaggi: mutazione della NetworkPolicy,
+convergenza del policy plane Cilium, una sola matrice HTTP autorevole e
+osservazione del dataplane. La relazione verificata per ogni stato è:
+
+```text
+NetworkPolicy API
+      ↓
+Cilium policy revision
+      ↓
+endpoint realization
+      ↓
+BPF policy maps sugli agent pertinenti
+      ↓
+matrice HTTP controllata
+      ↓
+Hubble multi-agent nella finestra della matrice
+      ↓
+interpretazione
+```
+
+La machinery di polling, parsing, file temporanei e raccolta multi-agent è nei
+due moduli Cilium. Il primo contiene gli observer Hubble/BPF; il secondo
+gestisce discovery, revisioni, endpoint e orchestrazione dello stato. Entrambi
+sono librerie da caricare dopo i moduli comuni già caricati all'inizio di E20:
 
 ```bash
+source scripts/cni/cilium/policy-observers.sh
+source scripts/cni/cilium/network-policy.sh
+
 export POLICY_DIR="$(mktemp -d)"
 export CILIUM_POLICY_TIMEOUT=120
 export CILIUM_HUBBLE_TIMEOUT=20
@@ -2190,752 +2201,70 @@ declare -a CILIUM_POLICY_NODES=()
 declare -a CILIUM_POLICY_AGENTS=()
 declare -a CILIUM_POLICY_REVISIONS=()
 declare -a CILIUM_POLICY_PODS=()
-
-_read_cilium_agent_revision() {
-  if [[ "$#" -ne 1 ]]
-  then
-    printf 'Uso: _read_cilium_agent_revision AGENT\n' >&2
-    return 2
-  fi
-  local AGENT="$1"
-
-  if ! CILIUM_CURRENT_REVISION="$(kubectl --context "$TESI_CONTEXT" \
-      exec -n kube-system "$AGENT" -- cilium-dbg policy get \
-      -o jsonpath='{.revision}')"
-  then
-    printf 'ERROR: lettura della policy revision fallita sull agent %s.\n' \
-      "$AGENT" >&2
-    return 1
-  fi
-  if [[ ! "$CILIUM_CURRENT_REVISION" =~ ^[0-9]+$ ]]
-  then
-    printf 'ERROR: policy revision non valida sull agent %s: %q.\n' \
-      "$AGENT" "$CILIUM_CURRENT_REVISION" >&2
-    return 1
-  fi
-}
-
-_read_cilium_agent_policy() {
-  if [[ "$#" -ne 1 ]]
-  then
-    printf 'Uso: _read_cilium_agent_policy AGENT\n' >&2
-    return 2
-  fi
-  local AGENT="$1"
-
-  if ! CILIUM_CURRENT_POLICY="$(kubectl --context "$TESI_CONTEXT" \
-      exec -n kube-system "$AGENT" -- cilium-dbg policy get \
-      -o jsonpath='{.policy}')"
-  then
-    printf 'ERROR: lettura delle policy importate fallita sull agent %s.\n' \
-      "$AGENT" >&2
-    return 1
-  fi
-}
-
-_cilium_policy_state_matches() {
-  if [[ "$#" -ne 2 ]]
-  then
-    printf 'Uso: _cilium_policy_state_matches STATO DOCUMENTO\n' >&2
-    return 2
-  fi
-  local EXPECTED_STATE="$1"
-  local POLICY_DOCUMENT="$2"
-  local NORMALIZED
-  local DENY_LABEL='"key":"io.cilium.k8s.policy.name","value":"default-deny-ingress"'
-  local ALLOW_LABEL='"key":"io.cilium.k8s.policy.name","value":"allow-client-to-http-servers"'
-  local HAS_DENY=0
-  local HAS_ALLOW=0
-
-  if ! NORMALIZED="$(awk '
-    { text = text $0 }
-    END {
-      gsub(/[[:space:]]/, "", text)
-      if (text !~ /^\[.*\]$/) exit 2
-      print text
-    }
-  ' <<<"$POLICY_DOCUMENT")"
-  then
-    printf 'ERROR: documento policy Cilium malformato.\n' >&2
-    return 2
-  fi
-  [[ "$NORMALIZED" == *"$DENY_LABEL"* ]] && HAS_DENY=1
-  [[ "$NORMALIZED" == *"$ALLOW_LABEL"* ]] && HAS_ALLOW=1
-
-  case "$EXPECTED_STATE" in
-    default-deny)
-      [[ "$HAS_DENY" -eq 1 && "$HAS_ALLOW" -eq 0 ]]
-      ;;
-    selective-allow)
-      [[ "$HAS_DENY" -eq 1 && "$HAS_ALLOW" -eq 1 ]]
-      ;;
-    restored)
-      [[ "$HAS_DENY" -eq 0 && "$HAS_ALLOW" -eq 0 ]]
-      ;;
-    *)
-      printf 'ERROR: stato policy Cilium non riconosciuto: %s.\n' \
-        "$EXPECTED_STATE" >&2
-      return 2
-      ;;
-  esac
-}
-
-snapshot_cilium_policy_revisions() {
-  local POD_OUTPUT
-  local POD
-  local NODE
-  local EXTRA
-  local AGENT_OUTPUT
-  local AGENT
-  local REVISION
-  local -a NODE_ORDER=()
-  local -A EXPECTED_PODS=(
-    [client]=1
-    [server-a]=1
-    [server-b]=1
-  )
-  local -A SEEN_PODS=()
-  local -A PODS_BY_NODE=()
-
-  if ! POD_OUTPUT="$(kubectl --context "$TESI_CONTEXT" get pods \
-      -n net-lab client server-a server-b \
-      -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.spec.nodeName}{"\n"}{end}')"
-  then
-    printf 'ERROR: inventario Pod/nodo E20 fallito.\n' >&2
-    return 1
-  fi
-
-  while IFS=$'\t' read -r POD NODE EXTRA
-  do
-    if [[ -n "$EXTRA" || -z "${EXPECTED_PODS[$POD]:-}" || \
-          -n "${SEEN_PODS[$POD]:-}" || \
-          ! "$NODE" =~ ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$ ]]
-    then
-      printf 'ERROR: record Pod/nodo E20 non valido: %q.\n' \
-        "$POD_OUTPUT" >&2
-      return 1
-    fi
-    SEEN_PODS["$POD"]=1
-    if [[ -z "${PODS_BY_NODE[$NODE]+presente}" ]]
-    then
-      NODE_ORDER+=("$NODE")
-      PODS_BY_NODE["$NODE"]="$POD"
-    else
-      PODS_BY_NODE["$NODE"]+=" $POD"
-    fi
-  done <<<"$POD_OUTPUT"
-
-  if [[ "${#SEEN_PODS[@]}" -ne 3 ]]
-  then
-    printf 'ERROR: attesi client, server-a e server-b nell inventario E20.\n' >&2
-    return 1
-  fi
-
-  CILIUM_POLICY_NODES=()
-  CILIUM_POLICY_AGENTS=()
-  CILIUM_POLICY_REVISIONS=()
-  CILIUM_POLICY_PODS=()
-  for NODE in "${NODE_ORDER[@]}"
-  do
-    if ! AGENT_OUTPUT="$(kubectl --context "$TESI_CONTEXT" get pods \
-        -n kube-system -l k8s-app=cilium \
-        --field-selector "spec.nodeName=$NODE,status.phase=Running" \
-        -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}')"
-    then
-      printf 'ERROR: ricerca dell agent Cilium sul nodo %s fallita.\n' \
-        "$NODE" >&2
-      return 1
-    fi
-    if [[ ! "$AGENT_OUTPUT" =~ ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$ ]]
-    then
-      printf 'ERROR: atteso un solo agent Cilium Running sul nodo %s: %q.\n' \
-        "$NODE" "$AGENT_OUTPUT" >&2
-      return 1
-    fi
-    AGENT="$AGENT_OUTPUT"
-    _read_cilium_agent_revision "$AGENT" || return 1
-    REVISION="$CILIUM_CURRENT_REVISION"
-    CILIUM_POLICY_NODES+=("$NODE")
-    CILIUM_POLICY_AGENTS+=("$AGENT")
-    CILIUM_POLICY_REVISIONS+=("$REVISION")
-    CILIUM_POLICY_PODS+=("${PODS_BY_NODE[$NODE]}")
-    printf 'policy_snapshot node=%s agent=%s revision=%s pods=%s\n' \
-      "$NODE" "$AGENT" "$REVISION" "${PODS_BY_NODE[$NODE]}"
-  done
-}
-
-_cilium_workload_endpoints_ready() {
-  if [[ "$#" -ne 3 ]]
-  then
-    printf 'Uso: _cilium_workload_endpoints_ready AGENT PODS REVISION\n' >&2
-    return 2
-  fi
-  local AGENT="$1"
-  local PODS="$2"
-  local REQUIRED_REVISION="$3"
-  local ENDPOINT_OUTPUT
-  local POD_REF
-  local STATE
-  local SPEC_REVISION
-  local REALIZED_REVISION
-  local EXTRA
-  local POD
-  local -A EXPECTED=()
-  local -A SEEN=()
-
-  for POD in $PODS
-  do
-    EXPECTED["net-lab/$POD"]=1
-  done
-  if ! ENDPOINT_OUTPUT="$(kubectl --context "$TESI_CONTEXT" exec \
-      -n kube-system "$AGENT" -- cilium-dbg endpoint list \
-      -o jsonpath='{range [*]}{@.status.external-identifiers.pod-name}{"|"}{@.status.state}{"|"}{@.status.policy.spec.policy-revision}{"|"}{@.status.policy.realized.policy-revision}{"\n"}{end}')"
-  then
-    printf 'ERROR: lettura endpoint Cilium fallita sull agent %s.\n' \
-      "$AGENT" >&2
-    return 2
-  fi
-
-  while IFS='|' read -r POD_REF STATE SPEC_REVISION REALIZED_REVISION EXTRA
-  do
-    [[ -n "${EXPECTED[$POD_REF]:-}" ]] || continue
-    if [[ -n "$EXTRA" || -n "${SEEN[$POD_REF]:-}" || \
-          ! "$SPEC_REVISION" =~ ^[0-9]+$ || \
-          ! "$REALIZED_REVISION" =~ ^[0-9]+$ ]]
-    then
-      printf 'ERROR: record endpoint Cilium non valido per %s: %q.\n' \
-        "$POD_REF" "$ENDPOINT_OUTPUT" >&2
-      return 2
-    fi
-    SEEN["$POD_REF"]=1
-    if [[ "$STATE" != ready || \
-          "$SPEC_REVISION" -lt "$REQUIRED_REVISION" || \
-          "$REALIZED_REVISION" -lt "$REQUIRED_REVISION" || \
-          "$SPEC_REVISION" -ne "$REALIZED_REVISION" ]]
-    then
-      return 1
-    fi
-  done <<<"$ENDPOINT_OUTPUT"
-
-  for POD in $PODS
-  do
-    [[ -n "${SEEN[net-lab/$POD]:-}" ]] || return 1
-  done
-}
-
-wait_for_cilium_policy_convergence() {
-  if [[ "$#" -ne 1 ]]
-  then
-    printf 'Uso: wait_for_cilium_policy_convergence default-deny|selective-allow|restored\n' >&2
-    return 2
-  fi
-  local EXPECTED_STATE="$1"
-  local DEADLINE=$((SECONDS + CILIUM_POLICY_TIMEOUT))
-  local INDEX
-  local AGENT
-  local NODE
-  local PODS
-  local BEFORE_REVISION
-  local FIRST_REVISION
-  local AFTER_REVISION
-  local TARGET_REVISION
-  local REMAINING
-  local MATCH_RC
-  local ENDPOINT_RC
-  local PENDING_REASON
-
-  case "$EXPECTED_STATE" in
-    default-deny|selective-allow|restored) ;;
-    *)
-      printf 'ERROR: stato policy Cilium non riconosciuto: %s.\n' \
-        "$EXPECTED_STATE" >&2
-      return 2
-      ;;
-  esac
-  if [[ "${#CILIUM_POLICY_AGENTS[@]}" -eq 0 || \
-        "${#CILIUM_POLICY_AGENTS[@]}" -ne "${#CILIUM_POLICY_REVISIONS[@]}" || \
-        "${#CILIUM_POLICY_AGENTS[@]}" -ne "${#CILIUM_POLICY_PODS[@]}" ]]
-  then
-    printf 'ERROR: snapshot delle policy revision Cilium assente o incoerente.\n' >&2
-    return 1
-  fi
-
-  for INDEX in "${!CILIUM_POLICY_AGENTS[@]}"
-  do
-    AGENT="${CILIUM_POLICY_AGENTS[$INDEX]}"
-    NODE="${CILIUM_POLICY_NODES[$INDEX]}"
-    PODS="${CILIUM_POLICY_PODS[$INDEX]}"
-    BEFORE_REVISION="${CILIUM_POLICY_REVISIONS[$INDEX]}"
-    PENDING_REASON='revisione non ancora avanzata'
-
-    while true
-    do
-      _read_cilium_agent_revision "$AGENT" || return 1
-      FIRST_REVISION="$CILIUM_CURRENT_REVISION"
-      if [[ "$FIRST_REVISION" -gt "$BEFORE_REVISION" ]]
-      then
-        _read_cilium_agent_policy "$AGENT" || return 1
-        _read_cilium_agent_revision "$AGENT" || return 1
-        AFTER_REVISION="$CILIUM_CURRENT_REVISION"
-        if [[ "$FIRST_REVISION" -ne "$AFTER_REVISION" ]]
-        then
-          PENDING_REASON='revisione cambiata durante la lettura'
-        elif _cilium_policy_state_matches \
-            "$EXPECTED_STATE" "$CILIUM_CURRENT_POLICY"
-        then
-          TARGET_REVISION="$AFTER_REVISION"
-          break
-        else
-          MATCH_RC=$?
-          if [[ "$MATCH_RC" -eq 2 ]]
-          then
-            return 1
-          fi
-          PENDING_REASON='stato semantico della policy non ancora convergente'
-        fi
-      fi
-
-      if [[ "$SECONDS" -ge "$DEADLINE" ]]
-      then
-        printf 'ERROR: timeout policy Cilium su %s/%s: %s.\n' \
-          "$NODE" "$AGENT" "$PENDING_REASON" >&2
-        return 1
-      fi
-      sleep 1
-    done
-
-    REMAINING=$((DEADLINE - SECONDS))
-    if [[ "$REMAINING" -le 0 ]]
-    then
-      printf 'ERROR: timeout policy Cilium prima del policy wait su %s.\n' \
-        "$AGENT" >&2
-      return 1
-    fi
-    if ! kubectl --context "$TESI_CONTEXT" exec -n kube-system \
-        "$AGENT" -- cilium-dbg policy wait "$TARGET_REVISION" \
-        --max-wait-time "$REMAINING" --fail-wait-time "$REMAINING" \
-        --sleep-time 1
-    then
-      printf 'ERROR: policy wait revision %s fallito sull agent %s.\n' \
-        "$TARGET_REVISION" "$AGENT" >&2
-      return 1
-    fi
-
-    while true
-    do
-      if _cilium_workload_endpoints_ready \
-          "$AGENT" "$PODS" "$TARGET_REVISION"
-      then
-        break
-      else
-        ENDPOINT_RC=$?
-      fi
-      if [[ "$ENDPOINT_RC" -eq 2 ]]
-      then
-        return 1
-      fi
-      if [[ "$SECONDS" -ge "$DEADLINE" ]]
-      then
-        printf 'ERROR: endpoint workload non convergenti su %s/%s.\n' \
-          "$NODE" "$AGENT" >&2
-        return 1
-      fi
-      sleep 1
-    done
-    printf 'PASS: policy %s convergente su %s, revision %s > %s.\n' \
-      "$EXPECTED_STATE" "$AGENT" "$TARGET_REVISION" "$BEFORE_REVISION"
-  done
-}
-
-_verify_cilium_hubble_policy_capture() {
-  if [[ "$#" -ne 4 ]]
-  then
-    printf 'Uso: _verify_cilium_hubble_policy_capture FILE STATO SINCE UNTIL\n' >&2
-    return 2
-  fi
-  local HUBBLE_FILE="$1"
-  local POLICY_STATE="$2"
-  local POLICY_SINCE="$3"
-  local POLICY_UNTIL="$4"
-  local VERIFY_RC
-
-  awk -v state="$POLICY_STATE" \
-      -v since="$POLICY_SINCE" -v until="$POLICY_UNTIL" '
-    function valid_timestamp(value) {
-      return value ~ /^[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]T[0-9][0-9]:[0-9][0-9]:[0-9][0-9]\.[0-9]+Z$/
-    }
-    function valid_json_record(value,    i, char, quoted, escaped, braces, brackets) {
-      if (substr(value, 1, 1) != "{" ||
-          substr(value, length(value), 1) != "}") return 0
-      for (i = 1; i <= length(value); i++) {
-        char = substr(value, i, 1)
-        if (quoted) {
-          if (escaped) escaped = 0
-          else if (char == "\\") escaped = 1
-          else if (char == "\"") quoted = 0
-          continue
-        }
-        if (char == "\"") quoted = 1
-        else if (char == "{") braces++
-        else if (char == "}") braces--
-        else if (char == "[") brackets++
-        else if (char == "]") brackets--
-        if (braces < 0 || brackets < 0) return 0
-      }
-      return !quoted && !escaped && braces == 0 && brackets == 0
-    }
-    BEGIN {
-      if (!valid_timestamp(since) || !valid_timestamp(until) || since > until) {
-        parser_error = 1
-        exit
-      }
-    }
-    {
-      sub(/\r$/, "")
-      if ($0 == "") next
-      records++
-      if (!valid_json_record($0)) {
-        parser_error = 1
-        exit
-      }
-      compact = $0
-      gsub(/[[:space:]]/, "", compact)
-      if (index(compact, "\"flow\":{") &&
-          index(compact, "\"namespace\":\"net-lab\"") &&
-          index(compact, "\"TCP\":{") &&
-          index(compact, "\"destination_port\":8080")) {
-        marker = "\"time\":\""
-        start = index(compact, marker)
-        if (!start) {
-          parser_error = 1
-          exit
-        }
-        timestamp = substr(compact, start + length(marker))
-        finish = index(timestamp, "\"")
-        if (!finish) {
-          parser_error = 1
-          exit
-        }
-        timestamp = substr(timestamp, 1, finish - 1)
-        if (!valid_timestamp(timestamp)) {
-          parser_error = 1
-          exit
-        }
-        if (timestamp >= since && timestamp <= until) {
-          relevant++
-          if (index(compact, "\"verdict\":\"FORWARDED\"")) forwarded++
-          if (index(compact, "\"verdict\":\"DROPPED\"") &&
-              index(compact, "\"drop_reason_desc\":\"POLICY_DENIED\""))
-            policy_denied++
-        }
-      }
-    }
-    END {
-      if (parser_error) exit 2
-      if (records == 0 || relevant == 0) exit 1
-      if (state == "baseline" || state == "restored")
-        exit !(forwarded > 0)
-      if (state == "default-deny")
-        exit !(policy_denied > 0)
-      if (state == "selective-allow")
-        exit !(forwarded > 0 && policy_denied > 0)
-      exit 2
-    }
-  ' "$HUBBLE_FILE"
-  VERIFY_RC=$?
-  case "$VERIFY_RC" in
-    0|1) return "$VERIFY_RC" ;;
-    *)
-      printf 'ERROR: output Hubble JSONPB malformato per lo stato %s.\n' \
-        "$POLICY_STATE" >&2
-      return 2
-      ;;
-  esac
-}
-
-_remove_cilium_hubble_temp_files() {
-  local TEMP_FILE
-
-  for TEMP_FILE in "$@"
-  do
-    if [[ -z "$TEMP_FILE" || "$TEMP_FILE" != "$POLICY_DIR"/.* ]]
-    then
-      printf 'ERROR: percorso temporaneo Hubble non valido: %q.\n' \
-        "$TEMP_FILE" >&2
-      return 1
-    fi
-    rm -f -- "$TEMP_FILE" || return 1
-  done
-}
-
-wait_for_cilium_hubble_policy_capture() {
-  if [[ "$#" -ne 4 ]]
-  then
-    printf 'Uso: wait_for_cilium_hubble_policy_capture STATO SINCE UNTIL FILE\n' >&2
-    return 2
-  fi
-  local POLICY_STATE="$1"
-  local POLICY_SINCE="$2"
-  local POLICY_UNTIL="$3"
-  local HUBBLE_FINAL="$4"
-  local HUBBLE_AGGREGATE
-  local HUBBLE_AGENT_FILE
-  local AGENT
-  local INDEX
-  local -a HUBBLE_AGENT_FILES=()
-  local DEADLINE=$((SECONDS + CILIUM_HUBBLE_TIMEOUT))
-  local VERIFY_RC
-
-  case "$POLICY_STATE" in
-    baseline|default-deny|selective-allow|restored) ;;
-    *)
-      printf 'ERROR: stato Hubble E20 non riconosciuto: %s.\n' \
-        "$POLICY_STATE" >&2
-      return 2
-      ;;
-  esac
-  if [[ "${#CILIUM_POLICY_AGENTS[@]}" -eq 0 ]]
-  then
-    printf 'ERROR: nessun agent Cilium associato ai workload E20.\n' >&2
-    return 1
-  fi
-  if ! HUBBLE_AGGREGATE="$(mktemp \
-      "$POLICY_DIR/.${POLICY_STATE}-hubble-aggregate.XXXXXX")"
-  then
-    printf 'ERROR: creazione aggregato Hubble temporaneo fallita.\n' >&2
-    return 1
-  fi
-  for INDEX in "${!CILIUM_POLICY_AGENTS[@]}"
-  do
-    AGENT="${CILIUM_POLICY_AGENTS[$INDEX]}"
-    if [[ ! "$AGENT" =~ ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$ ]]
-    then
-      printf 'ERROR: nome agent Cilium non valido: %q.\n' "$AGENT" >&2
-      _remove_cilium_hubble_temp_files \
-        "$HUBBLE_AGGREGATE" "${HUBBLE_AGENT_FILES[@]}" || true
-      return 1
-    fi
-    if ! HUBBLE_AGENT_FILE="$(mktemp \
-        "$POLICY_DIR/.${POLICY_STATE}-hubble-agent-${INDEX}.XXXXXX")"
-    then
-      printf 'ERROR: creazione del file Hubble per-agent fallita.\n' >&2
-      _remove_cilium_hubble_temp_files \
-        "$HUBBLE_AGGREGATE" "${HUBBLE_AGENT_FILES[@]}" || true
-      return 1
-    fi
-    HUBBLE_AGENT_FILES+=("$HUBBLE_AGENT_FILE")
-  done
-
-  while true
-  do
-    if ! : >"$HUBBLE_AGGREGATE"
-    then
-      printf 'ERROR: inizializzazione aggregato Hubble fallita.\n' >&2
-      _remove_cilium_hubble_temp_files \
-        "$HUBBLE_AGGREGATE" "${HUBBLE_AGENT_FILES[@]}" || true
-      return 1
-    fi
-    for INDEX in "${!CILIUM_POLICY_AGENTS[@]}"
-    do
-      AGENT="${CILIUM_POLICY_AGENTS[$INDEX]}"
-      HUBBLE_AGENT_FILE="${HUBBLE_AGENT_FILES[$INDEX]}"
-      printf 'INFO: query Hubble locale stato=%s agent=%s.\n' \
-        "$POLICY_STATE" "$AGENT" >&2
-      if ! kubectl --context "$TESI_CONTEXT" exec -n kube-system \
-          "$AGENT" -- hubble observe \
-          --server unix:///var/run/cilium/hubble.sock \
-          --since "$POLICY_SINCE" --until "$POLICY_UNTIL" \
-          --namespace net-lab --port 8080 -o jsonpb \
-          >"$HUBBLE_AGENT_FILE"
-      then
-        printf 'ERROR: query Hubble fallita per agent %s nello stato %s.\n' \
-          "$AGENT" "$POLICY_STATE" >&2
-        _remove_cilium_hubble_temp_files \
-          "$HUBBLE_AGGREGATE" "${HUBBLE_AGENT_FILES[@]}" || true
-        return 1
-      fi
-      if ! cat -- "$HUBBLE_AGENT_FILE" >>"$HUBBLE_AGGREGATE"
-      then
-        printf 'ERROR: aggregazione Hubble fallita per agent %s.\n' \
-          "$AGENT" >&2
-        _remove_cilium_hubble_temp_files \
-          "$HUBBLE_AGGREGATE" "${HUBBLE_AGENT_FILES[@]}" || true
-        return 1
-      fi
-    done
-
-    if _verify_cilium_hubble_policy_capture \
-        "$HUBBLE_AGGREGATE" "$POLICY_STATE" \
-        "$POLICY_SINCE" "$POLICY_UNTIL"
-    then
-      if ! mv -f -- "$HUBBLE_AGGREGATE" "$HUBBLE_FINAL"
-      then
-        printf 'ERROR: promozione atomica dell output Hubble fallita.\n' >&2
-        _remove_cilium_hubble_temp_files \
-          "$HUBBLE_AGGREGATE" "${HUBBLE_AGENT_FILES[@]}" || true
-        return 1
-      fi
-      if ! _remove_cilium_hubble_temp_files "${HUBBLE_AGENT_FILES[@]}"
-      then
-        printf 'ERROR: pulizia dei file Hubble per-agent fallita.\n' >&2
-        return 1
-      fi
-      printf 'PASS: evidence Hubble %s aggregata da %s agent nella finestra %s / %s.\n' \
-        "$POLICY_STATE" "${#CILIUM_POLICY_AGENTS[@]}" \
-        "$POLICY_SINCE" "$POLICY_UNTIL"
-      return 0
-    else
-      VERIFY_RC=$?
-    fi
-    if [[ "$VERIFY_RC" -eq 2 ]]
-    then
-      _remove_cilium_hubble_temp_files \
-        "$HUBBLE_AGGREGATE" "${HUBBLE_AGENT_FILES[@]}" || true
-      return 1
-    fi
-    if [[ "$SECONDS" -ge "$DEADLINE" ]]
-    then
-      printf 'ERROR: timeout evidence Hubble incompleta per lo stato %s.\n' \
-        "$POLICY_STATE" >&2
-      _remove_cilium_hubble_temp_files \
-        "$HUBBLE_AGGREGATE" "${HUBBLE_AGENT_FILES[@]}" || true
-      return 1
-    fi
-    sleep 0.5
-  done
-}
-
-capture_cilium_bpf_policy_maps() {
-  if [[ "$#" -ne 1 ]]
-  then
-    printf 'Uso: capture_cilium_bpf_policy_maps STATO\n' >&2
-    return 2
-  fi
-  local POLICY_STATE="$1"
-  local AGGREGATE_FINAL="$POLICY_DIR/${POLICY_STATE}-bpf-policy.log"
-  local AGGREGATE_TEMP
-  local AGENT
-  local AGENT_FINAL
-  local AGENT_COUNT=0
-  local -A SEEN_AGENTS=()
-
-  case "$POLICY_STATE" in
-    baseline|default-deny|selective-allow|restored) ;;
-    *)
-      printf 'ERROR: stato BPF policy E20 non riconosciuto: %s.\n' \
-        "$POLICY_STATE" >&2
-      return 2
-      ;;
-  esac
-  if [[ "${#CILIUM_POLICY_AGENTS[@]}" -eq 0 ]]
-  then
-    printf 'ERROR: nessun agent Cilium per la raccolta BPF policy.\n' >&2
-    return 1
-  fi
-  if ! AGGREGATE_TEMP="$(mktemp \
-      "$POLICY_DIR/.${POLICY_STATE}-bpf-policy-aggregate.XXXXXX")"
-  then
-    printf 'ERROR: creazione aggregato BPF policy fallita.\n' >&2
-    return 1
-  fi
-
-  for AGENT in "${CILIUM_POLICY_AGENTS[@]}"
-  do
-    if [[ ! "$AGENT" =~ ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$ ]]
-    then
-      printf 'ERROR: nome agent Cilium non valido: %q.\n' "$AGENT" >&2
-      rm -f -- "$AGGREGATE_TEMP"
-      return 1
-    fi
-    if [[ -n "${SEEN_AGENTS[$AGENT]:-}" ]]
-    then
-      printf 'INFO: agent Cilium duplicato ignorato nella raccolta BPF: %s.\n' \
-        "$AGENT" >&2
-      continue
-    fi
-    SEEN_AGENTS["$AGENT"]=1
-    AGENT_FINAL="$POLICY_DIR/${POLICY_STATE}-bpf-policy-${AGENT}.log"
-
-    if ! kubectl --context "$TESI_CONTEXT" exec -n kube-system \
-        "$AGENT" -- cilium-dbg bpf policy get --all >"$AGENT_FINAL"
-    then
-      printf 'ERROR: raccolta BPF policy fallita sull agent %s.\n' \
-        "$AGENT" >&2
-      rm -f -- "$AGENT_FINAL" "$AGGREGATE_TEMP"
-      return 1
-    fi
-    if [[ ! -s "$AGENT_FINAL" ]]
-    then
-      printf 'ERROR: output BPF policy vuoto sull agent %s.\n' \
-        "$AGENT" >&2
-      rm -f -- "$AGENT_FINAL" "$AGGREGATE_TEMP"
-      return 1
-    fi
-    if ! printf '===== agent=%s raw-file=%s =====\n' \
-        "$AGENT" "${AGENT_FINAL##*/}" >>"$AGGREGATE_TEMP" || \
-       ! cat -- "$AGENT_FINAL" >>"$AGGREGATE_TEMP" || \
-       ! printf '\n' >>"$AGGREGATE_TEMP"
-    then
-      printf 'ERROR: aggregazione BPF policy fallita per %s.\n' \
-        "$AGENT" >&2
-      rm -f -- "$AGGREGATE_TEMP"
-      return 1
-    fi
-    AGENT_COUNT=$((AGENT_COUNT + 1))
-  done
-  if ! mv -f -- "$AGGREGATE_TEMP" "$AGGREGATE_FINAL"
-  then
-    printf 'ERROR: promozione aggregato BPF policy fallita.\n' >&2
-    rm -f -- "$AGGREGATE_TEMP"
-    return 1
-  fi
-  printf 'PASS: BPF policy %s acquisita da %s agent distinti.\n' \
-    "$POLICY_STATE" "$AGENT_COUNT"
-}
-
-capture_cilium_policy_state() {
-  if [[ "$#" -ne 2 ]]
-  then
-    printf 'Uso: capture_cilium_policy_state STATO ASPETTATIVA\n' >&2
-    return 2
-  fi
-  local POLICY_STATE="$1"
-  local POLICY_EXPECTATION="$2"
-  local POLICY_SINCE
-  local POLICY_UNTIL
-  local HUBBLE_FILE="$POLICY_DIR/${POLICY_STATE}-hubble.json"
-  local REQUIRED_FILE
-  POLICY_SINCE="$(date -u '+%Y-%m-%dT%H:%M:%S.%NZ')" || return 1
-  run_policy_matrix "$POLICY_EXPECTATION" || return 1
-  POLICY_UNTIL="$(date -u '+%Y-%m-%dT%H:%M:%S.%NZ')" || return 1
-  wait_for_cilium_hubble_policy_capture \
-    "$POLICY_STATE" "$POLICY_SINCE" "$POLICY_UNTIL" "$HUBBLE_FILE" || \
-    return 1
-
-  kubectl --context "$TESI_CONTEXT" get networkpolicy -n net-lab -o yaml \
-    >"$POLICY_DIR/${POLICY_STATE}-networkpolicy.yaml" || return 1
-  kubectl --context "$TESI_CONTEXT" get ciliumendpoint \
-    -n net-lab client server-a server-b -o yaml \
-    >"$POLICY_DIR/${POLICY_STATE}-endpoints.yaml" || return 1
-  capture_cilium_bpf_policy_maps "$POLICY_STATE" || return 1
-
-  for REQUIRED_FILE in \
-    "$POLICY_DIR/${POLICY_STATE}-networkpolicy.yaml" \
-    "$POLICY_DIR/${POLICY_STATE}-endpoints.yaml" \
-    "$POLICY_DIR/${POLICY_STATE}-bpf-policy.log" \
-    "$HUBBLE_FILE"
-  do
-    if [[ ! -s "$REQUIRED_FILE" ]]
-    then
-      printf 'ERROR: output policy E20 richiesto vuoto: %s\n' \
-        "$REQUIRED_FILE" >&2
-      return 1
-    fi
-  done
-}
 ```
 
-Eseguire i tre stati:
+`snapshot_cilium_policy_revisions` ricava nuovamente i nodi di `client`,
+`server-a` e `server-b`, individua su ciascun nodo l'unico agent Cilium
+`Running` e registra revisione e Pod pertinenti. Nessun nome agent, endpoint ID
+o BPF map ID deriva dalle evidence storiche.
+
+Dopo una mutazione, `wait_for_cilium_policy_convergence` usa un unico timeout
+bounded di 120 secondi. Per ogni agent richiede che la revisione sia avanzata,
+che il documento importato contenga esattamente le policy previste dallo stato,
+che `cilium-dbg policy wait` raggiunga la revisione e che tutti gli endpoint
+workload locali siano `ready`, con revisione richiesta e realizzata coincidenti
+e non inferiori al target. Il gate non genera traffico e non richiama la
+matrice HTTP.
+
+Gli helper mantengono visibili e usano, per gli agent e gli intervalli scoperti
+a runtime, queste interfacce di osservazione già validate:
+
+```text
+kubectl --context "$TESI_CONTEXT" get networkpolicy -n net-lab -o yaml
+kubectl --context "$TESI_CONTEXT" get ciliumendpoint \
+  -n net-lab client server-a server-b -o yaml
+
+kubectl --context "$TESI_CONTEXT" exec -n kube-system "$AGENT" -- \
+  cilium-dbg policy get -o jsonpath='{.revision}'
+kubectl --context "$TESI_CONTEXT" exec -n kube-system "$AGENT" -- \
+  cilium-dbg policy get -o jsonpath='{.policy}'
+kubectl --context "$TESI_CONTEXT" exec -n kube-system "$AGENT" -- \
+  cilium-dbg policy wait "$TARGET_REVISION" \
+  --max-wait-time "$REMAINING" --fail-wait-time "$REMAINING" --sleep-time 1
+kubectl --context "$TESI_CONTEXT" exec -n kube-system "$AGENT" -- \
+  cilium-dbg endpoint list \
+  -o jsonpath='{range [*]}{@.status.external-identifiers.pod-name}{"|"}{@.status.state}{"|"}{@.status.policy.spec.policy-revision}{"|"}{@.status.policy.realized.policy-revision}{"\n"}{end}'
+kubectl --context "$TESI_CONTEXT" exec -n kube-system "$AGENT" -- \
+  cilium-dbg bpf policy get --all
+kubectl --context "$TESI_CONTEXT" exec -n kube-system "$AGENT" -- \
+  hubble observe --server unix:///var/run/cilium/hubble.sock \
+  --since "$POLICY_SINCE" --until "$POLICY_UNTIL" \
+  --namespace net-lab --port 8080 -o jsonpb
+```
+
+Per ciascuno stato, `capture_cilium_policy_state` congela `POLICY_SINCE`,
+esegue una sola `run_policy_matrix`, congela `POLICY_UNTIL` e solo dopo
+interroga Hubble sulla stessa finestra assoluta RFC3339Nano. Il collector può
+ripetere, per non più di 20 secondi, soltanto le query della finestra già
+chiusa: parsing e polling non rigenerano traffico workload.
+
+La raccolta Hubble interroga separatamente tutti gli agent pertinenti, registra
+su stderr l'agent interrogato, conserva durante ogni polling un raw file
+temporaneo distinto per agent e concatena gli output solo dopo le acquisizioni.
+Il parser verifica JSONPB, finestra e verdetti semanticamente richiesti. I raw
+temporanei vengono eliminati dopo la promozione atomica dell'aggregato finale;
+la baseline non applica deduplicazione e Hubble Relay resta disabilitato.
+
+Le policy map eBPF sono node-local. Per ogni agent distinto viene conservato
+`<stato>-bpf-policy-<agent>.log`; solo dopo i raw dump vengono aggregati in
+`<stato>-bpf-policy.log`, con intestazioni che mantengono `agent` e
+`raw-file`. Un agent pertinente mancante, un nome non valido o un dump vuoto
+fanno fallire l'acquisizione.
+
+#### Baseline, default deny e selective allow
+
+Eseguire i tre stati nello stesso ordine della baseline. Ogni blocco mantiene
+la sequenza mutazione API → convergence gate → singola matrice → observer:
 
 ```bash
 snapshot_cilium_policy_revisions &&
@@ -2956,15 +2285,31 @@ capture_cilium_policy_state selective-allow selective-allow &&
 ls -la "$POLICY_DIR"
 ```
 
-Controllare revisioni endpoint crescenti, policy map eBPF per-agent e verdetti
-Hubble `FORWARDED` o `POLICY_DENIED`. Il file logico
-`<stato>-bpf-policy.log` è un indice aggregato con intestazioni agent/file, non
-l'output raw di un singolo comando. La matrice attesa è 6/6 consentiti, 6/6
-negati, poi 4/6 consentiti. Questi artefatti attribuiscono l'enforcement a
-Cilium, non al controller policy K3s disabilitato.
+Gli expected result restano:
 
-Rimuovere entrambe le policy e acquisire uno stato finale `restored`. La
-conclusione causale richiede che la matrice torni a `allow-all`:
+- `baseline`: nessuna policy pertinente e 6/6 flussi consentiti;
+- `default-deny`: default deny presente e 6/6 flussi negati;
+- `selective-allow`: default deny più allow selettiva e 4/6 flussi consentiti.
+
+Per ogni stato vengono prodotti:
+
+- `<stato>-networkpolicy.yaml`, oggetti API osservati;
+- `<stato>-endpoints.yaml`, stato degli endpoint Cilium;
+- `<stato>-bpf-policy-<agent>.log`, raw BPF con provenienza per-agent;
+- `<stato>-bpf-policy.log`, indice BPF aggregato con intestazioni;
+- `<stato>-hubble.json`, aggregato Hubble della sola finestra controllata.
+
+Controllare revisioni crescenti dopo ogni mutazione, policy map pertinenti e
+verdetti Hubble `FORWARDED` o `DROPPED` con
+`drop_reason_desc=POLICY_DENIED`. Questi artefatti, insieme alla matrice,
+attribuiscono l'enforcement a Cilium/eBPF e non al controller NetworkPolicy K3s
+disabilitato.
+
+#### Stato restored
+
+Rimuovere entrambe le policy e attendere nuovamente revisione, stato semantico
+senza le due policy ed endpoint realization. Solo dopo il gate acquisire
+un'unica matrice finale `allow-all` e gli stessi observer multi-agent:
 
 ```bash
 snapshot_cilium_policy_revisions &&
@@ -2978,6 +2323,9 @@ wait_for_cilium_policy_convergence restored &&
 capture_cilium_policy_state restored allow-all
 ```
 
+Il PASS richiede il ritorno a 6/6 flussi consentiti, policy importate senza
+residui delle due NetworkPolicy pertinenti, endpoint realizzati e artefatti
+BPF/Hubble coerenti con lo stato ripristinato.
 ### 11.8 Troubleshooting circoscritto al riavvio Docker
 
 Questo controllo non è parte del percorso normale. Usarlo soltanto se, dopo
