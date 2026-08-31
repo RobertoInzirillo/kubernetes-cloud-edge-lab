@@ -649,11 +649,14 @@ Lo script rileva e verifica la root, definisce l'immagine K3s bloccata e gli
 helper comuni. Può essere caricato più volte: non crea cluster, non modifica il
 sistema e non avvia test. I moduli Service, cattura e policy vengono caricati
 esplicitamente nei rispettivi punti di ingresso; E10 carica inoltre la propria
-orchestrazione Service specifica. Gli helper Cilium specifici di E20 restano
-nella relativa sezione e vengono definiti prima dell'uso.
-`service.sh` dipende dalle primitive di contesto, validazione IP e probe HTTP
-definite da `lab-env.sh`; `capture.sh` dipende da `_tesi_is_ipv4` e `http_flow`.
-L'ordine dei `source` è quindi intenzionale. Il runner di cattura esegue il
+orchestrazione Service specifica. Gli helper Cilium Service sono caricati dal
+modulo E20 dedicato; quelli NetworkPolicy restano nella relativa sezione e
+vengono definiti prima dell'uso.
+`common/service.sh` dipende dalle primitive di contesto, validazione IP e probe
+HTTP definite da `lab-env.sh`; `capture.sh` dipende da `_tesi_is_ipv4` e
+`http_flow`. Il modulo Cilium Service dipende inoltre dagli helper comuni
+Service e viene quindi caricato per ultimo nel punto di ingresso E20.
+L'ordine dei `source` è intenzionale. Il runner di cattura esegue il
 comando ricevuto dopo `--`: non sceglie CNI, device, filtro o porta VXLAN.
 
 Prima di creare un cluster, ogni esperimento invoca:
@@ -1772,6 +1775,7 @@ cd "$HOME/kubernetes-cloud-edge-lab"
 source scripts/cni/common/lab-env.sh
 source scripts/cni/common/service.sh
 source scripts/cni/common/capture.sh
+source scripts/cni/cilium/service.sh
 ```
 
 ### 11.1 Download e controllo statico del chart
@@ -2088,196 +2092,64 @@ conclusione circoscritta alle connessioni generate.
 Verificare prima la disponibilità dei due backend, poi acquisire stato
 kube-proxy ed eBPF prima di nuove connessioni:
 
+Il modulo specifico [`scripts/cni/cilium/service.sh`](../scripts/cni/cilium/service.sh)
+mantiene separati producer, snapshot e parser. Gli observer eseguiti dal runner
+restano espliciti e riconoscibili:
+
+```text
+docker exec "$CILIUM_NODE" /bin/aux/iptables-save -c -t nat
+kubectl --context "$TESI_CONTEXT" exec -n kube-system \
+  "$CILIUM_AGENT0" -- cilium-dbg bpf lb list --frontends
+kubectl --context "$TESI_CONTEXT" exec -n kube-system \
+  "$CILIUM_AGENT0" -- cilium-dbg bpf lb list --backends
+kubectl --context "$TESI_CONTEXT" exec -n kube-system \
+  "$CILIUM_AGENT0" -- cilium-dbg bpf lb list --revnat
+kubectl --context "$TESI_CONTEXT" exec -n kube-system \
+  "$CILIUM_AGENT0" -- cilium-dbg bpf ct list global
+kubectl --context "$TESI_CONTEXT" exec -n kube-system \
+  "$CILIUM_AGENT0" -- hubble observe \
+  --server unix:///var/run/cilium/hubble.sock \
+  --since "$START_UTC" --until "$END_UTC" \
+  --from-pod net-lab/client --port 8080 -o jsonpb
+```
+
+`capture_service_iptables_snapshot` salva prima e dopo sia il dump NAT
+completo sia le sole regole pertinenti a `net-lab/servers:http`. Le mappe BPF
+registrano il frontend `$SERVICE_IP:8080`, i backend e la mappa RevNAT;
+conntrack viene acquisito prima e dopo le connessioni. Il runner congela
+`START_UTC` immediatamente prima ed `END_UTC` immediatamente dopo
+`service_http_flows 6`: soltanto quelle sei nuove connessioni appartengono
+alla finestra. Il polling Hubble rilegge la stessa finestra senza rigenerare
+traffico e promuove il file temporaneo soltanto dopo la correlazione completa.
+
+La correlazione preservata dal modulo è:
+
+```text
+HTTP responses
+    ↓
+new CT TCP SVC entries
+    ↓
+BPF backend IDs
+    ↓
+backend IP
+    ↓
+RevNAT / Service ID
+    ↓
+Hubble frozen window
+```
+
+Il parser considera esclusivamente le nuove entry `TCP SVC`, le collega alle
+relative entry `TCP OUT`, quindi verifica backend ID, IP osservato, RevNAT e
+Service ID nelle mappe BPF. La distribuzione fra `server-a` e `server-b` non è
+predeterminata. I parser non producono traffico e distinguono un fallimento
+causale (RC 1) da un errore operativo o di formato (RC 2).
+
+Eseguire l'attribuzione completa con:
+
 ```bash
 export CILIUM_NODE='k3d-tesi-e20-cilium-vxlan-agent-0'
 export SERVICE_DIR="$(mktemp -d)"
 export CILIUM_SERVICE_HUBBLE_TIMEOUT=20
-
-wait_for_cilium_service_hubble() {
-  if [[ "$#" -ne 4 ]]
-  then
-    printf 'Uso: wait_for_cilium_service_hubble SINCE UNTIL CORRELAZIONE OUTPUT.\n' >&2
-    return 2
-  fi
-  local SINCE="$1"
-  local UNTIL="$2"
-  local CORRELATION_FILE="$3"
-  local HUBBLE_FINAL="$4"
-  local HUBBLE_TEMP
-  local VERIFY_RC
-  local DEADLINE=$((SECONDS + CILIUM_SERVICE_HUBBLE_TIMEOUT))
-
-  if ! HUBBLE_TEMP="$(mktemp "$SERVICE_DIR/.hubble-service.XXXXXX")"
-  then
-    printf 'ERROR: creazione file Hubble Service temporaneo fallita.\n' >&2
-    return 2
-  fi
-  while true
-  do
-    if ! kubectl --context "$TESI_CONTEXT" exec -n kube-system \
-        "$CILIUM_AGENT0" -- hubble observe \
-        --server unix:///var/run/cilium/hubble.sock \
-        --since "$SINCE" --until "$UNTIL" \
-        --from-pod net-lab/client --port 8080 -o jsonpb \
-        >"$HUBBLE_TEMP"
-    then
-      printf 'ERROR: observer Hubble Service fallito.\n' >&2
-      rm -f -- "$HUBBLE_TEMP"
-      return 2
-    fi
-    if verify_cilium_service_hubble \
-        "$HUBBLE_TEMP" "$CORRELATION_FILE" "$SINCE" "$UNTIL" \
-        "$CLIENT_IP" 8080
-    then
-      if ! mv -f -- "$HUBBLE_TEMP" "$HUBBLE_FINAL"
-      then
-        printf 'ERROR: promozione output Hubble Service fallita.\n' >&2
-        rm -f -- "$HUBBLE_TEMP"
-        return 2
-      fi
-      return 0
-    else
-      VERIFY_RC=$?
-    fi
-    if [[ "$VERIFY_RC" -eq 2 ]]
-    then
-      rm -f -- "$HUBBLE_TEMP"
-      return 2
-    fi
-    if [[ "$SECONDS" -ge "$DEADLINE" ]]
-    then
-      printf 'FAIL: Hubble non ha esposto tutti i flussi Service controllati entro %ss.\n' \
-        "$CILIUM_SERVICE_HUBBLE_TIMEOUT" >&2
-      rm -f -- "$HUBBLE_TEMP"
-      return 1
-    fi
-    sleep 0.5
-  done
-}
-
-run_e20_service_attribution() {
-  local START_UTC
-  local END_UTC
-  local required_file
-  local VERIFY_RC
-
-  verify_service_backends || return 1
-
-  capture_service_iptables_snapshot "$CILIUM_NODE" \
-    "$SERVICE_DIR/kube-proxy-before-full.log" \
-    "$SERVICE_DIR/kube-proxy-before.log" || return 1
-  kubectl --context "$TESI_CONTEXT" exec -n kube-system \
-    "$CILIUM_AGENT0" -- cilium-dbg bpf lb list --frontends \
-    >"$SERVICE_DIR/lb-frontends-before.log" || {
-      printf 'ERROR: observer frontend LB Cilium fallito.\n' >&2
-      return 2
-    }
-  kubectl --context "$TESI_CONTEXT" exec -n kube-system \
-    "$CILIUM_AGENT0" -- cilium-dbg bpf lb list --backends \
-    >"$SERVICE_DIR/lb-backends-before.log" || {
-      printf 'ERROR: observer backend LB Cilium fallito.\n' >&2
-      return 2
-    }
-  kubectl --context "$TESI_CONTEXT" exec -n kube-system \
-    "$CILIUM_AGENT0" -- cilium-dbg bpf lb list --revnat \
-    >"$SERVICE_DIR/lb-revnat-before.log" || {
-      printf 'ERROR: observer RevNAT Cilium fallito.\n' >&2
-      return 2
-    }
-  kubectl --context "$TESI_CONTEXT" exec -n kube-system \
-    "$CILIUM_AGENT0" -- cilium-dbg bpf ct list global \
-    >"$SERVICE_DIR/ct-before.log" || {
-      printf 'ERROR: observer Cilium CT iniziale fallito.\n' >&2
-      return 2
-    }
-
-  for required_file in \
-    "$SERVICE_DIR/lb-frontends-before.log" \
-    "$SERVICE_DIR/lb-backends-before.log" \
-    "$SERVICE_DIR/lb-revnat-before.log" \
-    "$SERVICE_DIR/ct-before.log"
-  do
-    if [[ ! -s "$required_file" ]]
-    then
-      printf 'ERROR: output Cilium richiesto vuoto: %s\n' \
-        "$required_file" >&2
-      return 1
-    fi
-  done
-
-  START_UTC="$(date -u '+%Y-%m-%dT%H:%M:%S.%NZ')" || return 1
-  if ! service_http_flows 6 >"$SERVICE_DIR/http-flows.log"
-  then
-    printf 'ERROR: almeno un flusso Service E20 è fallito; snapshot successivi non acquisiti.\n' >&2
-    return 1
-  fi
-  END_UTC="$(date -u '+%Y-%m-%dT%H:%M:%S.%NZ')" || return 1
-
-  capture_service_iptables_snapshot "$CILIUM_NODE" \
-    "$SERVICE_DIR/kube-proxy-after-full.log" \
-    "$SERVICE_DIR/kube-proxy-after.log" || return 1
-  kubectl --context "$TESI_CONTEXT" exec -n kube-system \
-    "$CILIUM_AGENT0" -- cilium-dbg bpf ct list global \
-    >"$SERVICE_DIR/ct-after.log" || {
-      printf 'ERROR: observer Cilium CT successivo fallito.\n' >&2
-      return 2
-    }
-
-  for required_file in \
-    "$SERVICE_DIR/http-flows.log" \
-    "$SERVICE_DIR/ct-after.log"
-  do
-    if [[ ! -s "$required_file" ]]
-    then
-      printf 'ERROR: output Service E20 richiesto vuoto: %s\n' \
-        "$required_file" >&2
-      return 1
-    fi
-  done
-
-  if verify_cilium_service_ct_lb \
-      "$SERVICE_IP" 8080 "$CLIENT_IP" "$SERVER_A_IP" "$SERVER_B_IP" \
-      "$SERVICE_DIR/http-flows.log" \
-      "$SERVICE_DIR/ct-before.log" "$SERVICE_DIR/ct-after.log" \
-      "$SERVICE_DIR/lb-frontends-before.log" \
-      "$SERVICE_DIR/lb-backends-before.log" \
-      "$SERVICE_DIR/lb-revnat-before.log" \
-      "$SERVICE_DIR/ct-service-correlation.log"
-  then
-    :
-  else
-    VERIFY_RC=$?
-    return "$VERIFY_RC"
-  fi
-  if verify_kube_proxy_service_invariance \
-      "$SERVICE_IP" 8080 "$SERVER_A_IP" "$SERVER_B_IP" \
-      "$SERVICE_DIR/kube-proxy-before.log" \
-      "$SERVICE_DIR/kube-proxy-after.log"
-  then
-    :
-  else
-    VERIFY_RC=$?
-    return "$VERIFY_RC"
-  fi
-  if wait_for_cilium_service_hubble \
-      "$START_UTC" "$END_UTC" \
-      "$SERVICE_DIR/ct-service-correlation.log" \
-      "$SERVICE_DIR/hubble-service.json"
-  then
-    :
-  else
-    VERIFY_RC=$?
-    return "$VERIFY_RC"
-  fi
-
-  cat "$SERVICE_DIR/http-flows.log" || return 1
-  cat "$SERVICE_DIR/ct-service-correlation.log" || return 1
-  show_informative_diff "$SERVICE_DIR/kube-proxy-before.log" \
-    "$SERVICE_DIR/kube-proxy-after.log" || return 1
-  show_informative_diff "$SERVICE_DIR/ct-before.log" \
-    "$SERVICE_DIR/ct-after.log" || return 1
-  printf 'PASS: per i flussi ClusterIP controllati, CT/mappe/Hubble attribuiscono il percorso a Cilium e i contatori kube-proxy pertinenti restano invariati.\n'
-}
 
 run_e20_service_attribution
 ```
