@@ -647,10 +647,10 @@ source scripts/cni/common/lab-env.sh
 
 Lo script rileva e verifica la root, definisce l'immagine K3s bloccata e gli
 helper comuni. Può essere caricato più volte: non crea cluster, non modifica il
-sistema e non avvia test. I moduli Service e cattura vengono caricati
-esplicitamente nei punti di ingresso di E01, E10 ed E20; E10 carica inoltre la
-propria orchestrazione Service specifica. Gli altri helper specifici di E02,
-E10 ed E20 restano nelle relative sezioni e vengono definiti prima dell'uso.
+sistema e non avvia test. I moduli Service, cattura e policy vengono caricati
+esplicitamente nei rispettivi punti di ingresso; E10 carica inoltre la propria
+orchestrazione Service specifica. Gli helper Cilium specifici di E20 restano
+nella relativa sezione e vengono definiti prima dell'uso.
 `service.sh` dipende dalle primitive di contesto, validazione IP e probe HTTP
 definite da `lab-env.sh`; `capture.sh` dipende da `_tesi_is_ipv4` e `http_flow`.
 L'ordine dei `source` è quindi intenzionale. Il runner di cattura esegue il
@@ -695,10 +695,12 @@ restituisca il nome del Pod destinazione. Le matrici usano `expect_allow` ed
 `expect_deny`: un deny atteso viene registrato come `PASS` soltanto quando il
 probe remoto è completo, `wget` restituisce il fallimento applicativo previsto
 e un probe locale nel Pod destinazione conferma che il server HTTP è sano.
-`wait_for_policy_convergence` effettua un polling read-only degli artefatti
-iptables sui nodi ricavati dall'inventario dei Pod. Il gate è limitato a 90
-secondi con intervallo di un secondo, non genera connessioni workload e
-interrompe subito il polling in caso di errore operativo o di parsing.
+`wait_for_k3s_policy_convergence` e
+`wait_for_calico_policy_convergence`, caricati dai moduli dei rispettivi
+esperimenti, effettuano polling read-only degli artefatti iptables sui nodi
+ricavati dall'inventario dei Pod. I gate sono limitati a 90 secondi con
+intervallo di un secondo, non generano connessioni workload e interrompono
+subito il polling in caso di errore operativo o di parsing.
 Scegliere una sola modalità per lo stato di policy corrente:
 
 ```text
@@ -966,6 +968,7 @@ Questo è il punto di ingresso E02 anche in una nuova shell:
 ```bash
 cd "$HOME/kubernetes-cloud-edge-lab"
 source scripts/cni/common/lab-env.sh
+source scripts/cni/k3s/e02-policy.sh
 ```
 
 La matrice comprende `client → server-a`, `client → server-b` e
@@ -977,87 +980,23 @@ Per capire se una policy è stata tradotta nel data plane, leggiamo i log del
 controller e cerchiamo catene iptables e insiemi IPSet con prefisso `KUBE-`.
 La funzione usa il prefisso nodo del cluster corrente:
 
-```bash
-inspect_k3s_policy_plane() {
-  local FAILED=0
-  local FILTER_RC
-  local IPSET_OUTPUT
-  local IPTABLES_OUTPUT
-  local LOG_OUTPUT
+La definizione è fornita da `scripts/cni/k3s/e02-policy.sh`. Per ciascun
+nodo il controllo mantiene visibili questi observer, senza generare traffico
+workload:
 
-  for NODE in \
-    "${TESI_NODE_PREFIX}-server-0" \
-    "${TESI_NODE_PREFIX}-agent-0" \
-    "${TESI_NODE_PREFIX}-agent-1"
-  do
-    if LOG_OUTPUT="$(docker logs "$NODE" 2>&1)"
-    then
-      if /usr/bin/grep -E \
-          'Starting network policy controller|network_policy_controller' \
-          <<<"$LOG_OUTPUT"
-      then
-        FILTER_RC=0
-      else
-        FILTER_RC=$?
-      fi
-      case "$FILTER_RC" in
-        0) ;;
-        1) printf 'INFO: marker controller policy assente su %s.\n' "$NODE" ;;
-        *) printf 'ERROR: filtro log policy fallito su %s (grep rc=%s).\n' \
-             "$NODE" "$FILTER_RC" >&2; FAILED=1 ;;
-      esac
-    else
-      printf 'ERROR: acquisizione log policy fallita su %s.\n' "$NODE" >&2
-      FAILED=1
-    fi
-
-    docker exec "$NODE" /bin/aux/iptables --version || FAILED=1
-    docker exec "$NODE" /bin/ipset --version || FAILED=1
-
-    if IPTABLES_OUTPUT="$(docker exec "$NODE" \
-        /bin/aux/iptables-save -c)"
-    then
-      if /usr/bin/grep -E 'KUBE-(NWPLCY|POD-FW|ROUTER)' \
-          <<<"$IPTABLES_OUTPUT"
-      then
-        FILTER_RC=0
-      else
-        FILTER_RC=$?
-      fi
-      case "$FILTER_RC" in
-        0) ;;
-        1) printf 'INFO: catene policy KUBE assenti su %s.\n' "$NODE" ;;
-        *) printf 'ERROR: filtro iptables fallito su %s (grep rc=%s).\n' \
-             "$NODE" "$FILTER_RC" >&2; FAILED=1 ;;
-      esac
-    else
-      printf 'ERROR: acquisizione iptables fallita su %s.\n' "$NODE" >&2
-      FAILED=1
-    fi
-
-    if IPSET_OUTPUT="$(docker exec "$NODE" /bin/ipset save)"
-    then
-      if /usr/bin/grep -E 'KUBE-' <<<"$IPSET_OUTPUT"
-      then
-        FILTER_RC=0
-      else
-        FILTER_RC=$?
-      fi
-      case "$FILTER_RC" in
-        0) ;;
-        1) printf 'INFO: IPSet policy KUBE assenti su %s.\n' "$NODE" ;;
-        *) printf 'ERROR: filtro IPSet fallito su %s (grep rc=%s).\n' \
-             "$NODE" "$FILTER_RC" >&2; FAILED=1 ;;
-      esac
-    else
-      printf 'ERROR: acquisizione IPSet fallita su %s.\n' "$NODE" >&2
-      FAILED=1
-    fi
-  done
-
-  [[ "$FAILED" -eq 0 ]]
-}
+```text
+docker logs "$NODE"
+docker exec "$NODE" /bin/aux/iptables --version
+docker exec "$NODE" /bin/ipset --version
+docker exec "$NODE" /bin/aux/iptables-save -c
+docker exec "$NODE" /bin/ipset save
 ```
+
+I log identificano il controller kube-router; `iptables-save` espone le
+catene `KUBE-NWPLCY-*` e `KUBE-POD-FW-*`, mentre `ipset save` mostra gli
+insiemi Kubernetes usati dai selector. Il gate di convergenza collega i
+marker semantici delle policy alle catene prima che la matrice HTTP produca
+le sei connessioni autorevoli.
 
 ### 9.1 Controllo ON
 
@@ -1086,7 +1025,8 @@ inspect_k3s_policy_plane
 ```
 
 Applicare il default deny, controllare l'oggetto API ed eseguire di nuovo la
-matrice. La modalità `k3s` attende le relazioni semanticamente marcate fra
+matrice. `wait_for_k3s_policy_convergence` attende le relazioni semanticamente
+marcate fra
 `KUBE-NWPLCY-*`, `KUBE-POD-FW-*` e i nomi delle policy, senza dipendere dagli
 hash delle chain:
 
@@ -1095,7 +1035,7 @@ kubectl --context "$TESI_CONTEXT" apply \
   -f manifests/cni/common/default-deny-ingress.yaml &&
 kubectl --context "$TESI_CONTEXT" get networkpolicy \
   default-deny-ingress -n net-lab -o yaml &&
-wait_for_policy_convergence k3s default-deny &&
+wait_for_k3s_policy_convergence default-deny &&
 run_policy_matrix deny-all &&
 inspect_k3s_policy_plane
 ```
@@ -1111,7 +1051,7 @@ Applicare quindi l'allow mirata e ripetere la matrice:
 kubectl --context "$TESI_CONTEXT" apply \
   -f manifests/cni/common/allow-client-to-http-servers.yaml &&
 kubectl --context "$TESI_CONTEXT" get networkpolicy -n net-lab -o yaml &&
-wait_for_policy_convergence k3s selective-allow &&
+wait_for_k3s_policy_convergence selective-allow &&
 run_policy_matrix selective-allow &&
 inspect_k3s_policy_plane
 ```
@@ -1127,7 +1067,7 @@ kubectl --context "$TESI_CONTEXT" delete \
 kubectl --context "$TESI_CONTEXT" delete \
   -f manifests/cni/common/default-deny-ingress.yaml \
   --ignore-not-found &&
-wait_for_policy_convergence k3s restored &&
+wait_for_k3s_policy_convergence restored &&
 run_policy_matrix allow-all &&
 inspect_k3s_policy_plane
 ```
@@ -1222,6 +1162,7 @@ Questo è il punto di ingresso E10 anche in una nuova shell:
 ```bash
 cd "$HOME/kubernetes-cloud-edge-lab"
 source scripts/cni/common/lab-env.sh
+source scripts/cni/calico/e10-policy.sh
 source scripts/cni/common/service.sh
 source scripts/cni/common/capture.sh
 source scripts/cni/calico/e10-service.sh
@@ -1734,107 +1675,32 @@ probabilistica e non indebolisce l'attribuzione basata sui contatori.
 
 Per le policy vogliamo correlare il risultato applicativo con il lavoro di
 Felix. Nei log cerchiamo calcolo di policy, selector e IPSet; nel kernel
-cerchiamo gli insiemi `cali*`, le catene iptables e i loro contatori. Definire
-il controllo una volta. Il gate in modalità `calico` attende nei dump iptables
-i commenti `KubernetesNetworkPolicy net-lab/<nome> ingress` prodotti da Felix,
+cerchiamo gli insiemi `cali*`, le catene iptables e i loro contatori. Il gate
+`wait_for_calico_policy_convergence` attende nei dump iptables i commenti
+`KubernetesNetworkPolicy net-lab/<nome> ingress` prodotti da Felix,
 ricava dinamicamente i nomi delle chain e richiede i relativi jump dalle
 `cali-tw-*` associate via route ai Pod selezionati, senza codificare hash:
 
-```bash
-inspect_calico_policy_plane() {
-  local FAILED=0
-  local FILTER_RC
-  local IPSET_OUTPUT
-  local IPTABLES_OUTPUT
-  local LOG_OUTPUT
-  local POD_OUTPUT
-  local POLICY_OUTPUT
+La definizione è fornita da `scripts/cni/calico/e10-policy.sh`. Il modulo
+mantiene separati l'inventario descrittivo e il gate di linkage; gli
+observer restano espliciti:
 
-  if POLICY_OUTPUT="$(kubectl --context "$TESI_CONTEXT" get \
-      networkpolicy -n net-lab -o yaml)"
-  then
-    printf '%s\n' "$POLICY_OUTPUT"
-  else
-    printf 'ERROR: acquisizione NetworkPolicy Calico fallita.\n' >&2
-    FAILED=1
-  fi
-  if POD_OUTPUT="$(kubectl --context "$TESI_CONTEXT" get pods \
-      -n net-lab -o wide)"
-  then
-    printf '%s\n' "$POD_OUTPUT"
-  else
-    printf 'ERROR: acquisizione Pod/IP/nodo per la policy Calico fallita.\n' >&2
-    FAILED=1
-  fi
-  if LOG_OUTPUT="$(kubectl --context "$TESI_CONTEXT" logs -n calico-system \
-      daemonset/calico-node -c calico-node --tail=300)"
-  then
-    if grep -E 'Policy|selector|IPSet|iptables' <<<"$LOG_OUTPUT"
-    then
-      FILTER_RC=0
-    else
-      FILTER_RC=$?
-    fi
-    case "$FILTER_RC" in
-      0) ;;
-      1) printf 'INFO: marker policy assenti nei log Calico.\n' ;;
-      *) printf 'ERROR: filtro log Calico fallito (grep rc=%s).\n' \
-           "$FILTER_RC" >&2; FAILED=1 ;;
-    esac
-  else
-    printf 'ERROR: acquisizione log Calico fallita.\n' >&2
-    FAILED=1
-  fi
-
-  for NODE in \
-    k3d-tesi-e10-calico-vxlan-agent-0 \
-    k3d-tesi-e10-calico-vxlan-agent-1
-  do
-    if IPTABLES_OUTPUT="$(docker exec "$NODE" \
-        /bin/aux/iptables-save -c)"
-    then
-      if grep -E 'cali-|KubernetesNetworkPolicy' <<<"$IPTABLES_OUTPUT"
-      then
-        FILTER_RC=0
-      else
-        FILTER_RC=$?
-      fi
-      case "$FILTER_RC" in
-        0) ;;
-        1) printf 'INFO: catene policy Calico assenti su %s.\n' "$NODE" ;;
-        *) printf 'ERROR: filtro iptables Calico fallito su %s (grep rc=%s).\n' \
-             "$NODE" "$FILTER_RC" >&2; FAILED=1 ;;
-      esac
-    else
-      printf 'ERROR: acquisizione iptables Calico fallita su %s.\n' \
-        "$NODE" >&2
-      FAILED=1
-    fi
-
-    if IPSET_OUTPUT="$(docker exec "$NODE" /bin/ipset save)"
-    then
-      if grep -E 'cali' <<<"$IPSET_OUTPUT"
-      then
-        FILTER_RC=0
-      else
-        FILTER_RC=$?
-      fi
-      case "$FILTER_RC" in
-        0) ;;
-        1) printf 'INFO: IPSet Calico assenti su %s.\n' "$NODE" ;;
-        *) printf 'ERROR: filtro IPSet Calico fallito su %s (grep rc=%s).\n' \
-             "$NODE" "$FILTER_RC" >&2; FAILED=1 ;;
-      esac
-    else
-      printf 'ERROR: acquisizione IPSet Calico fallita su %s.\n' \
-        "$NODE" >&2
-      FAILED=1
-    fi
-  done
-
-  [[ "$FAILED" -eq 0 ]]
-}
+```text
+kubectl --context "$TESI_CONTEXT" get networkpolicy -n net-lab -o yaml
+kubectl --context "$TESI_CONTEXT" get pods -n net-lab -o wide
+kubectl --context "$TESI_CONTEXT" logs -n calico-system \
+  daemonset/calico-node -c calico-node --tail=300
+docker exec "$NODE" ip -o route get "$POD_IP"
+docker exec "$NODE" ip -br link
+docker exec "$NODE" /bin/aux/iptables-save -c
+docker exec "$NODE" /bin/ipset save
 ```
+
+Per ciascun Pod il gate legge nodo e IP dall'API, risolve con
+`ip route get <Pod IP>` l'interfaccia host `cali*`, seleziona la chain
+esatta `cali-tw-<interfaccia>` e ne verifica il jump alla `cali-pi-*`
+identificata dal commento semantico della policy. Nessun hash o nome storico
+di chain viene assunto.
 
 Eseguire poi i tre stati in ordine:
 
@@ -1846,14 +1712,14 @@ inspect_calico_policy_plane &&
 # Default deny: sei connessioni negate
 kubectl --context "$TESI_CONTEXT" apply \
   -f manifests/cni/common/default-deny-ingress.yaml &&
-wait_for_policy_convergence calico default-deny &&
+wait_for_calico_policy_convergence default-deny &&
 run_policy_matrix deny-all &&
 inspect_calico_policy_plane &&
 
 # Allow selettiva: quattro consentite, due negate
 kubectl --context "$TESI_CONTEXT" apply \
   -f manifests/cni/common/allow-client-to-http-servers.yaml &&
-wait_for_policy_convergence calico selective-allow &&
+wait_for_calico_policy_convergence selective-allow &&
 run_policy_matrix selective-allow &&
 inspect_calico_policy_plane
 ```
@@ -1875,7 +1741,7 @@ kubectl --context "$TESI_CONTEXT" delete \
 kubectl --context "$TESI_CONTEXT" delete \
   -f manifests/cni/common/default-deny-ingress.yaml \
   --ignore-not-found &&
-wait_for_policy_convergence calico restored &&
+wait_for_calico_policy_convergence restored &&
 run_policy_matrix allow-all &&
 inspect_calico_policy_plane
 ```
