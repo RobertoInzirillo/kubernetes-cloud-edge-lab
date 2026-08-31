@@ -56,8 +56,9 @@ Command Line Interface (CLI) erano `29.6.2` in E01/E02, `29.7.1` in E10 e
 invalidasse gli esperimenti, ma la variazione resta un limite. Indirizzi,
 veth, identità, contatori e altri identificativi runtime differiscono per
 definizione. Queste versioni appartengono alle sessioni che hanno prodotto le
-evidence storiche pubblicate; la successiva validation completa end-to-end ha
-rieseguito E01, E02, E10 ed E20 con Docker Engine/CLI `29.6.2`.
+evidence storiche pubblicate; la successiva validation completa end-to-end al
+commit `d392dfb9b54753eb7e998d9620e02b01dbc36a2a` ha rieseguito E01, E02, E10 ed
+E20 con Docker Engine/CLI `29.7.2`.
 
 ## Matrice principale
 

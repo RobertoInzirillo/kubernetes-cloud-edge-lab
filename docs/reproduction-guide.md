@@ -29,7 +29,7 @@ git rev-parse --verify HEAD
 ```
 
 La validation end-to-end documentata nella sezione successiva ha usato il
-commit `1dbcb290f10cc8dfa51715db03d2ba7da71bd57e`. Una riproduzione destinata a
+commit `d392dfb9b54753eb7e998d9620e02b01dbc36a2a`. Una riproduzione destinata a
 essere archiviata o citata deve registrare il tag o il commit selezionato e il
 valore restituito da `git rev-parse`.
 
@@ -65,13 +65,13 @@ introdotte ulteriori correzioni tecniche e metodologiche, verificate
 inizialmente con esecuzioni mirate o incrementali.
 
 Successivamente, la guida sul singolo commit
-`1dbcb290f10cc8dfa51715db03d2ba7da71bd57e` è stata eseguita integralmente da
-stato sperimentale pulito sul validator già predisposto, con verifica della
-toolchain e delle versioni previste. E01, E02, E10, E20 e il cleanup finale
-hanno avuto esito PASS. Questa esecuzione end-to-end non è partita da una
-nuova installazione Linux vergine. Gli output indicati come risultati
-appartengono agli esperimenti pubblicati e non vanno assunti come output
-dell'esecuzione end-to-end appena descritta.
+`d392dfb9b54753eb7e998d9620e02b01dbc36a2a` è stata eseguita integralmente da
+stato sperimentale pulito sul validator già predisposto, con Docker Engine e
+CLI `29.7.2`, containerd.io host `2.3.4` e Docker Buildx `0.36.1`. E01, E02,
+E10, E20 e il cleanup finale hanno avuto esito PASS. Questa esecuzione
+end-to-end non è partita da una nuova installazione Linux vergine. Gli output
+indicati come risultati appartengono agli esperimenti pubblicati e non vanno
+assunti come output dell'esecuzione end-to-end appena descritta.
 
 ## 2. Ambiente di riferimento
 
@@ -324,10 +324,10 @@ apt-cache policy \
   docker-buildx-plugin
 
 apt-get --simulate install \
-  docker-ce=5:29.6.2-1~ubuntu.24.04~noble \
-  docker-ce-cli=5:29.6.2-1~ubuntu.24.04~noble \
-  containerd.io=2.2.6-1~ubuntu.24.04~noble \
-  docker-buildx-plugin=0.35.0-1~ubuntu.24.04~noble
+  docker-ce=5:29.7.2-1~ubuntu.24.04~noble \
+  docker-ce-cli=5:29.7.2-1~ubuntu.24.04~noble \
+  containerd.io=2.3.4-1~ubuntu.24.04~noble \
+  docker-buildx-plugin=0.36.1-1~ubuntu.24.04~noble
 ```
 
 I candidati devono provenire da `download.docker.com`, suite Noble, canale
@@ -339,10 +339,10 @@ Installare i pacchetti esatti:
 
 ```bash
 sudo apt-get install -y \
-  docker-ce=5:29.6.2-1~ubuntu.24.04~noble \
-  docker-ce-cli=5:29.6.2-1~ubuntu.24.04~noble \
-  containerd.io=2.2.6-1~ubuntu.24.04~noble \
-  docker-buildx-plugin=0.35.0-1~ubuntu.24.04~noble
+  docker-ce=5:29.7.2-1~ubuntu.24.04~noble \
+  docker-ce-cli=5:29.7.2-1~ubuntu.24.04~noble \
+  containerd.io=2.3.4-1~ubuntu.24.04~noble \
+  docker-buildx-plugin=0.36.1-1~ubuntu.24.04~noble
 ```
 
 Il laboratorio usa il daemon Docker di sistema e `docker buildx imagetools`.
@@ -550,7 +550,7 @@ unset TOOLCHAIN_DIR KUBECTL_FILE KUBECTL_SHA256 \
 
 | Componente | Versione o riferimento |
 |---|---|
-| Docker della baseline consolidata | `29.6.2` |
+| Docker della baseline consolidata | `29.7.2` |
 | k3d | `v5.9.0` |
 | K3s/Kubernetes | `v1.34.9+k3s1` |
 | kubectl | `v1.34.9` |
@@ -561,10 +561,10 @@ unset TOOLCHAIN_DIR KUBECTL_FILE KUBECTL_SHA256 \
 
 Le versioni Docker associate alle evidence storiche erano `29.6.2` in
 E01/E02, `29.7.1` in E10 e `29.7.2` in E20. La validation end-to-end al commit
-`1dbcb290f10cc8dfa51715db03d2ba7da71bd57e` ha invece usato `29.6.2` come
-baseline consolidata per l'intera guida. Questo ne conferma l'operatività con
-la baseline corrente, senza uniformare retroattivamente i runtime delle
-evidence originali né ricreare la cronologia degli aggiornamenti intermedi.
+`d392dfb9b54753eb7e998d9620e02b01dbc36a2a` ha usato `29.7.2` come baseline
+consolidata per l'intera guida. Questo ne conferma l'operatività con la
+baseline corrente, senza uniformare retroattivamente i runtime delle evidence
+originali né ricreare la cronologia degli aggiornamenti intermedi.
 
 ### 6.1 Immagine K3s
 
@@ -1449,7 +1449,7 @@ kubectl --context "$TESI_CONTEXT" apply \
 
 La sequenza applica direttamente la configurazione finale consolidata ed è
 stata eseguita nella validation end-to-end al commit
-`1dbcb290f10cc8dfa51715db03d2ba7da71bd57e`. Se non converge in una replica,
+`d392dfb9b54753eb7e998d9620e02b01dbc36a2a`. Se non converge in una replica,
 fermarsi e conservare lo stato per la diagnosi.
 
 ### 10.3 Verifica di Calico, CNI e IPAM
@@ -1664,8 +1664,16 @@ e confronto dei delta lungo
 e un delta positivo viene richiesto soltanto per i backend realmente osservati.
 
 ```bash
-export CALICO_AGENT0='k3d-tesi-e10-calico-vxlan-agent-0'
-export SERVICE_DIR="$(mktemp -d)"
+export TESI_CONTEXT='k3d-tesi-e10-calico-vxlan'
+export TESI_NODE_PREFIX='k3d-tesi-e10-calico-vxlan'
+_tesi_export_runtime SERVER_A_IP ipv4 kubectl --context "$TESI_CONTEXT" \
+  -n net-lab get pod server-a -o jsonpath='{.status.podIP}' &&
+_tesi_export_runtime SERVER_B_IP ipv4 kubectl --context "$TESI_CONTEXT" \
+  -n net-lab get pod server-b -o jsonpath='{.status.podIP}' &&
+_tesi_export_runtime SERVICE_IP ipv4 kubectl --context "$TESI_CONTEXT" \
+  -n net-lab get svc servers -o jsonpath='{.spec.clusterIP}' &&
+export CALICO_AGENT0="${TESI_NODE_PREFIX}-agent-0" &&
+export SERVICE_DIR="$(mktemp -d)" &&
 run_e10_service_attribution
 ```
 
@@ -1990,12 +1998,12 @@ Hubble soltanto locale.
 
 ### 11.4 Workload e percorso intra-node
 
-Applicare il workload comune, eseguire la matrice baseline e rileggere
-endpoint, identità e indirizzi:
+Applicare il workload comune e rileggere endpoint, identità e indirizzi. La
+singola matrice baseline autorevole viene eseguita nella sezione 11.7, dove la
+sua finestra temporale viene congelata e osservata da Hubble:
 
 ```bash
 deploy_common_workload &&
-run_policy_matrix allow-all &&
 _tesi_export_runtime CLIENT_IP ipv4 kubectl --context "$TESI_CONTEXT" \
   -n net-lab get pod client -o jsonpath='{.status.podIP}' &&
 _tesi_export_runtime SERVER_A_IP ipv4 kubectl --context "$TESI_CONTEXT" \
@@ -2265,6 +2273,10 @@ fanno fallire l'acquisizione.
 
 Eseguire i tre stati nello stesso ordine della baseline. Ogni blocco mantiene
 la sequenza mutazione API → convergence gate → singola matrice → observer:
+
+La chiamata `capture_cilium_policy_state baseline allow-all` seguente produce
+l'unica matrice baseline E20. I flussi ClusterIP della sezione Service non la
+sostituiscono: non osservano la stessa matrice diretta fra Pod IP.
 
 ```bash
 snapshot_cilium_policy_revisions &&

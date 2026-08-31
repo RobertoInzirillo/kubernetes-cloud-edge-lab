@@ -43,7 +43,7 @@ salute non hanno mostrato divergenze capaci di invalidare i singoli casi, ma
 il confronto non è quindi byte-identico a livello di runtime host. Queste
 versioni appartengono alle sessioni da cui derivano le evidence storiche; la
 validation end-to-end della guida al commit
-`1dbcb290f10cc8dfa51715db03d2ba7da71bd57e` ha usato Docker `29.6.2` per tutti
+`d392dfb9b54753eb7e998d9620e02b01dbc36a2a` ha usato Docker `29.7.2` per tutti
 e quattro gli esperimenti e non modifica gli output storici.
 
 Le evidence storiche E20 registrano il kernel `7.0.0-28-generic`. Prima della
