@@ -74,14 +74,26 @@ esperimenti esistenti.
 │   ├── calico/
 │   └── cilium/
 └── scripts/cni/
-    ├── common/lab-env.sh
-    └── calico/
+    ├── common/
+    │   ├── lab-env.sh
+    │   ├── capture.sh
+    │   └── service.sh
+    ├── k3s/e02-policy.sh
+    ├── calico/
+    │   ├── e10-policy.sh
+    │   ├── e10-service.sh
+    │   └── pin-tigera-operator-image.sh
+    └── cilium/
+        ├── network-policy.sh
+        ├── policy-observers.sh
+        └── service.sh
 ```
 
 I manifest comuni fissano workload e NetworkPolicy; le directory Calico e
-Cilium contengono le configurazioni specifiche. Lo script comune ricostruisce
-l'ambiente di shell degli esperimenti; lo script Calico è il post-renderer
-usato per bloccare l'immagine del Tigera Operator.
+Cilium contengono le configurazioni specifiche. I moduli comuni ricostruiscono
+l'ambiente di shell e condividono cattura e attribuzione Service; i moduli
+specifici implementano gli observer e i gate dei singoli esperimenti. Il
+post-renderer Calico blocca l'immagine del Tigera Operator.
 
 ## Percorso di lettura
 

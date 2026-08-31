@@ -651,7 +651,7 @@ sistema e non avvia test. I moduli Service, cattura e policy vengono caricati
 esplicitamente nei rispettivi punti di ingresso; E10 carica inoltre la propria
 orchestrazione Service specifica. Gli helper Cilium Service sono caricati dal
 modulo E20 dedicato; quelli NetworkPolicy restano nella relativa sezione e
-vengono definiti prima dell'uso.
+vengono caricati prima dell'uso.
 `common/service.sh` dipende dalle primitive di contesto, validazione IP e probe
 HTTP definite da `lab-env.sh`; `capture.sh` dipende da `_tesi_is_ipv4` e
 `http_flow`. Il modulo Cilium Service dipende inoltre dagli helper comuni
@@ -981,7 +981,7 @@ verifica il risultato atteso.
 
 Per capire se una policy è stata tradotta nel data plane, leggiamo i log del
 controller e cerchiamo catene iptables e insiemi IPSet con prefisso `KUBE-`.
-La funzione usa il prefisso nodo del cluster corrente:
+La funzione usa il prefisso nodo del cluster corrente.
 
 La definizione è fornita da `scripts/cni/k3s/e02-policy.sh`. Per ciascun
 nodo il controllo mantiene visibili questi observer, senza generare traffico
@@ -1682,7 +1682,7 @@ cerchiamo gli insiemi `cali*`, le catene iptables e i loro contatori. Il gate
 `wait_for_calico_policy_convergence` attende nei dump iptables i commenti
 `KubernetesNetworkPolicy net-lab/<nome> ingress` prodotti da Felix,
 ricava dinamicamente i nomi delle chain e richiede i relativi jump dalle
-`cali-tw-*` associate via route ai Pod selezionati, senza codificare hash:
+`cali-tw-*` associate via route ai Pod selezionati, senza codificare hash.
 
 La definizione è fornita da `scripts/cni/calico/e10-policy.sh`. Il modulo
 mantiene separati l'inventario descrittivo e il gate di linkage; gli
@@ -2090,7 +2090,7 @@ conntrack eBPF, e flussi Hubble. Solo la combinazione dei delta permette una
 conclusione circoscritta alle connessioni generate.
 
 Verificare prima la disponibilità dei due backend, poi acquisire stato
-kube-proxy ed eBPF prima di nuove connessioni:
+kube-proxy ed eBPF prima di nuove connessioni.
 
 Il modulo specifico [`scripts/cni/cilium/service.sh`](../scripts/cni/cilium/service.sh)
 mantiene separati producer, snapshot e parser. Gli observer eseguiti dal runner
@@ -2326,6 +2326,7 @@ capture_cilium_policy_state restored allow-all
 Il PASS richiede il ritorno a 6/6 flussi consentiti, policy importate senza
 residui delle due NetworkPolicy pertinenti, endpoint realizzati e artefatti
 BPF/Hubble coerenti con lo stato ripristinato.
+
 ### 11.8 Troubleshooting circoscritto al riavvio Docker
 
 Questo controllo non è parte del percorso normale. Usarlo soltanto se, dopo
