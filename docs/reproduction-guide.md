@@ -523,19 +523,19 @@ cd "$HOME/kubernetes-cloud-edge-lab"
 source scripts/cni/common/lab-env.sh
 ```
 
-Lo script rileva e verifica la root, definisce l'immagine K3s bloccata e gli
-helper comuni. Può essere caricato più volte: non crea cluster, non modifica il
-sistema e non avvia test. I moduli Service, cattura e policy vengono caricati
-esplicitamente nei rispettivi punti di ingresso; E10 carica inoltre la propria
-orchestrazione Service specifica. Gli helper Cilium Service sono caricati dal
-modulo E20 dedicato; quelli NetworkPolicy restano nella relativa sezione e
-vengono caricati prima dell'uso.
-`common/service.sh` dipende dalle primitive di contesto, validazione IP e probe
-HTTP definite da `lab-env.sh`; `capture.sh` dipende da `_tesi_is_ipv4` e
-`http_flow`. Il modulo Cilium Service dipende inoltre dagli helper comuni
-Service e viene quindi caricato per ultimo nel punto di ingresso E20.
-L'ordine dei `source` è intenzionale. Il runner di cattura esegue il
-comando ricevuto dopo `--`: non sceglie CNI, device, filtro o porta VXLAN.
+`lab-env.sh` raccoglie l'immagine K3s bloccata, le variabili e le utility comuni
+del laboratorio. Non crea cluster e può essere caricato nuovamente. Gli helper
+per Service, catture e NetworkPolicy vengono caricati soltanto negli
+esperimenti che li usano.
+
+Ogni esperimento assegna `TESI_CONTEXT` al contesto kubectl del proprio cluster
+e `TESI_NODE_PREFIX` al prefisso dei container nodo. IP, PID, veth e altri
+identificativi effimeri vengono sempre rilevati dal cluster corrente, mai
+copiati dalle evidence storiche.
+
+I cluster del laboratorio usano nomi con prefisso `tesi-` e una porta API
+loopback distinta. Nome e porta concreti restano visibili in ogni comando di
+creazione.
 
 Prima di creare un cluster, ogni esperimento invoca:
 
@@ -543,12 +543,9 @@ Prima di creare un cluster, ogni esperimento invoca:
 check_experiment_preflight NOME_CLUSTER PORTA_API
 ```
 
-I valori concreti sono già riportati nei punti di ingresso degli esperimenti,
-quindi questa forma descrittiva non deve essere copiata. Il controllo si ferma
-se trova lo stesso cluster, la porta occupata o un processo `tcpdump` residuo;
-non elimina nulla. In quel caso scegliere se conservare e analizzare lo stato
-esistente oppure eseguire consapevolmente la rimozione documentata per
-l'esperimento precedente.
+I valori concreti sono riportati nei punti di ingresso. Il preflight verifica
+che nome cluster e porta API siano liberi e che non restino catture precedenti;
+non elimina risorse. Se fallisce, risolvere il conflitto prima di proseguire.
 
 ### 7.1 Workload e flussi comuni
 
@@ -560,51 +557,44 @@ invoca:
 deploy_common_workload
 ```
 
-Il manifest comune usa ora la label neutra `cni-network-baseline`. Le evidence
-storiche restano byte-identiche e possono quindi mostrare il precedente valore
-`e01-network-baseline`; la label non partecipa ai selector delle policy provate.
+Il manifest forza `client` e `server-a` su `agent-0` e `server-b` su `agent-1`:
+questa disposizione permette di confrontare flussi intra-node e inter-node.
+La label comune è `cni-network-baseline`; le evidence storiche possono mostrare
+il precedente valore `e01-network-baseline`, che non partecipa ai selector
+delle policy.
 
-La funzione rifiuta di procedere se contesto o prefisso non sono definiti. Per
-il Service, `verify_service_backends` controlla separatamente che `server-a` e
-`server-b` siano entrambi Ready negli EndpointSlice; `service_http_flows N`
-genera invece `N` nuove connessioni e registra il backend realmente osservato,
-senza imporre una distribuzione probabilistica.
+`http_flow` genera una nuova richiesta HTTP diretta fra due Pod e controlla la
+risposta. Per i Service, `verify_service_backends` verifica che entrambi i
+backend siano Ready e `service_http_flows N` registra quale backend risponde a
+ciascuna delle `N` nuove connessioni, senza imporre una distribuzione.
 
-Per le connessioni dirette fra Pod, `http_flow` distingue gli errori locali e
-di `kubectl exec` dall'esito di `wget`, e verifica che un flusso consentito
-restituisca il nome del Pod destinazione. Le matrici usano `expect_allow` ed
-`expect_deny`: un deny atteso viene registrato come `PASS` soltanto quando il
-probe remoto è completo, `wget` restituisce il fallimento applicativo previsto
-e un probe locale nel Pod destinazione conferma che il server HTTP è sano.
-`wait_for_k3s_policy_convergence` e
-`wait_for_calico_policy_convergence`, caricati dai moduli dei rispettivi
-esperimenti, effettuano polling read-only degli artefatti iptables sui nodi
-ricavati dall'inventario dei Pod. I gate sono limitati a 90 secondi con
-intervallo di un secondo, non generano connessioni workload e interrompono
-subito il polling in caso di errore operativo o di parsing.
-Scegliere una sola modalità per lo stato di policy corrente:
+Gli esperimenti NetworkPolicy attendono la convergenza del data plane prima di
+eseguire una sola matrice di traffico nello stato corrente:
 
 ```text
 run_policy_matrix MODALITA
 ```
 
-Sostituire `MODALITA` con `allow-all`, `deny-all` oppure `selective-allow` in
-base allo stato esplicitamente indicato nella sezione dell'esperimento. Le tre
-modalità sono alternative e non vanno eseguite consecutivamente sullo stesso
-stato.
-
-Ogni matrice esegue due volte `client → server-a`, `client → server-b` e
-`server-a → server-b`, poi stampa sei esiti e un riepilogo. Le forme
-`allow-all`, `deny-all` e `selective-allow` corrispondono rispettivamente a
-6/6 consentite, 6/6 negate e quattro consentite più due negate.
+Le modalità `allow-all`, `deny-all` e `selective-allow` sono alternative e
+corrispondono rispettivamente a 6/6 connessioni consentite, 6/6 negate e 4/6
+consentite. Ogni matrice prova due volte `client → server-a`,
+`client → server-b` e `server-a → server-b`. Gli helper di convergenza e
+osservazione non generano traffico workload.
 
 ## 8. E01 — Flannel VXLAN
 
-### 8.1 Creazione e controllo iniziale
+E01 mostra come Flannel collega i Pod di un cluster K3s multi-node. Prima
+osserveremo la configurazione predisposta sui nodi; poi confronteremo un flusso
+locale con uno diretto a un Pod remoto e correleremo il secondo al tunnel
+VXLAN. La cattura deve mostrare il pacchetto interno fra Pod e quello esterno
+fra gli indirizzi underlay dei nodi, su UDP 8472 e VNI 1.
+
+### 8.1 Obiettivo e creazione del cluster
 
 Creiamo la baseline K3s con Flannel VXLAN, un server e due agent. La porta
 API è esposta soltanto su loopback. Questo è il punto di ingresso E01 anche in
-una nuova shell:
+una nuova shell. `service.sh` fornisce le prove sui Service; `capture.sh`
+fornisce il mapping Pod–veth e l'orchestrazione della cattura controllata.
 
 ```bash
 cd "$HOME/kubernetes-cloud-edge-lab"
@@ -624,21 +614,17 @@ k3d cluster create tesi-flannel-vxlan \
   --wait
 ```
 
-Ispezionare contesto, readiness, CIDR dei nodi e componenti di sistema:
+Il comando crea tre nodi K3s come container Docker. Attendere che Kubernetes li
+dichiari Ready, quindi osservare nodi, Pod di sistema e PodCIDR assegnati:
 
 ```bash
 export TESI_CONTEXT='k3d-tesi-flannel-vxlan'
 export TESI_NODE_PREFIX='k3d-tesi-flannel-vxlan'
 
-kubectl config current-context
 kubectl --context "$TESI_CONTEXT" cluster-info
-kubectl --context "$TESI_CONTEXT" version -o yaml
 k3d cluster list
 docker ps --filter 'name=k3d-tesi-flannel-vxlan' \
   --format 'table {{.Names}}\t{{.Status}}\t{{.Networks}}'
-docker port k3d-tesi-flannel-vxlan-serverlb
-ss -ltn 'sport = :6445'
-kubectl --context "$TESI_CONTEXT" get --raw='/readyz?verbose'
 kubectl --context "$TESI_CONTEXT" wait \
   --for=condition=Ready node --all --timeout=120s
 kubectl --context "$TESI_CONTEXT" get nodes -o wide
@@ -647,78 +633,84 @@ kubectl --context "$TESI_CONTEXT" get nodes \
   -o custom-columns=NAME:.metadata.name,POD_CIDR:.spec.podCIDR
 ```
 
-### 8.2 CNI, subnet e data plane
+L'output deve mostrare un server e due agent Ready. Ogni nodo riceve un
+PodCIDR distinto: questa subnet identifica gli indirizzi Pod locali al nodo.
 
-Prima del workload distinguiamo configurazione CNI, subnet per nodo, bridge e
-tunnel. Questi dati descrivono il data plane predisposto, ma non dimostrano
-ancora il percorso di uno specifico pacchetto.
+### 8.2 Networking Flannel sui nodi
+
+Prima del workload distinguiamo i componenti del data plane. `cni0` è il bridge
+locale al quale vengono collegati i Pod del nodo; `flannel.1` è l'interfaccia
+VXLAN usata per raggiungere i PodCIDR remoti. `10-flannel.conflist` descrive la
+catena CNI, mentre `subnet.env` registra la subnet assegnata al nodo e i
+parametri Flannel.
 
 ```bash
-NODE_INVENTORY_FAILED=0
-for NODE in \
+for node in \
   k3d-tesi-flannel-vxlan-server-0 \
   k3d-tesi-flannel-vxlan-agent-0 \
   k3d-tesi-flannel-vxlan-agent-1
 do
-  docker exec "$NODE" sh -c \
-    'hostname; ls -la /var/lib/rancher/k3s/agent/etc/cni/net.d /run/flannel' || \
-    NODE_INVENTORY_FAILED=1
-  docker exec "$NODE" sh -c \
-    'hostname; sed -n "1,240p" /var/lib/rancher/k3s/agent/etc/cni/net.d/10-flannel.conflist; sed -n "1,120p" /run/flannel/subnet.env' || \
-    NODE_INVENTORY_FAILED=1
-  docker exec "$NODE" ip -details address || NODE_INVENTORY_FAILED=1
-  docker exec "$NODE" ip -details link show flannel.1 || \
-    NODE_INVENTORY_FAILED=1
-  docker exec "$NODE" sh -c \
-    'hostname; ip route; ip neigh show dev flannel.1' || \
-    NODE_INVENTORY_FAILED=1
+  docker exec "$node" sh -c \
+    'hostname; ls -la /var/lib/rancher/k3s/agent/etc/cni/net.d /run/flannel'
+  docker exec "$node" sh -c \
+    'hostname; sed -n "1,240p" /var/lib/rancher/k3s/agent/etc/cni/net.d/10-flannel.conflist; sed -n "1,120p" /run/flannel/subnet.env'
+  docker exec "$node" ip -details address
+  docker exec "$node" ip -details link show flannel.1
+  docker exec "$node" sh -c \
+    'hostname; ip route; ip neigh show dev flannel.1'
 done
 
-kubectl --context "$TESI_CONTEXT" get nodes -o jsonpath='{range .items[*]}{.metadata.name}{" | backend="}{.metadata.annotations.flannel\.alpha\.coreos\.com/backend-type}{" | backend-data="}{.metadata.annotations.flannel\.alpha\.coreos\.com/backend-data}{" | public-ip="}{.metadata.annotations.flannel\.alpha\.coreos\.com/public-ip}{" | podCIDR="}{.spec.podCIDR}{"\n"}{end}' || \
-  NODE_INVENTORY_FAILED=1
-if [[ "$NODE_INVENTORY_FAILED" -ne 0 ]]
-then
-  printf 'ERROR: inventario data plane E01 incompleto.\n' >&2
-  unset NODE_INVENTORY_FAILED
-  false
-else
-  unset NODE_INVENTORY_FAILED
-fi
+kubectl --context "$TESI_CONTEXT" get nodes -o jsonpath='{range .items[*]}{.metadata.name}{" | backend="}{.metadata.annotations.flannel\.alpha\.coreos\.com/backend-type}{" | backend-data="}{.metadata.annotations.flannel\.alpha\.coreos\.com/backend-data}{" | public-ip="}{.metadata.annotations.flannel\.alpha\.coreos\.com/public-ip}{" | podCIDR="}{.spec.podCIDR}{"\n"}{end}'
 ```
 
-Controllare `cni0`, `flannel.1`, route verso le subnet remote e backend
-`vxlan`. La configurazione presente non basta ancora a dimostrare che uno
-specifico flusso usi il tunnel.
+Per ogni nodo controllare `cni0`, `flannel.1` e la subnet riportata da
+`subnet.env`. `ip route` mostra quale percorso sceglie il kernel per un PodCIDR
+remoto; la route deve usare `flannel.1`. Le annotazioni Kubernetes devono
+indicare il backend `vxlan` e gli indirizzi pubblici correnti dei nodi. Questa
+configurazione descrive il tunnel predisposto, ma non dimostra ancora che uno
+specifico flusso lo attraversi.
 
-### 8.3 Workload e test
+### 8.3 Workload e connettività
 
-Con i valori già impostati, applicare il workload comune e rileggere gli
-indirizzi:
+`deploy_common_workload` applica il manifest comune e attende che i Pod siano
+Ready. Prima dei test individuiamo placement e IP: `client` e `server-a` devono
+trovarsi su `agent-0`, mentre `server-b` deve trovarsi su `agent-1`.
 
 ```bash
-deploy_common_workload &&
-_tesi_export_runtime CLIENT_IP ipv4 kubectl --context "$TESI_CONTEXT" \
-  -n net-lab get pod client -o jsonpath='{.status.podIP}' &&
-_tesi_export_runtime SERVER_A_IP ipv4 kubectl --context "$TESI_CONTEXT" \
-  -n net-lab get pod server-a -o jsonpath='{.status.podIP}' &&
-_tesi_export_runtime SERVER_B_IP ipv4 kubectl --context "$TESI_CONTEXT" \
-  -n net-lab get pod server-b -o jsonpath='{.status.podIP}' &&
-_tesi_export_runtime SERVICE_IP ipv4 kubectl --context "$TESI_CONTEXT" \
-  -n net-lab get svc servers -o jsonpath='{.spec.clusterIP}' &&
+deploy_common_workload
+kubectl --context "$TESI_CONTEXT" get pods -n net-lab -o wide
+
+CLIENT_IP="$(kubectl --context "$TESI_CONTEXT" -n net-lab \
+  get pod client -o jsonpath='{.status.podIP}')"
+SERVER_A_IP="$(kubectl --context "$TESI_CONTEXT" -n net-lab \
+  get pod server-a -o jsonpath='{.status.podIP}')"
+SERVER_B_IP="$(kubectl --context "$TESI_CONTEXT" -n net-lab \
+  get pod server-b -o jsonpath='{.status.podIP}')"
+SERVICE_IP="$(kubectl --context "$TESI_CONTEXT" -n net-lab \
+  get svc servers -o jsonpath='{.spec.clusterIP}')"
+
 printf 'client=%s server-a=%s server-b=%s service=%s\n' \
   "$CLIENT_IP" "$SERVER_A_IP" "$SERVER_B_IP" "$SERVICE_IP"
 ```
 
-Verificare Internet Control Message Protocol (ICMP), HTTP intra-node e HTTP
-inter-node:
+Le quattro variabili devono mostrare indirizzi IPv4 non vuoti prima di
+proseguire.
+
+Il flusso `client → server-a` resta sullo stesso nodo; `client → server-b` deve
+raggiungere un PodCIDR remoto. Verificare ICMP verso il Pod locale e HTTP in
+entrambi i casi:
 
 ```bash
 kubectl --context "$TESI_CONTEXT" exec -n net-lab client -- sh -c \
   'ping -c 3 -W 2 "$1"; rc=$?; printf "exit_code=%s\n" "$rc"; exit "$rc"' \
-  sh "$SERVER_A_IP" &&
-http_flow client server-a &&
+  sh "$SERVER_A_IP"
+http_flow client server-a
 http_flow client server-b
 ```
+
+I due test HTTP devono restituire il nome del Pod destinazione. Il loro
+successo dimostra connettività intra-node e inter-node, ma la cattura successiva
+serve per attribuire il secondo percorso a VXLAN.
 
 Verificare prima che entrambi i backend siano Ready, poi generare connessioni
 nuove. Le risposte registrano soltanto i backend effettivamente scelti; non è
@@ -726,7 +718,7 @@ richiesto che un numero finito di connessioni li selezioni entrambi. L'esito
 prova il ClusterIP nei flussi osservati, ma non isola causalmente kube-proxy:
 
 ```bash
-verify_service_backends &&
+verify_service_backends
 service_http_flows 6
 ```
 
@@ -735,7 +727,7 @@ dell'host alteri la risoluzione:
 
 ```bash
 kubectl --context "$TESI_CONTEXT" exec -n net-lab client -- \
-  nslookup servers.net-lab.svc.cluster.local. &&
+  nslookup servers.net-lab.svc.cluster.local.
 kubectl --context "$TESI_CONTEXT" exec -n net-lab client -- \
   wget -qO- -T 5 http://servers.net-lab.svc.cluster.local.:8080/
 ```
@@ -745,60 +737,64 @@ provato; non costituisce un'analisi generale del DNS del cluster.
 
 ### 8.4 Identificativi runtime, veth e cattura inter-node
 
-Prima della cattura ricostruiamo l'associazione Pod–veth. L'helper
-`map_pod_veth`, fornito dal modulo di cattura caricato al punto di ingresso,
-individua la sandbox con `crictl pods`, legge il PID con `crictl inspectp`, entra
-nel namespace con `nsenter` e usa l'ifindex peer di `eth0` per trovare una sola
-veth nell'output `ip -o link` del nodo. Il Pod IP letto dall'API deve inoltre
-comparire su `eth0`.
+Ogni Pod ha un'interfaccia `eth0` collegata tramite una coppia veth al nodo.
+`map_pod_veth` individua la sandbox corrente del Pod e associa `eth0` alla
+corrispondente veth nel namespace del nodo. Questa associazione permette di
+riconoscere quali porte di `cni0` appartengono ai tre Pod.
 
 ```bash
-map_pod_veth client k3d-tesi-flannel-vxlan-agent-0 &&
-map_pod_veth server-a k3d-tesi-flannel-vxlan-agent-0 &&
+map_pod_veth client k3d-tesi-flannel-vxlan-agent-0
+map_pod_veth server-a k3d-tesi-flannel-vxlan-agent-0
 map_pod_veth server-b k3d-tesi-flannel-vxlan-agent-1
 ```
 
-Per ogni Pod controllare che `eth0` mostri il Pod IP corrente e che l'ultima
-riga individui una sola veth del nodo. Questo controllo fa parte della
-procedura ed è stato incluso nella validation end-to-end.
+Per ogni Pod l'output deve mostrare il Pod IP corrente su `eth0` e una sola veth
+corrispondente sul nodo.
 
-Per correlare il GET inter-node al traffico VXLAN UDP 8472, leggiamo poi PID
-host dei nodi e indirizzi underlay correnti:
+Per osservare il flusso inter-node leggiamo dinamicamente il PID del nodo
+sorgente e gli indirizzi underlay Docker dei due agent:
 
 ```bash
 export SOURCE_NODE='k3d-tesi-flannel-vxlan-agent-0'
 export DESTINATION_NODE='k3d-tesi-flannel-vxlan-agent-1'
-_tesi_export_runtime SOURCE_PID positive-integer docker inspect \
-  -f '{{.State.Pid}}' "$SOURCE_NODE" &&
-_tesi_export_runtime SOURCE_UNDERLAY ipv4 docker inspect \
+SOURCE_PID="$(docker inspect -f '{{.State.Pid}}' "$SOURCE_NODE")"
+SOURCE_UNDERLAY="$(docker inspect \
   -f '{{with index .NetworkSettings.Networks "k3d-tesi-flannel-vxlan"}}{{.IPAddress}}{{end}}' \
-  "$SOURCE_NODE" &&
-_tesi_export_runtime DESTINATION_UNDERLAY ipv4 docker inspect \
+  "$SOURCE_NODE")"
+DESTINATION_UNDERLAY="$(docker inspect \
   -f '{{with index .NetworkSettings.Networks "k3d-tesi-flannel-vxlan"}}{{.IPAddress}}{{end}}' \
-  "$DESTINATION_NODE" &&
-export CAPTURE_DIR="$(mktemp -d)" &&
+  "$DESTINATION_NODE")"
+CAPTURE_DIR="$(mktemp -d)"
+
 printf 'pid=%s source_underlay=%s destination_underlay=%s capture_dir=%s\n' \
-  "$SOURCE_PID" "$SOURCE_UNDERLAY" "$DESTINATION_UNDERLAY" "$CAPTURE_DIR" &&
+  "$SOURCE_PID" "$SOURCE_UNDERLAY" "$DESTINATION_UNDERLAY" "$CAPTURE_DIR"
 
 sudo /usr/bin/nsenter --target "$SOURCE_PID" --net \
-  /usr/sbin/bridge -d link show master cni0 &&
+  /usr/sbin/bridge -d link show master cni0
 sudo /usr/bin/nsenter --target "$SOURCE_PID" --net /usr/sbin/ip -br link
 ```
+
+Il PID deve essere un intero positivo e gli underlay devono essere due
+indirizzi IPv4 correnti distinti.
 
 La lista del bridge deve mostrare come porte di `cni0` le veth di `client` e
 `server-a` appena ricostruite.
 
-La cattura entra nel network namespace del nodo perché è lì che esistono
-`cni0`, `flannel.1` ed `eth0`. `sudo` autorizza `nsenter` e l'apertura delle
-interfacce; `-i any` mostra nello stesso intervallo le copie del pacchetto sui
-diversi punti. Il filtro comprende sia HTTP fra i Pod sia VXLAN fra gli
-indirizzi underlay. Avviare un solo GET ritardato e mantenere la cattura
-limitata in primo piano:
+La cattura entra nel network namespace del nodo sorgente, dove esistono
+`cni0`, `flannel.1`, le veth e l'interfaccia underlay `eth0`. Con `-i any`
+osserviamo nello stesso intervallo due viste dello stesso flusso:
+
+- la vista interna, con IP Pod sorgente e destinazione e TCP/8080;
+- la vista esterna, incapsulata fra gli IP underlay con UDP/8472.
+
+`run_dual_view_capture` avvia il comando `tcpdump` mostrato di seguito, genera
+un solo GET `client → server-b` e conserva separatamente cattura e risposta
+HTTP. Il filtro e i punti osservati restano scelti esplicitamente dalla guida:
 
 ```bash
 sudo -v
 TCPDUMP_FILTER="((host $CLIENT_IP and host $SERVER_B_IP and tcp port 8080) or (host $SOURCE_UNDERLAY and host $DESTINATION_UNDERLAY and udp port 8472))"
-if run_dual_view_capture \
+run_dual_view_capture \
   E01 \
   "$CAPTURE_DIR/flannel-inter-node.log" \
   "$CAPTURE_DIR/http-client.log" \
@@ -811,25 +807,29 @@ if run_dual_view_capture \
     --signal=TERM --kill-after=2s 8s \
     /usr/bin/tcpdump -i any -tttt -nn -e -vv -A -s 0 -l \
     "$TCPDUMP_FILTER"
-then
-  sed -n '1,260p' "$CAPTURE_DIR/flannel-inter-node.log" &&
-    cat "$CAPTURE_DIR/http-client.log"
-else
-  false
-fi
 ```
 
-Ispezionare il GET con IP dei Pod e i datagrammi VXLAN fra gli IP underlay;
-la porta di destinazione deve essere 8472 e il VNI 1. L'eventuale codice di
-terminazione di `timeout` non descrive l'esito HTTP: i due output restano
-separati. `0` indica chiusura gestita da `tcpdump`; `124` o `143` indicano la
-terminazione temporizzata accettata. Ogni altro codice arresta il blocco.
+Se l'helper termina con errore, non proseguire. In caso di successo, leggere i
+due output:
+
+```bash
+sed -n '1,260p' "$CAPTURE_DIR/flannel-inter-node.log"
+cat "$CAPTURE_DIR/http-client.log"
+```
+
+La cattura deve mostrare il GET con gli IP dei Pod e i datagrammi VXLAN fra gli
+IP underlay. La porta UDP di destinazione deve essere 8472 e il VNI deve essere
+1. L'output HTTP separato conferma che il flusso catturato ha raggiunto
+`server-b`.
 
 `CAPTURE_DIR` conserva i due output per l'ispezione. Dopo un esito positivo può
 essere eliminata con `rm -rf -- "$CAPTURE_DIR"`; in caso di errore conservarla
 temporaneamente per la diagnosi.
 
 ### 8.5 Rimozione del cluster
+
+Eliminare soltanto il cluster E01 e controllare che non resti il listener API
+sulla porta 6445:
 
 ```bash
 k3d cluster delete tesi-flannel-vxlan
