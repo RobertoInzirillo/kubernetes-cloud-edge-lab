@@ -1742,6 +1742,12 @@ rendering, cattura e delta non sono stati diagnosticati.
 
 ## 11. E20 — Cilium VXLAN con data plane eBPF
 
+E01 ha mostrato bridge e VXLAN di Flannel; E10 ha aggiunto routing per
+workload e policy Calico. E20 mantiene un tunnel VXLAN, ma introduce eBPF nel
+data plane e Hubble come osservatore dei flussi. L'obiettivo è seguire
+concretamente endpoint, hook, route, Service e policy per capire dove eBPF
+entra nel percorso, senza dedurlo dalla sola configurazione.
+
 Questo è il punto di ingresso E20 anche in una nuova shell:
 
 ```bash
@@ -1771,48 +1777,41 @@ Lo SHA-256 del chart deve essere:
 21c43cf53841f9ab0375047d95aa4c64051ea52bbd2c679416e6408f5f1c9179
 ```
 
-Eseguire lint e rendering con il file valori pubblico:
+Eseguire direttamente lint e rendering con il file valori pubblico:
 
 ```bash
-if helm lint "$E20_DIR/cilium-1.19.6.tgz" \
-    --values manifests/cni/cilium/values.yaml && \
-    helm template cilium "$E20_DIR/cilium-1.19.6.tgz" \
-      --namespace kube-system \
-      --values manifests/cni/cilium/values.yaml \
-      --kube-version 1.34.9 \
-      --output-dir "$E20_DIR/rendered"
-then
-  RENDER_FILTER_FAILED=0
-  if grep -R -n -E 'kind: (DaemonSet|Deployment)|image:|latest' \
-      "$E20_DIR/rendered"
-  then
-    RENDER_FILTER_RC=0
-  else
-    RENDER_FILTER_RC=$?
-  fi
-  case "$RENDER_FILTER_RC" in
-    0) ;;
-    1) printf 'INFO: nessun marker del filtro trovato nel rendering Cilium.\n' ;;
-    *) printf 'ERROR: filtro rendering Cilium fallito (grep rc=%s).\n' \
-         "$RENDER_FILTER_RC" >&2; RENDER_FILTER_FAILED=1 ;;
-  esac
-  unset RENDER_FILTER_RC
-  if [[ "$RENDER_FILTER_FAILED" -ne 0 ]]
-  then
-    unset RENDER_FILTER_FAILED
-    false
-  else
-    unset RENDER_FILTER_FAILED
-  fi
-else
-  printf 'ERROR: lint o rendering statico Cilium fallito.\n' >&2
-  false
-fi
+sed -n '1,260p' manifests/cni/cilium/values.yaml
+
+helm lint "$E20_DIR/cilium-1.19.6.tgz" \
+  --values manifests/cni/cilium/values.yaml
+
+helm template cilium "$E20_DIR/cilium-1.19.6.tgz" \
+  --namespace kube-system \
+  --values manifests/cni/cilium/values.yaml \
+  --kube-version 1.34.9 \
+  --output-dir "$E20_DIR/rendered"
 ```
 
-Controllare un DaemonSet `cilium`, un Deployment `cilium-operator`, immagini
-bloccate e assenza di Relay, interfaccia grafica Hubble, Envoy separato e
-altri workload esclusi dalla configurazione.
+Nel file cercare immagini con digest, CNI esclusivo, Cluster Pool IPAM `/24`,
+`routingMode: tunnel`, `tunnelProtocol: vxlan`, data path veth, root bpffs,
+`kubeProxyReplacement: "false"`, Hubble locale abilitato e Relay disabilitato.
+
+Elencare i manifest prodotti e le immagini dei workload principali:
+
+```bash
+find "$E20_DIR/rendered" -type f -print
+grep -R -nE \
+  '^kind: (DaemonSet|Deployment)|^[[:space:]]+name:|^[[:space:]]+image:' \
+  "$E20_DIR/rendered"
+grep -R -nE '^[[:space:]]+image:.*:latest' \
+  "$E20_DIR/rendered" || true
+```
+
+Controllare un DaemonSet `cilium`, un Deployment `cilium-operator` e immagini
+bloccate; l'ultima ispezione deve restare vuota. Relay, interfaccia grafica
+Hubble, Envoy separato e altri workload esclusi dai values non devono
+comparire. Il rendering usa lo stesso namespace e lo stesso file `values.yaml`
+che verranno passati all'installazione.
 
 ### 11.2 Creazione e installazione
 
@@ -1847,180 +1846,215 @@ helm install cilium "$E20_DIR/cilium-1.19.6.tgz" \
 
 ### 11.3 Verifica di Cilium ed eBPF
 
-Prima del workload verifichiamo convergenza, CNI esclusivo, Cluster Pool
-IPAM, tunnel e strumenti locali. Le **mappe eBPF** sono strutture del kernel
-usate da Cilium per conservare endpoint, policy, load balancing e conntrack.
-**Hubble** legge la telemetria Cilium e permette di correlare identità,
-verdetti e connessioni senza introdurre un Relay nel laboratorio.
-Il rollout del DaemonSet dispone di 600 secondi per coprire anche bootstrap e
-pull iniziali su host con cache immagini fredda.
+Prima di generare traffico verifichiamo che tutti gli agent Cilium siano
+operativi e che il data plane non sia degradato. Il rollout del DaemonSet
+dispone degli stessi 600 secondi validati, sufficienti anche per bootstrap e
+pull iniziali con cache fredda; i nodi conservano il timeout di 300 secondi.
 
 ```bash
-wait_for_cilium_daemonset_ready() {
-  local DAEMONSET_STATUS
-  local DESIRED
-  local CURRENT
-  local READY
-  local AVAILABLE
-  local EXTRA
-
-  if ! kubectl --context "$TESI_CONTEXT" \
-      rollout status daemonset/cilium \
-      -n kube-system \
-      --timeout=600s
-  then
-    printf 'ERROR: rollout del DaemonSet Cilium non completato entro il timeout.\n' >&2
-    return 1
-  fi
-
-  if ! DAEMONSET_STATUS="$(kubectl --context "$TESI_CONTEXT" get \
-      daemonset -n kube-system cilium \
-      -o jsonpath='{.status.desiredNumberScheduled}{"|"}{.status.currentNumberScheduled}{"|"}{.status.numberReady}{"|"}{.status.numberAvailable}')"
-  then
-    printf 'ERROR: lettura strutturata dello stato DaemonSet Cilium fallita.\n' >&2
-    return 2
-  fi
-
-  IFS='|' read -r DESIRED CURRENT READY AVAILABLE EXTRA \
-    <<< "$DAEMONSET_STATUS"
-  if [[ ! "$DESIRED" =~ ^[0-9]+$ || ! "$CURRENT" =~ ^[0-9]+$ ||
-        ! "$READY" =~ ^[0-9]+$ || ! "$AVAILABLE" =~ ^[0-9]+$ ||
-        -n "$EXTRA" ]]
-  then
-    printf 'ERROR: stato DaemonSet Cilium mancante o malformato: %q.\n' \
-      "$DAEMONSET_STATUS" >&2
-    return 2
-  fi
-  if [[ "$DESIRED" -ne 3 || "$CURRENT" -ne 3 ||
-        "$READY" -ne 3 || "$AVAILABLE" -ne 3 ]]
-  then
-    printf 'FAIL: DaemonSet Cilium non convergente: desired=%s current=%s ready=%s available=%s.\n' \
-      "$DESIRED" "$CURRENT" "$READY" "$AVAILABLE" >&2
-    return 1
-  fi
-
-  printf 'PASS: DaemonSet Cilium convergente: desired=3 current=3 ready=3 available=3.\n'
-}
-
 kubectl --context "$TESI_CONTEXT" wait \
   --for=condition=Ready node --all --timeout=300s
-wait_for_cilium_daemonset_ready && {
+kubectl --context "$TESI_CONTEXT" rollout status \
+  daemonset/cilium -n kube-system --timeout=600s
+
 kubectl --context "$TESI_CONTEXT" get nodes -o wide
 kubectl --context "$TESI_CONTEXT" get pods -A -o wide
 kubectl --context "$TESI_CONTEXT" get daemonset -n kube-system cilium
 kubectl --context "$TESI_CONTEXT" get deployment -n kube-system cilium-operator
 kubectl --context "$TESI_CONTEXT" get ciliumnodes -o yaml
+```
 
-_tesi_export_runtime CILIUM_AGENT0 pod-name kubectl \
-  --context "$TESI_CONTEXT" get pods \
-  -n kube-system -l k8s-app=cilium \
-  --field-selector spec.nodeName=k3d-tesi-e20-cilium-vxlan-agent-0 \
-  -o jsonpath='{.items[0].metadata.name}' &&
+Non proseguire se un wait fallisce. Il DaemonSet deve mostrare
+`DESIRED=3`, `CURRENT=3`, `READY=3` e `AVAILABLE=3`; l'Operator deve essere
+disponibile. Individuare quindi l'agent di `agent-0` e interrogare direttamente
+stato Cilium, endpoint correnti e socket Hubble locale:
+
+```bash
+export CILIUM_AGENT0="$(
+  kubectl --context "$TESI_CONTEXT" get pods \
+    -n kube-system -l k8s-app=cilium \
+    --field-selector spec.nodeName=k3d-tesi-e20-cilium-vxlan-agent-0 \
+    -o jsonpath='{.items[0].metadata.name}'
+)"
+printf 'CILIUM_AGENT0=%s\n' "$CILIUM_AGENT0"
+```
+
+Se il nome è vuoto o non identifica un singolo Pod Cilium, fermarsi. Usare
+quindi l'agent scoperto per gli observer:
+
+```bash
 kubectl --context "$TESI_CONTEXT" exec -n kube-system \
-  "$CILIUM_AGENT0" -- cilium-dbg status --verbose &&
+  "$CILIUM_AGENT0" -- cilium-dbg status --verbose
 kubectl --context "$TESI_CONTEXT" exec -n kube-system \
-  "$CILIUM_AGENT0" -- cilium-dbg endpoint list &&
+  "$CILIUM_AGENT0" -- cilium-dbg endpoint list
 kubectl --context "$TESI_CONTEXT" exec -n kube-system \
   "$CILIUM_AGENT0" -- hubble status \
   --server unix:///var/run/cilium/hubble.sock
-}
 ```
 
-Ispezionare CNI, route, VXLAN e attach eBPF in ogni nodo:
+`cilium-dbg status --verbose` deve riportare agent e controller sani,
+`KubeProxyReplacement: False` e Hubble locale disponibile. Le **mappe eBPF**
+sono strutture del kernel usate da Cilium per endpoint, policy, load balancing
+e conntrack; Hubble legge la telemetria prodotta dal data plane senza un Relay.
+
+Ispezionare ora CNI, interfacce, route e tunnel in ogni namespace nodo:
 
 ```bash
-NODE_INVENTORY_FAILED=0
-for NODE in \
+for node in \
   k3d-tesi-e20-cilium-vxlan-server-0 \
   k3d-tesi-e20-cilium-vxlan-agent-0 \
   k3d-tesi-e20-cilium-vxlan-agent-1
 do
-  docker exec "$NODE" sh -c \
-    'test -d /etc/cni/net.d && ls -la /etc/cni/net.d && test -r /etc/cni/net.d/05-cilium.conflist && sed -n "1,240p" /etc/cni/net.d/05-cilium.conflist' || \
-    NODE_INVENTORY_FAILED=1
-  docker exec "$NODE" ip -br link || NODE_INVENTORY_FAILED=1
-  docker exec "$NODE" ip route || NODE_INVENTORY_FAILED=1
-  docker exec "$NODE" ip -details link show cilium_vxlan || \
-    NODE_INVENTORY_FAILED=1
+  docker exec "$node" sh -c \
+    'test -d /etc/cni/net.d && ls -la /etc/cni/net.d && test -r /etc/cni/net.d/05-cilium.conflist && sed -n "1,240p" /etc/cni/net.d/05-cilium.conflist'
+  docker exec "$node" ip -br link
+  docker exec "$node" ip route
+  docker exec "$node" ip -details link show cilium_vxlan
 done
 
-if [[ "$NODE_INVENTORY_FAILED" -ne 0 ]]
-then
-  printf 'ERROR: inventario data plane E20 incompleto.\n' >&2
-  unset NODE_INVENTORY_FAILED
-  false
-else
-  unset NODE_INVENTORY_FAILED
-  kubectl --context "$TESI_CONTEXT" exec -n kube-system \
-    "$CILIUM_AGENT0" -- bpftool net
-fi
-```
-
-Controllare tre nodi `Ready`, Cilium `3/3`, un Operator disponibile, blocchi
-IPAM `/24`, `05-cilium.conflist`, bpffs, `cilium_vxlan`, route remote e hook
-TCX. Flannel e il controller policy K3s devono essere assenti; kube-proxy deve
-restare presente. Lo stato deve riportare `KubeProxyReplacement: False` e
-Hubble soltanto locale.
-
-### 11.4 Workload e percorso intra-node
-
-Applicare il workload comune e rileggere endpoint, identità e indirizzi. La
-singola matrice baseline autorevole viene eseguita nella sezione 11.7, dove la
-sua finestra temporale viene congelata e osservata da Hubble:
-
-```bash
-deploy_common_workload &&
-_tesi_export_runtime CLIENT_IP ipv4 kubectl --context "$TESI_CONTEXT" \
-  -n net-lab get pod client -o jsonpath='{.status.podIP}' &&
-_tesi_export_runtime SERVER_A_IP ipv4 kubectl --context "$TESI_CONTEXT" \
-  -n net-lab get pod server-a -o jsonpath='{.status.podIP}' &&
-_tesi_export_runtime SERVER_B_IP ipv4 kubectl --context "$TESI_CONTEXT" \
-  -n net-lab get pod server-b -o jsonpath='{.status.podIP}' &&
-_tesi_export_runtime SERVICE_IP ipv4 kubectl --context "$TESI_CONTEXT" \
-  -n net-lab get svc servers -o jsonpath='{.spec.clusterIP}' &&
-kubectl --context "$TESI_CONTEXT" get ciliumendpoint \
-  -n net-lab client server-a server-b -o wide &&
-
-_tesi_export_runtime CLIENT_ENDPOINT_ID positive-integer kubectl \
-  --context "$TESI_CONTEXT" get ciliumendpoint -n net-lab client \
-  -o jsonpath='{.status.id}' &&
-kubectl --context "$TESI_CONTEXT" exec -n kube-system \
-  "$CILIUM_AGENT0" -- cilium-dbg endpoint get "$CLIENT_ENDPOINT_ID" &&
-kubectl --context "$TESI_CONTEXT" exec -n kube-system \
-  "$CILIUM_AGENT0" -- ip route get "$SERVER_A_IP" &&
 kubectl --context "$TESI_CONTEXT" exec -n kube-system \
   "$CILIUM_AGENT0" -- bpftool net
 ```
 
-Per il flusso locale verificare veth `lxc*`, route tramite `cilium_host` e
-programma `cil_from_container`; il tunnel non deve intervenire fra `client` e
-`server-a`.
+Fermarsi se un comando di inventario fallisce. Cercare blocchi IPAM `/24`,
+`05-cilium.conflist`, bpffs, `cilium_vxlan`, route remote e attach TCX/eBPF
+nell'output di `bpftool net`. Flannel e il controller policy K3s devono essere
+assenti; kube-proxy deve restare presente.
+
+### 11.4 Workload e percorso intra-node
+
+Applicare il workload comune senza eseguire una matrice preliminare. La sola
+baseline NetworkPolicy autorevole verrà generata nella sezione 11.7 come
+traffico diretto Pod-to-Pod, dentro una finestra Hubble congelata:
+
+```bash
+deploy_common_workload
+
+export CLIENT_IP="$(
+  kubectl --context "$TESI_CONTEXT" -n net-lab get pod client \
+    -o jsonpath='{.status.podIP}'
+)"
+export SERVER_A_IP="$(
+  kubectl --context "$TESI_CONTEXT" -n net-lab get pod server-a \
+    -o jsonpath='{.status.podIP}'
+)"
+export SERVER_B_IP="$(
+  kubectl --context "$TESI_CONTEXT" -n net-lab get pod server-b \
+    -o jsonpath='{.status.podIP}'
+)"
+export SERVICE_IP="$(
+  kubectl --context "$TESI_CONTEXT" -n net-lab get svc servers \
+    -o jsonpath='{.spec.clusterIP}'
+)"
+
+printf 'CLIENT_IP=%s SERVER_A_IP=%s SERVER_B_IP=%s SERVICE_IP=%s\n' \
+  "$CLIENT_IP" "$SERVER_A_IP" "$SERVER_B_IP" "$SERVICE_IP"
+```
+
+I quattro valori devono essere indirizzi IPv4 non vuoti. In caso contrario,
+fermarsi prima degli observer e degli esperimenti di traffico.
+
+```bash
+kubectl --context "$TESI_CONTEXT" get pods -n net-lab -o wide
+kubectl --context "$TESI_CONTEXT" get ciliumendpoint \
+  -n net-lab client server-a server-b -o wide
+kubectl --context "$TESI_CONTEXT" exec -n kube-system \
+  "$CILIUM_AGENT0" -- cilium-dbg endpoint list
+```
+
+Per Cilium ogni workload Kubernetes è rappresentato anche come endpoint del
+data plane, con identity, stato e revisione policy. Correlare nome e IP del Pod
+con il `CiliumEndpoint`; quindi leggere l'endpoint `client`, la route locale e
+gli attach eBPF:
+
+```bash
+export CLIENT_ENDPOINT_ID="$(
+  kubectl --context "$TESI_CONTEXT" get ciliumendpoint -n net-lab client \
+    -o jsonpath='{.status.id}'
+)"
+printf 'CLIENT_ENDPOINT_ID=%s\n' "$CLIENT_ENDPOINT_ID"
+```
+
+L'endpoint ID deve essere un intero positivo. Se è vuoto o non valido,
+fermarsi prima di interrogare il data plane.
+
+```bash
+kubectl --context "$TESI_CONTEXT" exec -n kube-system \
+  "$CILIUM_AGENT0" -- cilium-dbg endpoint get "$CLIENT_ENDPOINT_ID"
+kubectl --context "$TESI_CONTEXT" exec -n kube-system \
+  "$CILIUM_AGENT0" -- ip route get "$SERVER_A_IP"
+kubectl --context "$TESI_CONTEXT" exec -n kube-system \
+  "$CILIUM_AGENT0" -- ip route get "$SERVER_B_IP"
+kubectl --context "$TESI_CONTEXT" exec -n kube-system \
+  "$CILIUM_AGENT0" -- bpftool net
+```
+
+Il percorso da riconoscere è:
+
+```text
+Pod → veth lxc* → hook TCX/eBPF → data plane Cilium
+```
+
+Nell'endpoint cercare l'interfaccia `lxc*` e l'identity; in
+`bpftool net` cercare l'attach TCX e il programma `cil_from_container` sulla
+stessa interfaccia. Per il flusso locale la route passa nel data plane Cilium
+senza usare il tunnel fra `client` e `server-a`; la seconda query mostra invece
+la route scelta verso il Pod remoto `server-b`, che verrà correlata alla
+cattura VXLAN successiva.
 
 ### 11.5 Cattura inter-node
 
-Il percorso atteso è veth `lxc*` → `cilium_vxlan` → `eth0`. Entriamo nel
-namespace del nodo sorgente e usiamo `-i any` per correlare il pacchetto HTTP
-fra Pod con il datagramma VXLAN UDP 8472 fra gli indirizzi underlay.
+Come in E01 ed E10 distinguiamo percorso locale e inter-node; in E20, però,
+anche la decisione e l'osservazione del traffico attraversano il data plane
+eBPF. Il percorso remoto atteso è
+`lxc* → hook eBPF → cilium_vxlan → eth0`. Entriamo nel namespace del nodo
+sorgente per correlare la vista inner fra Pod con la vista outer VXLAN fra gli
+underlay.
 
 ```bash
 export SOURCE_NODE='k3d-tesi-e20-cilium-vxlan-agent-0'
 export DESTINATION_NODE='k3d-tesi-e20-cilium-vxlan-agent-1'
-_tesi_export_runtime SOURCE_PID positive-integer docker inspect \
-  -f '{{.State.Pid}}' "$SOURCE_NODE" &&
-_tesi_export_runtime SOURCE_UNDERLAY ipv4 docker inspect \
-  -f '{{with index .NetworkSettings.Networks "k3d-tesi-e20-cilium-vxlan"}}{{.IPAddress}}{{end}}' \
-  "$SOURCE_NODE" &&
-_tesi_export_runtime DESTINATION_UNDERLAY ipv4 docker inspect \
-  -f '{{with index .NetworkSettings.Networks "k3d-tesi-e20-cilium-vxlan"}}{{.IPAddress}}{{end}}' \
-  "$DESTINATION_NODE" &&
-export CAPTURE_DIR="$(mktemp -d)" &&
+export SOURCE_PID="$(
+  docker inspect -f '{{.State.Pid}}' "$SOURCE_NODE"
+)"
+export SOURCE_UNDERLAY="$(
+  docker inspect \
+    -f '{{with index .NetworkSettings.Networks "k3d-tesi-e20-cilium-vxlan"}}{{.IPAddress}}{{end}}' \
+    "$SOURCE_NODE"
+)"
+export DESTINATION_UNDERLAY="$(
+  docker inspect \
+    -f '{{with index .NetworkSettings.Networks "k3d-tesi-e20-cilium-vxlan"}}{{.IPAddress}}{{end}}' \
+    "$DESTINATION_NODE"
+)"
+export CAPTURE_DIR="$(mktemp -d)"
 
+printf 'SOURCE_PID=%s SOURCE_UNDERLAY=%s DESTINATION_UNDERLAY=%s\n' \
+  "$SOURCE_PID" "$SOURCE_UNDERLAY" "$DESTINATION_UNDERLAY"
+```
+
+Il PID deve essere positivo e gli underlay devono essere indirizzi IPv4
+correnti e distinti. Se un valore è vuoto o non valido, fermarsi. Ispezionare
+quindi il tunnel nel namespace sorgente:
+
+```bash
 sudo /usr/bin/nsenter --target "$SOURCE_PID" --net \
-  /usr/sbin/ip -details link show cilium_vxlan &&
+  /usr/sbin/ip -details link show cilium_vxlan
+```
 
-sudo -v &&
-TCPDUMP_FILTER="((host $CLIENT_IP and host $SERVER_B_IP and tcp port 8080) or (host $SOURCE_UNDERLAY and host $DESTINATION_UNDERLAY and udp port 8472))" &&
-if run_dual_view_capture \
+La cattura `-i any` mostra due viste dello stesso stimolo HTTP `client →
+server-b`:
+
+- inner: IP dei Pod e TCP/8080;
+- outer: IP underlay e UDP 8472 su `cilium_vxlan`.
+
+Il filtro completo e il singolo stimolo restano visibili; l'helper gestisce
+timeout, sincronizzazione e terminazione di `tcpdump`:
+
+```bash
+sudo -v
+TCPDUMP_FILTER="((host $CLIENT_IP and host $SERVER_B_IP and tcp port 8080) or (host $SOURCE_UNDERLAY and host $DESTINATION_UNDERLAY and udp port 8472))"
+run_dual_view_capture \
   E20 \
   "$CAPTURE_DIR/cilium-inter-node.log" \
   "$CAPTURE_DIR/http-client.log" \
@@ -2033,21 +2067,24 @@ if run_dual_view_capture \
     --signal=TERM --kill-after=2s 8s \
     /usr/bin/tcpdump -i any -tttt -nn -e -vv -A -s 0 -l \
     "$TCPDUMP_FILTER"
-then
-  sed -n '1,360p' "$CAPTURE_DIR/cilium-inter-node.log" &&
-    cat "$CAPTURE_DIR/http-client.log"
-else
-  false
-fi
 ```
 
-Correlare il flusso su veth `lxc*`, `cilium_vxlan` ed `eth0`, con IP dei Pod
-all'interno e UDP 8472 fra gli underlay. In questa modalità il decoder
-`tcpdump` può mostrare il campo VXLAN come `OTV instance`: non interpretarlo
-come assenza del VNI. Nelle
+Se l'helper fallisce, non proseguire. Dopo il successo leggere cattura e
+risposta separata:
+
+```bash
+sed -n '1,360p' "$CAPTURE_DIR/cilium-inter-node.log"
+cat "$CAPTURE_DIR/http-client.log"
+```
+
+Correlare `lxc*`, `cilium_vxlan` ed `eth0`, gli IP Pod nella vista inner e UDP
+8472 fra gli underlay nella vista outer. In questa configurazione il VNI non è
+un valore fisso da hardcodare: coincide con la security identity della
+sorgente osservata a runtime. `tcpdump` può mostrarlo come `OTV instance`, che
+non significa assenza del VNI. Nelle
 [evidenze E20 pubblicate](../experiments/cni/e20-cilium-vxlan/evidence/) i
-valori osservati sono 21766 e 16090 e coincidono con le security identity delle
-rispettive sorgenti; in una nuova replica possono cambiare.
+valori osservati coincidono con le security identity delle rispettive
+sorgenti; in una nuova replica devono essere rilevati nuovamente.
 
 Per la cattura sono accettati exit code `0`, `124` o `143`; gli altri indicano
 un errore da diagnosticare.
@@ -2055,22 +2092,21 @@ un errore da diagnosticare.
 `CAPTURE_DIR` va conservata in caso di errore. Dopo un esito positivo può
 essere rimossa con `rm -rf -- "$CAPTURE_DIR"`.
 
-### 11.6 Attribuzione del Service
+### 11.6 Service B02: attribuzione eBPF controllata
 
-La configurazione mantiene kube-proxy, quindi la sola presenza delle sue
-regole o delle mappe Cilium non attribuisce un flusso. Confrontiamo tre fonti
-nella stessa finestra: contatori iptables kube-proxy, stato load balancer e
-conntrack eBPF, e flussi Hubble. Solo la combinazione dei delta permette una
-conclusione circoscritta alle connessioni generate.
+Nel profilo Cilium 1.19.6 studiato, `kubeProxyReplacement=false` mantiene
+kube-proxy ma non dimostra che Cilium sia assente dal percorso Service. B02
+confronta nella stessa esecuzione mappe load balancer e conntrack eBPF, flussi
+Hubble e contatori iptables kube-proxy. La sola presenza di uno di questi
+artefatti non basta per attribuire le sei connessioni generate.
 
-Verificare prima la disponibilità dei due backend, poi acquisire stato
-kube-proxy ed eBPF prima di nuove connessioni.
-
-Il modulo specifico [`scripts/cni/cilium/service.sh`](../scripts/cni/cilium/service.sh)
-mantiene separati producer, snapshot e parser. Gli observer eseguiti dal runner
-restano espliciti e riconoscibili:
+Il runner [`scripts/cni/cilium/service.sh`](../scripts/cni/cilium/service.sh)
+protegge la sequenza scientifica e usa questi observer, qui riportati per
+rendere esplicito cosa viene misurato:
 
 ```text
+kubectl --context "$TESI_CONTEXT" get endpointslice \
+  -n net-lab -l kubernetes.io/service-name=servers
 docker exec "$CILIUM_NODE" /bin/aux/iptables-save -c -t nat
 kubectl --context "$TESI_CONTEXT" exec -n kube-system \
   "$CILIUM_AGENT0" -- cilium-dbg bpf lb list --frontends
@@ -2087,16 +2123,26 @@ kubectl --context "$TESI_CONTEXT" exec -n kube-system \
   --from-pod net-lab/client --port 8080 -o jsonpb
 ```
 
-`capture_service_iptables_snapshot` salva prima e dopo sia il dump NAT
-completo sia le sole regole pertinenti a `net-lab/servers:http`. Le mappe BPF
-registrano il frontend `$SERVICE_IP:8080`, i backend e la mappa RevNAT;
-conntrack viene acquisito prima e dopo le connessioni. Il runner congela
-`START_UTC` immediatamente prima ed `END_UTC` immediatamente dopo
-`service_http_flows 6`: soltanto quelle sei nuove connessioni appartengono
-alla finestra. Il polling Hubble rilegge la stessa finestra senza rigenerare
-traffico e promuove il file temporaneo soltanto dopo la correlazione completa.
+La sequenza protetta è:
 
-La correlazione preservata dal modulo è:
+```text
+EndpointSlice Ready
+    ↓
+kube-proxy BEFORE + BPF LB frontend/backend/RevNAT + CT BEFORE
+    ↓
+START_UTC → esattamente 6 connessioni → END_UTC
+    ↓
+CT AFTER + kube-proxy AFTER + Hubble nella finestra congelata
+    ↓
+backend osservato e verifica dell'invarianza kube-proxy
+```
+
+Le mappe LB devono contenere frontend `$SERVICE_IP:8080`, backend e RevNAT.
+Il confronto CT considera soltanto le nuove entry `TCP SVC` e le correla alle
+entry `TCP OUT`, alle risposte HTTP e ai backend ID. Hubble rilegge la finestra
+assoluta `START_UTC`/`END_UTC` senza produrre altro traffico.
+
+La relazione causale attesa è:
 
 ```text
 HTTP responses
@@ -2112,13 +2158,8 @@ RevNAT / Service ID
 Hubble frozen window
 ```
 
-Il parser considera esclusivamente le nuove entry `TCP SVC`, le collega alle
-relative entry `TCP OUT`, quindi verifica backend ID, IP osservato, RevNAT e
-Service ID nelle mappe BPF. La distribuzione fra `server-a` e `server-b` non è
-predeterminata. I parser non producono traffico e distinguono un fallimento
-causale (RC 1) da un errore operativo o di formato (RC 2).
-
-Eseguire l'attribuzione completa con:
+Eseguire una sola attribuzione autoritativa; non rilanciarla per ottenere una
+distribuzione diversa fra i backend:
 
 ```bash
 export CILIUM_NODE='k3d-tesi-e20-cilium-vxlan-agent-0'
@@ -2128,14 +2169,29 @@ export CILIUM_SERVICE_HUBBLE_TIMEOUT=20
 run_e20_service_attribution
 ```
 
-La distribuzione delle risposte fra i backend non è un criterio di successo.
-La conclusione E20 richiede congiuntamente, per le connessioni realmente
-osservate: nuove entry conntrack `TCP SVC` con backend e reverse Network
-Address Translation (NAT) coerenti con le risposte, correlazione Hubble e
-nessun delta nei contatori kube-proxy pertinenti. Vale soltanto per quei flussi
-e non dimostra che kube-proxy sia inattivo in ogni percorso. Le evidence
-originali selezionarono entrambi i backend in due connessioni, ma la nuova
-procedura non assume che ciò debba ripetersi.
+Il runner mostra risposte, correlazione CT/LB e diff informative. Ispezionare
+anche l'osservazione Hubble conservata, che include finestra, sorgente,
+destinazione, protocollo e verdict; la provenienza è l'agent
+`$CILIUM_AGENT0` esplicitato dal comando observer:
+
+```bash
+ls -la "$SERVICE_DIR"
+sed -n '1,160p' "$SERVICE_DIR/hubble-service.json"
+```
+
+Il PASS richiede nuove entry CT coerenti con backend e reverse Network Address
+Translation (RevNAT), correlazione Hubble e nessun delta nei contatori
+kube-proxy pertinenti. La distribuzione dei backend non è un criterio. La
+conclusione vale soltanto per questi sei flussi e non implica che kube-proxy
+sia globalmente inattivo.
+
+Il confronto con B01 è quindi circoscritto ai profili testati:
+
+```text
+E10 / Calico: Service → kube-proxy → KUBE-SVC/KUBE-SEP → DNAT
+E20 / Cilium 1.19.6: Service → BPF LB/CT + RevNAT → Hubble
+                      mentre i contatori kube-proxy osservati restano invariati
+```
 
 ### 11.7 Matrice NetworkPolicy
 
@@ -2159,10 +2215,9 @@ Hubble multi-agent nella finestra della matrice
 interpretazione
 ```
 
-La machinery di polling, parsing, file temporanei e raccolta multi-agent è nei
-due moduli Cilium. Il primo contiene gli observer Hubble/BPF; il secondo
-gestisce discovery, revisioni, endpoint e orchestrazione dello stato. Entrambi
-sono librerie da caricare dopo i moduli comuni già caricati all'inizio di E20:
+I due moduli Cilium mantengono negli helper validati polling, finestre temporali
+e raccolta multi-agent. Caricarli dopo i moduli comuni già importati all'inizio
+di E20:
 
 ```bash
 source scripts/cni/cilium/policy-observers.sh
@@ -2171,19 +2226,14 @@ source scripts/cni/cilium/network-policy.sh
 export POLICY_DIR="$(mktemp -d)"
 export CILIUM_POLICY_TIMEOUT=120
 export CILIUM_HUBBLE_TIMEOUT=20
-declare -a CILIUM_POLICY_NODES=()
-declare -a CILIUM_POLICY_AGENTS=()
-declare -a CILIUM_POLICY_REVISIONS=()
-declare -a CILIUM_POLICY_PODS=()
 ```
 
-`snapshot_cilium_policy_revisions` ricava nuovamente i nodi di `client`,
-`server-a` e `server-b`, individua su ciascun nodo l'unico agent Cilium
-`Running` e registra revisione e Pod pertinenti. Nessun nome agent, endpoint ID
-o BPF map ID deriva dalle evidence storiche.
+`snapshot_cilium_policy_revisions` scopre placement, agent `Running`, Pod e
+revisioni correnti. Nessun nome agent, endpoint ID, identity o BPF map ID
+deriva dalle evidence storiche.
 
 Dopo una mutazione, `wait_for_cilium_policy_convergence` usa un unico timeout
-bounded di 120 secondi. Per ogni agent richiede che la revisione sia avanzata,
+di 120 secondi. Per ogni agent richiede che la revisione sia avanzata,
 che il documento importato contenga esattamente le policy previste dallo stato,
 che `cilium-dbg policy wait` raggiunga la revisione e che tutti gli endpoint
 workload locali siano `ready`, con revisione richiesta e realizzata coincidenti
@@ -2217,95 +2267,117 @@ kubectl --context "$TESI_CONTEXT" exec -n kube-system "$AGENT" -- \
 ```
 
 Per ciascuno stato, `capture_cilium_policy_state` congela `POLICY_SINCE`,
-esegue una sola `run_policy_matrix`, congela `POLICY_UNTIL` e solo dopo
-interroga Hubble sulla stessa finestra assoluta RFC3339Nano. Il collector può
-ripetere, per non più di 20 secondi, soltanto le query della finestra già
-chiusa: parsing e polling non rigenerano traffico workload.
+esegue una sola `run_policy_matrix`, congela `POLICY_UNTIL` e interroga Hubble
+sulla stessa finestra assoluta RFC3339Nano. L'eventuale polling ripete soltanto
+la lettura della finestra chiusa e non genera traffico workload.
 
-La raccolta Hubble interroga separatamente tutti gli agent pertinenti, registra
-su stderr l'agent interrogato, conserva durante ogni polling un raw file
-temporaneo distinto per agent e concatena gli output solo dopo le acquisizioni.
-Il parser verifica JSONPB, finestra e verdetti semanticamente richiesti. I raw
-temporanei vengono eliminati dopo la promozione atomica dell'aggregato finale;
-la baseline non applica deduplicazione e Hubble Relay resta disabilitato.
+Hubble deve interrogare separatamente tutti gli agent pertinenti perché i
+workload non sono tutti sullo stesso nodo. L'aggregato conserva la provenienza
+dell'agent, evitando di attribuire un flusso al nodo sbagliato. Anche le BPF
+policy map sono node-local: `capture_cilium_bpf_policy_maps` esegue
+`cilium-dbg bpf policy get --all` per agent e mantiene il mapping con endpoint
+e identity nei file per-agent e nell'indice aggregato.
 
-Le policy map eBPF sono node-local. Per ogni agent distinto viene conservato
-`<stato>-bpf-policy-<agent>.log`; solo dopo i raw dump vengono aggregati in
-`<stato>-bpf-policy.log`, con intestazioni che mantengono `agent` e
-`raw-file`. Un agent pertinente mancante, un nome non valido o un dump vuoto
-fanno fallire l'acquisizione.
+#### Baseline: 6/6 connessioni consentite
 
-#### Baseline, default deny e selective allow
-
-Eseguire i tre stati nello stesso ordine della baseline. Ogni blocco mantiene
-la sequenza mutazione API → convergence gate → singola matrice → observer:
-
-La chiamata `capture_cilium_policy_state baseline allow-all` seguente produce
-l'unica matrice baseline E20. I flussi ClusterIP della sezione Service non la
-sostituiscono: non osservano la stessa matrice diretta fra Pod IP.
+La baseline parte senza NetworkPolicy. Acquisire lo snapshot di agent e
+revisioni, quindi produrre l'unica matrice baseline E20:
 
 ```bash
-snapshot_cilium_policy_revisions &&
-capture_cilium_policy_state baseline allow-all &&
+snapshot_cilium_policy_revisions
+capture_cilium_policy_state baseline allow-all
+```
 
-snapshot_cilium_policy_revisions &&
+La seconda chiamata congela `POLICY_SINCE`, genera una sola matrice diretta fra
+Pod IP, congela `POLICY_UNTIL` e raccoglie Hubble, API endpoint e BPF policy map
+nella stessa finestra. B02 usa invece il ClusterIP e non viene riutilizzato
+come baseline NetworkPolicy.
+
+#### Default deny: 0/6 connessioni consentite
+
+Registrare le revisioni precedenti, applicare la policy e attendere che agent
+ed endpoint abbiano realizzato la nuova revisione:
+
+```bash
+snapshot_cilium_policy_revisions
 kubectl --context "$TESI_CONTEXT" apply \
-  -f manifests/cni/common/default-deny-ingress.yaml &&
-wait_for_cilium_policy_convergence default-deny &&
-capture_cilium_policy_state default-deny deny-all &&
+  -f manifests/cni/common/default-deny-ingress.yaml
+wait_for_cilium_policy_convergence default-deny
+```
 
-snapshot_cilium_policy_revisions &&
+Se il gate fallisce, fermarsi senza generare traffico. Dopo il successo:
+
+```bash
+capture_cilium_policy_state default-deny deny-all
+```
+
+#### Allow selettiva: 4/6 connessioni consentite
+
+Ripetere snapshot, mutazione e gate prima dell'unica matrice dello stato:
+
+```bash
+snapshot_cilium_policy_revisions
 kubectl --context "$TESI_CONTEXT" apply \
-  -f manifests/cni/common/allow-client-to-http-servers.yaml &&
-wait_for_cilium_policy_convergence selective-allow &&
-capture_cilium_policy_state selective-allow selective-allow &&
+  -f manifests/cni/common/allow-client-to-http-servers.yaml
+wait_for_cilium_policy_convergence selective-allow
+```
 
+Se il gate fallisce, non proseguire. Dopo il successo:
+
+```bash
+capture_cilium_policy_state selective-allow selective-allow
+```
+
+#### Stato ripristinato: 6/6 connessioni consentite
+
+Rimuovere entrambe le policy e attendere revisione, stato semantico senza le
+policy ed endpoint realization:
+
+```bash
+snapshot_cilium_policy_revisions
+kubectl --context "$TESI_CONTEXT" delete \
+  -f manifests/cni/common/allow-client-to-http-servers.yaml \
+  --ignore-not-found
+kubectl --context "$TESI_CONTEXT" delete \
+  -f manifests/cni/common/default-deny-ingress.yaml \
+  --ignore-not-found
+wait_for_cilium_policy_convergence restored
+```
+
+Se il gate fallisce, fermarsi. Dopo il successo acquisire l'unica matrice
+finale e gli stessi observer multi-agent:
+
+```bash
+capture_cilium_policy_state restored allow-all
 ls -la "$POLICY_DIR"
 ```
 
-Gli expected result restano:
+Per ogni stato controllare:
 
-- `baseline`: nessuna policy pertinente e 6/6 flussi consentiti;
-- `default-deny`: default deny presente e 6/6 flussi negati;
-- `selective-allow`: default deny più allow selettiva e 4/6 flussi consentiti.
+- `<stato>-networkpolicy.yaml`, oggetti API;
+- `<stato>-endpoints.yaml`, stato, identity e revisioni requested/realized;
+- `<stato>-bpf-policy-<agent>.log`, policy map con provenienza per-agent;
+- `<stato>-bpf-policy.log`, indice multi-agent;
+- `<stato>-hubble.json`, sorgente, destinazione, protocollo, verdict e agent
+  nella finestra congelata.
 
-Per ogni stato vengono prodotti:
+La policy non è pronta solo perché l'oggetto API esiste: il gate richiede che
+la revisione globale/agent sia avanzata e che ogni endpoint abbia revisioni
+requested e realized coincidenti e almeno pari al target. I verdict attesi
+sono `FORWARDED` oppure `DROPPED` con
+`drop_reason_desc=POLICY_DENIED`. Matrice, endpoint, BPF policy map e Hubble
+attribuiscono insieme l'enforcement a Cilium/eBPF.
 
-- `<stato>-networkpolicy.yaml`, oggetti API osservati;
-- `<stato>-endpoints.yaml`, stato degli endpoint Cilium;
-- `<stato>-bpf-policy-<agent>.log`, raw BPF con provenienza per-agent;
-- `<stato>-bpf-policy.log`, indice BPF aggregato con intestazioni;
-- `<stato>-hubble.json`, aggregato Hubble della sola finestra controllata.
+### 11.8 Interpretazione E20
 
-Controllare revisioni crescenti dopo ogni mutazione, policy map pertinenti e
-verdetti Hubble `FORWARDED` o `DROPPED` con
-`drop_reason_desc=POLICY_DENIED`. Questi artefatti, insieme alla matrice,
-attribuiscono l'enforcement a Cilium/eBPF e non al controller NetworkPolicy K3s
-disabilitato.
+L'inventario endpoint e `bpftool net` collega i Pod agli hook eBPF; route e
+cattura collegano il percorso remoto a `cilium_vxlan`; B02 attribuisce i sei
+flussi Service a LB/CT/RevNAT e Hubble, con contatori kube-proxy invariati; le
+quattro matrici policy collegano invece API, revisioni realizzate, BPF policy
+map e verdict Hubble. Le conclusioni restano circoscritte alla configurazione
+Cilium 1.19.6 studiata.
 
-#### Stato restored
-
-Rimuovere entrambe le policy e attendere nuovamente revisione, stato semantico
-senza le due policy ed endpoint realization. Solo dopo il gate acquisire
-un'unica matrice finale `allow-all` e gli stessi observer multi-agent:
-
-```bash
-snapshot_cilium_policy_revisions &&
-kubectl --context "$TESI_CONTEXT" delete \
-  -f manifests/cni/common/allow-client-to-http-servers.yaml \
-  --ignore-not-found &&
-kubectl --context "$TESI_CONTEXT" delete \
-  -f manifests/cni/common/default-deny-ingress.yaml \
-  --ignore-not-found &&
-wait_for_cilium_policy_convergence restored &&
-capture_cilium_policy_state restored allow-all
-```
-
-Il PASS richiede il ritorno a 6/6 flussi consentiti, policy importate senza
-residui delle due NetworkPolicy pertinenti, endpoint realizzati e artefatti
-BPF/Hubble coerenti con lo stato ripristinato.
-
-### 11.8 Troubleshooting circoscritto al riavvio Docker
+### 11.9 Troubleshooting facoltativo: riavvio Docker
 
 Questo controllo non è parte del percorso normale. Usarlo soltanto se, dopo
 un riavvio Docker, i flussi intra-node funzionano ma quelli inter-node verso
@@ -2313,20 +2385,30 @@ un riavvio Docker, i flussi intra-node funzionano ma quelli inter-node verso
 
 ```bash
 export AGENT1_NODE='k3d-tesi-e20-cilium-vxlan-agent-1'
-_tesi_export_runtime AGENT1_UNDERLAY ipv4 docker inspect \
-  -f '{{with index .NetworkSettings.Networks "k3d-tesi-e20-cilium-vxlan"}}{{.IPAddress}}{{end}}' \
-  "$AGENT1_NODE" &&
-_tesi_export_runtime CILIUM_AGENT1 pod-name kubectl \
-  --context "$TESI_CONTEXT" get pods \
-  -n kube-system -l k8s-app=cilium \
-  --field-selector spec.nodeName=k3d-tesi-e20-cilium-vxlan-agent-1 \
-  -o jsonpath='{.items[0].metadata.name}' &&
+export AGENT1_UNDERLAY="$(
+  docker inspect \
+    -f '{{with index .NetworkSettings.Networks "k3d-tesi-e20-cilium-vxlan"}}{{.IPAddress}}{{end}}' \
+    "$AGENT1_NODE"
+)"
+export CILIUM_AGENT1="$(
+  kubectl --context "$TESI_CONTEXT" get pods \
+    -n kube-system -l k8s-app=cilium \
+    --field-selector spec.nodeName=k3d-tesi-e20-cilium-vxlan-agent-1 \
+    -o jsonpath='{.items[0].metadata.name}'
+)"
 
-printf 'docker_underlay=%s\n' "$AGENT1_UNDERLAY" &&
+printf 'AGENT1_UNDERLAY=%s CILIUM_AGENT1=%s\n' \
+  "$AGENT1_UNDERLAY" "$CILIUM_AGENT1"
+```
+
+Se l'underlay non è un IPv4 valido o il nome dell'agent è vuoto, fermarsi
+prima del confronto facoltativo.
+
+```bash
 kubectl --context "$TESI_CONTEXT" get ciliumnode \
-  k3d-tesi-e20-cilium-vxlan-agent-1 -o yaml &&
+  k3d-tesi-e20-cilium-vxlan-agent-1 -o yaml
 kubectl --context "$TESI_CONTEXT" exec -n kube-system \
-  "$CILIUM_AGENT0" -- cilium-dbg node list &&
+  "$CILIUM_AGENT0" -- cilium-dbg node list
 kubectl --context "$TESI_CONTEXT" exec -n kube-system \
   "$CILIUM_AGENT0" -- cilium-dbg bpf ipcache list
 ```
@@ -2347,7 +2429,7 @@ flussi; la causa della mancata riconciliazione automatica non è stata
 determinata e il comportamento non costituisce una proprietà generale di
 Cilium.
 
-### 11.9 Rimozione del cluster
+### 11.10 Rimozione del cluster
 
 ```bash
 kubectl --context "$TESI_CONTEXT" get nodes
@@ -2363,6 +2445,11 @@ Le directory `E20_DIR`, `CAPTURE_DIR`, `SERVICE_DIR` e `POLICY_DIR` servono
 soltanto a E20. Dopo un esito positivo possono essere eliminate esplicitamente;
 in caso di errore conservarle finché chart, cattura, output Service e stato
 policy non sono stati diagnosticati.
+
+Le query Hubble sono sincrone e non lasciano un Relay o un processo dedicato;
+la terminazione di `tcpdump` è verificata da `run_dual_view_capture`. Se la
+shell viene interrotta durante la cattura, diagnosticare l'eventuale processo
+nel namespace del nodo prima di eliminare i file temporanei.
 
 La rimozione deve riguardare solo E20. Non eliminare manualmente programmi o
 mappe eBPF, route, regole netfilter o reti Docker senza avere prima dimostrato
