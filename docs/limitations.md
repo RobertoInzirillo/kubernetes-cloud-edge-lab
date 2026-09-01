@@ -39,34 +39,35 @@ e un Service non permette conclusioni sulla scala o sull'alta disponibilità.
 
 K3s, topologia e manifest sono rimasti controllati, mentre Docker Engine/CLI
 era `29.6.2` in E01 ed E02, `29.7.1` in E10 e `29.7.2` in E20. I controlli di
-salute non hanno mostrato divergenze capaci di invalidare i singoli casi, ma
-il confronto non è quindi byte-identico a livello di runtime host. Queste
-versioni appartengono alle sessioni da cui derivano le evidence storiche; la
-validation end-to-end della guida al commit
-`d392dfb9b54753eb7e998d9620e02b01dbc36a2a` ha usato Docker `29.7.2` per tutti
-e quattro gli esperimenti e non modifica gli output storici.
+salute non hanno mostrato divergenze che invalidassero i singoli casi, ma il
+runtime host non era byte-identico. Queste versioni appartengono alle sessioni
+da cui derivano le evidence storiche. La procedura corrente usa Docker `29.7.2`
+per tutti e quattro gli esperimenti e non modifica gli output storici.
 
-Le evidence storiche E20 registrano il kernel `7.0.0-28-generic`. Prima della
-full validation sul validator era stato osservato `7.0.0-30-generic`, ma la
-repository non conserva un output della full validation sufficiente ad
-attribuirle con certezza una release kernel precisa. Le due osservazioni non
-vengono quindi uniformate.
+Le evidence E20 registrano il kernel `7.0.0-28-generic`. Una nuova
+riproduzione deve registrare la propria release; i risultati non vengono
+generalizzati automaticamente a kernel differenti.
 
 ## Ambito delle prove Service e NetworkPolicy
 
 La procedura E01 comprende il controllo del ClusterIP e dei due backend, ma la
 selezione pubblica non conserva output autonomi di tali test e non ne sostiene
 una dimostrazione pubblica; E01 non isola causalmente il componente Service.
-E10 ha attribuito i flussi osservati a kube-proxy iptables. In E20 due nuove
-connessioni ClusterIP hanno prodotto
-stato conntrack eBPF coerente, mentre i contatori kube-proxy pertinenti sono
-rimasti invariati. Quest'ultima conclusione vale soltanto per quei flussi dal
-Pod client; kube-proxy era ancora installato.
+E10 ha attribuito i flussi osservati a kube-proxy iptables. Nella sessione
+storica E20, due nuove connessioni ClusterIP hanno prodotto stato conntrack
+eBPF coerente, mentre i contatori kube-proxy pertinenti sono rimasti invariati.
+La procedura B02 corrente applica lo stesso metodo a sei connessioni per
+rafforzare la correlazione, senza modificare le evidence originali. La
+conclusione vale soltanto per i flussi controllati dal Pod client; kube-proxy
+era ancora installato.
 
 La matrice NetworkPolicy riguarda regole ingress Kubernetes e nuove
 connessioni HTTP dirette ai Pod IP sulla porta TCP 8080. Non valuta policy
 egress, Domain Name System (DNS), policy proprietarie Calico o Cilium,
-livello 7, grandi insiemi di regole o elevato churn degli endpoint.
+livello 7, grandi insiemi di regole o cambiamenti rapidi e frequenti degli
+endpoint. Le evidence pubbliche conservano i tre stati baseline, default deny
+e allow selettiva; il restore della guida corrente verifica soltanto il ritorno
+alla baseline e non amplia il confronto scientifico.
 
 ## Configurazioni non incluse
 

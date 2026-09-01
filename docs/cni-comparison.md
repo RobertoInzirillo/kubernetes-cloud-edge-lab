@@ -56,9 +56,8 @@ Command Line Interface (CLI) erano `29.6.2` in E01/E02, `29.7.1` in E10 e
 invalidasse gli esperimenti, ma la variazione resta un limite. Indirizzi,
 veth, identità, contatori e altri identificativi runtime differiscono per
 definizione. Queste versioni appartengono alle sessioni che hanno prodotto le
-evidence storiche pubblicate; la successiva validation completa end-to-end al
-commit `d392dfb9b54753eb7e998d9620e02b01dbc36a2a` ha rieseguito E01, E02, E10 ed
-E20 con Docker Engine/CLI `29.7.2`.
+evidence storiche pubblicate. La procedura corrente usa Docker Engine/CLI
+`29.7.2` per tutti e quattro gli esperimenti.
 
 ## Matrice principale
 
@@ -78,25 +77,23 @@ La matrice usa inoltre User Datagram Protocol (UDP), Virtual Tunnel Endpoint
 | **O/I — VNI/tunnel ID** | VNI fisso `1` | VNI fisso `4096` | `21766` in andata e `16090` al ritorno, coincidenti con l'identità della sorgente |
 | **O/I — stato di raggiungibilità** | subnet manager, annotazioni Flannel, route e vicini VTEP nel kernel | IPPool, IPAMBlock/BlockAffinity, Pod IP/nodo, route e stato Felix; BGP disabilitato | `CiliumNode`, IP cache, endpoint e security identity |
 | **I — data plane** | bridge, routing e VXLAN del kernel Linux configurati da CNI/Flannel | routing, netfilter/iptables, IPSet e VXLAN del kernel programmati da Felix | programmi e mappe eBPF su veth/TCX, routing e VXLAN del kernel |
-| **O/I — Service** | controllo incluso nella procedura, ma non documentato da output autonomi nella selezione pubblica E01; attribuzione causale non isolata | kube-proxy iptables: catene `KUBE-SVC`/`KUBE-SEP`, Destination Network Address Translation e delta dei contatori | per due flussi: load balancing, reverse NAT e conntrack `TCP SVC` eBPF; regole kube-proxy presenti ma senza delta |
+| **O/I — Service** | controllo incluso nella procedura, ma non documentato da output autonomi nella selezione pubblica E01; attribuzione causale non isolata | kube-proxy iptables: catene `KUBE-SVC`/`KUBE-SEP`, Destination Network Address Translation e delta dei contatori | nelle evidence storiche, due flussi con load balancing, reverse NAT e conntrack `TCP SVC` eBPF; regole kube-proxy presenti ma senza delta |
 | **O/I — NetworkPolicy** | enforcement del controller K3s separato quando attivo, non di Flannel | calculation graph e Felix traducono e programmano la policy | Cilium associa policy e identità agli endpoint e applica la decisione in eBPF |
 | **O — artefatti policy** | catene/ipset policy-specifici `KUBE-*` e contatori soltanto nel controllo ON | NetworkPolicy Kubernetes, selector, IPSet e catene iptables con riferimenti alle policy | policy revision, policy map eBPF, contatori e verdetti Hubble |
 | **O — osservabilità usata** | file CNI, route, bridge, netfilter, log K3s e `tcpdump` | risorse Calico, log Felix, IPSet/iptables, route e `tcpdump` | `CiliumEndpoint`, identità, mappe/programmi eBPF, `cilium-dbg`, Hubble e `tcpdump` |
 | **I — deleghe** | bridge/IPAM ai plugin CNI; policy al controller K3s; Service separato da Flannel | Service a kube-proxy; applicazione finale al kernel Linux | kube-proxy resta installato; il kernel eBPF applica forwarding, Service e policy nei flussi osservati |
 | **O/T — limiti specifici** | non provati `host-gw` e altri backend; Service non isolato causalmente | non provati BGP/no-overlay, IP-in-IP, nftables o eBPF | non provati native routing o kube-proxy replacement |
 
-WorkloadEndpoint rimane il modello logico con cui Calico rappresenta un
-endpoint di workload. Nel
+In E10 l'endpoint di workload è stato ricostruito correlando Pod, IP, nodo,
+interfacce `cali*`, route, IPAMBlock/BlockAffinity e stato Felix.
+WorkloadEndpoint rimane il modello logico con cui Calico rappresenta questo
+endpoint. Nel
 [Kubernetes API datastore (KDD)](https://docs.tigera.io/calico/latest/getting-started/kubernetes/hardway/the-calico-datastore),
-gli endpoint dei workload Kubernetes sono rappresentati internamente a
-partire dai Pod, non da una CRD WorkloadEndpoint dedicata nel datastore
-sottostante. Il
+tuttavia, gli endpoint Kubernetes derivano internamente dai Pod e non da una
+CRD WorkloadEndpoint dedicata nel datastore sottostante. La query diretta
+tentata nel laboratorio non era quindi una fonte conclusiva da sola; il
 [Calico API server](https://docs.tigera.io/calico/latest/reference/architecture/overview)
-può esporre tramite `kubectl` le API v3 aggregate `projectcalico.org/v3`: è un
-percorso distinto dalla query diretta delle CRD del datastore tentata nel
-laboratorio. In E10 quella query non ha esposto una CRD WorkloadEndpoint
-dedicata; le osservazioni correlano quindi Pod IP e nodo, interfacce `cali*`,
-route, IPAMBlock/BlockAffinity e dataplane Felix.
+può esporre separatamente le API v3 aggregate `projectcalico.org/v3`.
 
 I numeri del VNI non sono una metrica di qualità. Nei casi Flannel e Calico
 identificano il dominio VXLAN configurato. Nel caso Cilium osservato, il
@@ -134,12 +131,13 @@ responsabilità a kube-proxy, ma E01 non viene presentato come una prova
 causale.
 
 In E10, regole, Destination Network Address Translation (DNAT) e delta dei
-contatori attribuiscono a kube-proxy iptables le connessioni osservate. In
-E20 kube-proxy era presente e configurato; tuttavia, per due connessioni
-controllate, sono comparse nuove entry conntrack eBPF `TCP SVC` con backend e
-reverse NAT correlati, mentre i contatori kube-proxy pertinenti sono rimasti
-invariati. La conclusione non esclude che altri percorsi o tipi di Service
-possano attraversare kube-proxy.
+contatori attribuiscono a kube-proxy iptables le connessioni osservate. Nella
+sessione storica E20 kube-proxy era presente e configurato; per due connessioni
+controllate sono però comparse nuove entry conntrack eBPF `TCP SVC` con backend
+e reverse NAT correlati, mentre i contatori kube-proxy pertinenti sono rimasti
+invariati. La procedura B02 corrente rafforza lo stesso metodo usando sei
+connessioni; non riscrive le evidence storiche e non esclude che altri percorsi
+o tipi di Service possano attraversare kube-proxy.
 
 ## NetworkPolicy
 
@@ -151,15 +149,22 @@ La stessa coppia di manifest Kubernetes ha prodotto la seguente matrice:
 | default deny | 6/6 negati | 6/6 consentiti | 6/6 negati | 6/6 negati |
 | deny + allow mirata | 4 consentiti, 2 negati | 6/6 consentiti | 4 consentiti, 2 negati | 4 consentiti, 2 negati |
 
+La tabella conserva i tre stati delle sessioni sperimentali pubblicate. La
+procedura corrente esegue anche un restore finale per verificare il ritorno
+alla baseline: è un controllo procedurale aggiuntivo, non una quarta
+configurazione scientifica usata per ampliare E30. In E02 ciò porta la guida
+corrente da 18 a 24 connessioni per cluster.
+
 Il controllo ON/OFF dimostra che la dichiarazione nell'API non equivale a
 enforcement. Con il controller K3s disabilitato, gli oggetti erano presenti,
 tutte le 18 connessioni restavano consentite e quattro confronti kernel erano
 identici alla baseline. Con il controller attivo comparivano comportamento e
 artefatti policy-specifici.
 
-Calico ha realizzato lo stesso intento con calculation graph, Felix,
-iptables e IPSet. Cilium lo ha realizzato con revisione degli endpoint,
-policy map eBPF e verdetti Hubble `FORWARDED` o `POLICY_DENIED`.
+Calico ha realizzato lo stesso intento mediante il processo di calcolo dello
+stato descritto come calculation graph, Felix, iptables e IPSet. Cilium lo ha
+realizzato con revisione degli endpoint, policy map eBPF e verdetti Hubble
+`FORWARDED` o `POLICY_DENIED`.
 
 ## Osservabilità
 

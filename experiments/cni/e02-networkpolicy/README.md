@@ -51,11 +51,15 @@ Ogni flusso è stato aperto due volte con una nuova connessione TCP:
 
 ## 5. Riproduzione
 
-La procedura completa dei cluster ON e OFF, comprese le 18 connessioni per
-cluster e le letture iptables/IPSet, è nella
+La procedura corrente dei cluster ON e OFF, comprese le letture
+iptables/IPSet, è nella
 [sezione E02 del manuale](../../../docs/reproduction-guide.md#9-e02--attribuzione-delle-networkpolicy-nello-stack-k3s).
+Le evidence storiche conservano tre stati e 18 connessioni per cluster. La
+guida corrente aggiunge una matrice di restore, raggiungendo 24 connessioni
+per cluster, per verificare il ritorno alla baseline; il restore non è una
+quarta configurazione scientifica.
 
-## 6. Risultati osservati
+## 6. Risultati osservati nella sessione storica
 
 | Stato | Cluster ON | Cluster OFF |
 |---|---:|---:|
@@ -91,6 +95,15 @@ La [selezione delle evidenze originali](evidence/) mantiene separati
 `policy-on/` e `policy-off/`. L'indice collega oggetti API, matrici HTTP,
 artefatti netfilter/IPSet e confronti invarianti all'attribuzione causale;
 `SHA256SUMS` copre tutti i file pubblicati.
+
+Dalla directory dell'esperimento, verificare l'integrità della selezione con:
+
+```bash
+cd evidence
+sha256sum -c SHA256SUMS
+```
+
+Tutti i file devono risultare `OK`.
 
 ## 9. Limiti
 

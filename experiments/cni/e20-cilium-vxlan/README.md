@@ -22,7 +22,7 @@ extended Berkeley Packet Filter (eBPF) di Cilium?
 I valori completi sono in
 [`manifests/cni/cilium/values.yaml`](../../../manifests/cni/cilium/values.yaml).
 
-## 3. Versioni rilevanti
+## 3. Versioni della sessione sperimentale documentata
 
 | Componente | Versione o integrità |
 |---|---|
@@ -34,6 +34,11 @@ I valori completi sono in
 | chart Cilium | SHA-256 `21c43cf53841f9ab0375047d95aa4c64051ea52bbd2c679416e6408f5f1c9179` |
 | agente Cilium | manifest list SHA-256 `0df5b2750b64c49843aba1d649e9eaf61467cb0645ad3171db6f6962c095ac92` |
 | operator generic | manifest list SHA-256 `0db4ca4e06969d8904ee036617795d0e9c3228cf7b8d902ba74fc2bb98d2d665` |
+
+La tabella registra l'ambiente della sessione che ha prodotto i risultati
+storici, incluso containerd host `2.3.3`. L'ambiente previsto dalla guida
+corrente usa containerd.io `2.3.4`: questa differenza successiva non modifica
+retroattivamente la sessione documentata.
 
 Le evidence storiche
 [`node-ebpf-prerequisites.log`](evidence/node-ebpf-prerequisites.log) e
@@ -64,7 +69,13 @@ cattura VXLAN, Service e NetworkPolicy sono descritti nella
 L'anomalia underlay osservata dopo un riavvio Docker è presentata nel manuale
 soltanto come troubleshooting condizionato.
 
-## 6. Risultati osservati
+Le evidence storiche del Service conservano due connessioni controllate; B02
+nella guida corrente applica lo stesso metodo rafforzato a sei connessioni. Per
+le NetworkPolicy, le evidence conservano baseline, default deny e allow
+selettiva; il restore finale della guida verifica il ritorno alla baseline e
+non costituisce una quarta configurazione scientifica.
+
+## 6. Risultati osservati nella sessione storica
 
 ### Installazione e percorso
 
@@ -117,10 +128,10 @@ NetworkPolicy nei flussi osservati; VXLAN del kernel trasporta il traffico
 inter-node.
 
 Per il Service, la sola configurazione `kubeProxyReplacement=false` non era
-sufficiente. Nuove entry conntrack `TCP SVC`, backend/reverse NAT, Hubble e
-contatori kube-proxy invariati sostengono l'attribuzione delle due
-connessioni a Cilium eBPF. Kube-proxy resta installato e la conclusione non
-viene estesa ad altri percorsi.
+sufficiente. Nella sessione storica, nuove entry conntrack `TCP SVC`,
+backend/reverse NAT, Hubble e contatori kube-proxy invariati sostengono
+l'attribuzione delle due connessioni a Cilium eBPF. Kube-proxy resta installato
+e la conclusione non viene estesa ad altri percorsi.
 
 Per le policy, l'API dichiara l'intento;
 Cilium lo associa agli endpoint e alle identità; policy map e programmi eBPF
@@ -135,13 +146,23 @@ NetworkPolicy. L'indice conserva soltanto tre output mirati per l'anomalia
 underlay e distingue gli output originali dal README; `SHA256SUMS` ne verifica
 l'integrità.
 
+Dalla directory dell'esperimento, verificare l'integrità della selezione con:
+
+```bash
+cd evidence
+sha256sum -c SHA256SUMS
+```
+
+Tutti i file devono risultare `OK`.
+
 ## 9. Limiti
 
 - k3d, kernel condiviso e rete Docker come underlay;
 - nessun benchmark, test di scala, fabric fisico o offload hardware;
 - native routing, Geneve e kube-proxy replacement non provati;
 - funzioni L7, cifratura, BGP e Cluster Mesh escluse;
-- attribuzione Service limitata a due connessioni ClusterIP dal Pod client;
+- risultato Service storico limitato a due connessioni ClusterIP dal Pod
+  client; B02 corrente ne usa sei senza riscrivere le evidence;
 - anomalia di riconciliazione circoscritta all'ambiente osservato, con causa
   non determinata;
 - identificativi e indirizzi da rilevare nuovamente in ogni replica.

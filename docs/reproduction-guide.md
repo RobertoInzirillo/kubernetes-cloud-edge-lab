@@ -26,7 +26,7 @@ git status --short --branch
 git rev-parse --verify HEAD
 ```
 
-La validation end-to-end documentata di seguito ha usato il commit
+La procedura è stata verificata end-to-end sul commit
 `d392dfb9b54753eb7e998d9620e02b01dbc36a2a`. Per ogni nuova riproduzione,
 registrare il tag o commit selezionato e il valore restituito da
 `git rev-parse`.
@@ -41,7 +41,7 @@ eseguono dalla radice della repository clonata. Ogni esperimento usa un
 cluster distinto; eliminarlo al termine evita che interfacce, route o regole
 residue influenzino il caso successivo.
 
-La guida presenta la procedura consolidata per riprodurre configurazioni,
+La guida presenta la procedura corrente per riprodurre configurazioni,
 esperimenti, osservazioni e attribuzioni. Gli output già pubblicati descrivono
 i risultati osservati nel laboratorio; una nuova esecuzione deve riprodurre i
 comportamenti pertinenti, non gli stessi identificativi runtime.
@@ -55,24 +55,17 @@ Percorso di lavoro:
 5. eseguire uno o più esperimenti dal relativo punto di ingresso;
 6. controllare la rimozione dei cluster creati.
 
-La prima validation incrementale di E01, E02, E10 ed E20 è marcata dal tag
-`validation-pass-2026-08` sul commit
-`ac33de8c31dc3d27efe1542b79ec05e4a4d886ae`. Successivamente, la guida al
-commit `d392dfb9b54753eb7e998d9620e02b01dbc36a2a` è stata eseguita integralmente
-da stato sperimentale pulito su un validator già predisposto, con Docker Engine
-e CLI `29.7.2`, containerd.io host `2.3.4` e Docker Buildx `0.36.1`. E01, E02,
-E10, E20 e cleanup finale hanno avuto esito PASS. Questa validation non è
-partita da una nuova installazione Linux vergine e non sostituisce gli output
-originali pubblicati come risultati degli esperimenti.
+Le evidence pubblicate appartengono alle sessioni sperimentali descritte nei
+rispettivi README; una nuova riproduzione produce output propri.
 
 ## 2. Ambiente di riferimento
 
-Il validator già predisposto usato per la validation end-to-end eseguiva Zorin
-OS 18.1, basato su Ubuntu 24.04 Noble, architettura `amd64`, control group v2
-(cgroup v2) e Berkeley Packet Filter filesystem (bpffs). Prima della full
-validation era stato osservato il kernel `7.0.0-30-generic`, ma non è
-disponibile un output che lo attribuisca con certezza all'intera esecuzione. Le
-evidence storiche E20 registrano invece `7.0.0-28-generic` e restano invariate.
+L'ambiente di riferimento è Zorin OS 18.1, basato su Ubuntu 24.04 Noble,
+architettura `amd64`, control group v2 (cgroup v2) e Berkeley Packet Filter
+filesystem (bpffs). La procedura parte da un sistema Zorin OS o Ubuntu
+compatibile pulito. Le evidence storiche E20 registrano il kernel
+`7.0.0-28-generic`; una nuova riproduzione deve registrare la propria release
+senza assumere che coincida.
 
 I comandi APT seguenti sono scritti per Ubuntu Noble `amd64` e per il sistema
 compatibile usato nel laboratorio. Altre distribuzioni possono essere
@@ -207,7 +200,7 @@ installare la toolchain.
 
 Docker fungerà da runtime per i container che k3d userà come nodi K3s del
 laboratorio. La procedura usa il repository APT ufficiale Docker per Ubuntu
-Noble e installa le versioni della baseline consolidata.
+Noble e installa le versioni della baseline corrente.
 
 Su un sistema appena installato non dovrebbero essere presenti pacchetti
 Docker o containerd confliggenti. Controllarli senza rimuovere nulla:
@@ -434,7 +427,7 @@ rm -rf -- "$TOOLCHAIN_DIR"
 
 | Componente | Versione o riferimento |
 |---|---|
-| Docker della baseline consolidata | `29.7.2` |
+| Docker della baseline corrente | `29.7.2` |
 | k3d | `v5.9.0` |
 | K3s/Kubernetes | `v1.34.9+k3s1` |
 | kubectl | `v1.34.9` |
@@ -444,11 +437,9 @@ rm -rf -- "$TOOLCHAIN_DIR"
 | Cilium | `1.19.6` |
 
 Le versioni Docker associate alle evidence storiche erano `29.6.2` in
-E01/E02, `29.7.1` in E10 e `29.7.2` in E20. La validation end-to-end al commit
-`d392dfb9b54753eb7e998d9620e02b01dbc36a2a` ha usato `29.7.2` come baseline
-consolidata per l'intera guida. Questo ne conferma l'operatività con la
-baseline corrente, senza uniformare retroattivamente i runtime delle evidence
-originali né ricreare la cronologia degli aggiornamenti intermedi.
+E01/E02, `29.7.1` in E10 e `29.7.2` in E20. La procedura corrente usa `29.7.2`
+per tutti gli esperimenti, senza uniformare retroattivamente i runtime delle
+evidence originali.
 
 ### 6.1 Immagine K3s
 
@@ -861,10 +852,17 @@ source scripts/cni/common/lab-env.sh
 source scripts/cni/k3s/e02-policy.sh
 ```
 
-`e02-policy.sh` fornisce il gate di convergenza e gli observer specifici del
-policy plane K3s. La matrice autoritativa comprende due nuove connessioni per
-ognuno dei flussi `client → server-a`, `client → server-b` e
-`server-a → server-b`, per un totale di sei richieste per stato.
+`e02-policy.sh` fornisce il controllo di convergenza e i comandi di
+osservazione del policy plane K3s. La matrice di riferimento comprende due
+nuove connessioni per ognuno dei flussi `client → server-a`,
+`client → server-b` e `server-a → server-b`, per un totale di sei richieste
+per stato.
+
+Le evidence storiche E02 conservano i tre stati sperimentali principali, cioè
+18 connessioni per cluster. La procedura corrente aggiunge il restore come
+verifica del ritorno alla baseline: esegue quindi quattro matrici, per un totale
+di 24 connessioni per cluster, senza trattare il restore come una quarta
+configurazione scientifica.
 
 La presenza dell'oggetto NetworkPolicy nell'API non basta a dimostrare
 l'enforcement. `inspect_k3s_policy_plane` mantiene osservabili, su ciascun
@@ -895,13 +893,13 @@ traffico consentito o bloccato
 
 Dopo ogni modifica nel caso ON,
 `wait_for_k3s_policy_convergence STATO` attende che chain e collegamenti
-corrispondano allo stato richiesto. Il gate legge soltanto il data plane, non
-genera traffico workload e non sostituisce la matrice autoritativa, che viene
-eseguita una sola volta dopo la convergenza.
+corrispondano allo stato richiesto. Il controllo legge soltanto il data plane,
+non genera traffico workload e non sostituisce la matrice di traffico, che
+viene eseguita una sola volta dopo la convergenza.
 
 I blocchi di ogni stato sono sequenziali: eseguire il successivo soltanto se il
 precedente termina correttamente. In particolare, non avviare mai una matrice
-se la mutazione API o il gate che la precede falliscono.
+se la mutazione API o il controllo di convergenza che la precede falliscono.
 
 ### 9.1 Controller ON
 
@@ -941,7 +939,7 @@ run_policy_matrix allow-all
 inspect_k3s_policy_plane
 ```
 
-Questa matrice `6/6` è la baseline autoritativa prima dell'introduzione delle
+Questa matrice `6/6` è la baseline di riferimento prima dell'introduzione delle
 policy.
 
 #### Default deny — 0/6 consentite
@@ -963,8 +961,8 @@ convergenza delle chain:
 wait_for_k3s_policy_convergence default-deny
 ```
 
-Soltanto dopo il PASS del gate, eseguire la matrice autoritativa e acquisire gli
-observer:
+Soltanto dopo che il controllo di convergenza termina correttamente, eseguire
+la matrice di traffico e acquisire le osservazioni:
 
 ```bash
 run_policy_matrix deny-all
@@ -992,7 +990,8 @@ Attendere che il data plane rappresenti entrambe le policy:
 wait_for_k3s_policy_convergence selective-allow
 ```
 
-Soltanto dopo il PASS del gate, eseguire la matrice e gli observer:
+Soltanto dopo che il controllo di convergenza termina correttamente, eseguire
+la matrice e acquisire le osservazioni:
 
 ```bash
 run_policy_matrix selective-allow
@@ -1022,7 +1021,8 @@ Attendere la rimozione delle strutture policy-specifiche:
 wait_for_k3s_policy_convergence restored
 ```
 
-Soltanto dopo il PASS del gate, verificare il ritorno alla baseline:
+Soltanto dopo che il controllo di convergenza termina correttamente, verificare
+il ritorno alla baseline:
 
 ```bash
 run_policy_matrix allow-all
@@ -1069,7 +1069,8 @@ deploy_common_workload
 kubectl --context "$TESI_CONTEXT" get pods -n net-lab -o wide
 ```
 
-Quando i Pod sono Ready, eseguire la matrice baseline e gli observer:
+Quando i Pod sono Ready, eseguire la matrice baseline e i comandi di
+osservazione:
 
 ```bash
 run_policy_matrix allow-all
@@ -1108,8 +1109,8 @@ kubectl --context "$TESI_CONTEXT" apply \
 kubectl --context "$TESI_CONTEXT" get networkpolicy -n net-lab -o yaml
 ```
 
-Con entrambi gli oggetti visibili nell'API, eseguire una sola matrice e gli
-observer:
+Con entrambi gli oggetti visibili nell'API, eseguire una sola matrice e i
+comandi di osservazione:
 
 ```bash
 run_policy_matrix allow-all
@@ -1128,7 +1129,7 @@ campi effimeri prima di usare un confronto byte per byte.
 #### Restore — ancora 6/6
 
 Rimuovere le policy e verificare un'ultima volta la baseline. Nel caso OFF non
-invochiamo il gate del caso ON, perché le strutture che esso attende devono
+invochiamo il controllo del caso ON, perché le strutture che esso attende devono
 restare assenti; la matrice viene comunque eseguita una sola volta:
 
 ```bash
@@ -1140,7 +1141,7 @@ kubectl --context "$TESI_CONTEXT" delete \
   --ignore-not-found
 ```
 
-Dopo la rimozione API, eseguire la matrice finale e gli observer:
+Dopo la rimozione API, eseguire la matrice finale e i comandi di osservazione:
 
 ```bash
 run_policy_matrix allow-all
@@ -1337,10 +1338,8 @@ kubectl --context "$TESI_CONTEXT" apply \
   -f manifests/cni/calico/installation.yaml
 ```
 
-La sequenza applica direttamente la configurazione finale consolidata ed è
-stata eseguita nella validation end-to-end al commit
-`d392dfb9b54753eb7e998d9620e02b01dbc36a2a`. Se non converge in una replica,
-fermarsi e conservare lo stato per la diagnosi.
+La sequenza applica direttamente la configurazione corrente. Se Calico non
+raggiunge lo stato atteso, fermarsi e conservare lo stato per la diagnosi.
 
 ### 10.3 Verifica di Calico, CNI e IPAM
 
@@ -1543,7 +1542,7 @@ cat "$CAPTURE_DIR/http-client.log"
 Correlare gli IP dei Pod nella vista inner e gli IP underlay nella vista outer;
 cercare `vxlan.calico`, UDP 4789 e VNI 4096. La risposta separata deve
 confermare che il GET ha raggiunto `server-b`. La gestione dei codici di
-terminazione e dei processi `tcpdump` resta nell'helper validato.
+terminazione e dei processi `tcpdump` resta nell'helper.
 
 `CAPTURE_DIR` va conservata in caso di errore. Dopo un esito positivo può
 essere rimossa con `rm -rf -- "$CAPTURE_DIR"`.
@@ -1553,8 +1552,8 @@ essere rimossa con `rm -rf -- "$CAPTURE_DIR"`.
 Per attribuire il Service verifichiamo separatamente i due backend Ready, poi
 confrontiamo catene e contatori kube-proxy prima e dopo nuove connessioni al
 ClusterIP. Il modulo E10 mantiene questa orchestrazione specifica senza
-trasformarla in un helper Service generico. Gli observer effettivamente usati
-restano riconoscibili nei comandi sottostanti:
+trasformarla in un helper Service generico. I comandi di osservazione usati
+restano visibili qui sotto:
 
 ```text
 kubectl --context "$TESI_CONTEXT" get endpointslice \
@@ -1564,7 +1563,7 @@ kubectl --context "$TESI_CONTEXT" get endpointslice \
 docker exec "$CALICO_AGENT0" /bin/aux/iptables-save -c -t nat
 ```
 
-Il primo comando alimenta il gate di readiness dei backend; il secondo produce
+Il primo comando verifica la readiness dei backend; il secondo produce
 gli snapshot completi dai quali vengono filtrate le regole
 `net-lab/servers:http`. La sequenza causale resta: snapshot `before`, sei nuove
 connessioni controllate, snapshot `after`, parsing delle sole osservazioni HTTP
@@ -1616,14 +1615,14 @@ NetworkPolicy API → Felix/calico-node → cali-pi-* e IPSet
 ```
 
 Nei log cerchiamo calcolo di policy, selector e IPSet; nel kernel cerchiamo gli
-insiemi `cali*`, le catene iptables e i loro contatori. Il gate
+insiemi `cali*`, le catene iptables e i loro contatori. La funzione
 `wait_for_calico_policy_convergence` attende nei dump iptables il commento
 semantico `KubernetesNetworkPolicy net-lab/<nome> ingress`, ricava i nomi delle
 chain e verifica il linkage fino al Pod interessato senza codificare hash.
 
 La definizione è fornita da `scripts/cni/calico/e10-policy.sh`. Il modulo
-mantiene separati l'inventario descrittivo e il gate di linkage; gli
-observer restano espliciti:
+mantiene separati l'inventario descrittivo e la verifica del linkage; i comandi
+di osservazione restano espliciti:
 
 ```text
 kubectl --context "$TESI_CONTEXT" get networkpolicy -n net-lab -o yaml
@@ -1636,13 +1635,17 @@ docker exec "$NODE" /bin/aux/iptables-save -c
 docker exec "$NODE" /bin/ipset save
 ```
 
-Per ciascun Pod il gate legge nodo e IP dall'API, risolve con
+Per ciascun Pod la funzione legge nodo e IP dall'API, risolve con
 `ip route get <Pod IP>` l'interfaccia host `cali*`, seleziona la chain
 esatta `cali-tw-<interfaccia>` e ne verifica il jump alla `cali-pi-*`
 identificata dal commento semantico della policy. Nessun hash o nome storico
-di chain viene assunto. Il gate è read-only e non genera traffico workload.
+di chain viene assunto. Il controllo è in sola lettura e non genera traffico
+workload.
 
-Eseguire i quattro stati in ordine e una sola volta.
+Eseguire i quattro stati in ordine e una sola volta. Le evidence storiche E10
+conservano baseline, default deny e allow selettiva; il restore è una verifica
+aggiuntiva della procedura corrente e non modifica i tre stati usati nel
+confronto scientifico.
 
 #### Baseline: 6/6 connessioni consentite
 
@@ -1661,7 +1664,8 @@ kubectl --context "$TESI_CONTEXT" apply \
 wait_for_calico_policy_convergence default-deny
 ```
 
-Se il gate fallisce, fermarsi prima della matrice. Dopo il successo:
+Se il controllo di convergenza fallisce, fermarsi prima della matrice. Quando
+termina correttamente:
 
 ```bash
 run_policy_matrix deny-all
@@ -1678,7 +1682,8 @@ kubectl --context "$TESI_CONTEXT" apply \
 wait_for_calico_policy_convergence selective-allow
 ```
 
-Se il gate fallisce, non eseguire traffico. Dopo il successo:
+Se il controllo di convergenza fallisce, non eseguire traffico. Quando termina
+correttamente:
 
 ```bash
 run_policy_matrix selective-allow
@@ -1686,16 +1691,16 @@ inspect_calico_policy_plane
 ```
 
 Selector, IPSet, catene e contatori devono essere coerenti con la progressione
-qualitativa da baseline a deny e allow selettiva. Il gate legge gli artefatti
-Felix senza generare traffico; gli esiti applicativi autorevoli restano 6/6
-consentiti, 6/6 negati e quindi 4/6 consentiti nella singola esecuzione della
-matrice per stato. L'enforcement osservato è attribuito al calculation graph e
-a Felix.
+qualitativa da baseline a deny e allow selettiva. Il controllo legge gli
+artefatti Felix senza generare traffico; gli esiti applicativi usati per il
+risultato restano 6/6 consentiti, 6/6 negati e quindi 4/6 consentiti nella
+singola esecuzione della matrice per stato. L'enforcement osservato è attribuito
+al calculation graph e a Felix.
 
 #### Baseline ripristinata: 6/6 connessioni consentite
 
-Rimuovere entrambe le policy e attendere che il gate read-only non trovi più i
-linkage di policy:
+Rimuovere entrambe le policy e attendere che il controllo in sola lettura non
+trovi più i linkage di policy:
 
 ```bash
 kubectl --context "$TESI_CONTEXT" delete \
@@ -1707,7 +1712,8 @@ kubectl --context "$TESI_CONTEXT" delete \
 wait_for_calico_policy_convergence restored
 ```
 
-Se il gate fallisce, fermarsi. Dopo il successo:
+Se il controllo di convergenza fallisce, fermarsi. Quando termina
+correttamente:
 
 ```bash
 run_policy_matrix allow-all
@@ -1880,7 +1886,7 @@ printf 'CILIUM_AGENT0=%s\n' "$CILIUM_AGENT0"
 ```
 
 Se il nome è vuoto o non identifica un singolo Pod Cilium, fermarsi. Usare
-quindi l'agent scoperto per gli observer:
+quindi l'agent scoperto per i comandi di osservazione:
 
 ```bash
 kubectl --context "$TESI_CONTEXT" exec -n kube-system \
@@ -1924,7 +1930,7 @@ assenti; kube-proxy deve restare presente.
 ### 11.4 Workload e percorso intra-node
 
 Applicare il workload comune senza eseguire una matrice preliminare. La sola
-baseline NetworkPolicy autorevole verrà generata nella sezione 11.7 come
+baseline NetworkPolicy di riferimento verrà generata nella sezione 11.7 come
 traffico diretto Pod-to-Pod, dentro una finestra Hubble congelata:
 
 ```bash
@@ -1952,7 +1958,7 @@ printf 'CLIENT_IP=%s SERVER_A_IP=%s SERVER_B_IP=%s SERVICE_IP=%s\n' \
 ```
 
 I quattro valori devono essere indirizzi IPv4 non vuoti. In caso contrario,
-fermarsi prima degli observer e degli esperimenti di traffico.
+fermarsi prima dei comandi di osservazione e degli esperimenti di traffico.
 
 ```bash
 kubectl --context "$TESI_CONTEXT" get pods -n net-lab -o wide
@@ -2100,9 +2106,14 @@ confronta nella stessa esecuzione mappe load balancer e conntrack eBPF, flussi
 Hubble e contatori iptables kube-proxy. La sola presenza di uno di questi
 artefatti non basta per attribuire le sei connessioni generate.
 
+Le evidence originali E20 appartengono a una sessione precedente che applicava
+lo stesso metodo a due connessioni. B02 è stato successivamente rafforzato con
+sei connessioni nella procedura corrente; gli output storici non sono stati
+riscritti e non vanno interpretati come se contenessero i sei flussi correnti.
+
 Il runner [`scripts/cni/cilium/service.sh`](../scripts/cni/cilium/service.sh)
-protegge la sequenza scientifica e usa questi observer, qui riportati per
-rendere esplicito cosa viene misurato:
+mantiene l'ordine della misurazione e usa i comandi seguenti, riportati per
+rendere esplicito cosa viene osservato:
 
 ```text
 kubectl --context "$TESI_CONTEXT" get endpointslice \
@@ -2123,7 +2134,7 @@ kubectl --context "$TESI_CONTEXT" exec -n kube-system \
   --from-pod net-lab/client --port 8080 -o jsonpb
 ```
 
-La sequenza protetta è:
+La sequenza di misurazione è:
 
 ```text
 EndpointSlice Ready
@@ -2158,7 +2169,7 @@ RevNAT / Service ID
 Hubble frozen window
 ```
 
-Eseguire una sola attribuzione autoritativa; non rilanciarla per ottenere una
+Eseguire l'attribuzione una sola volta; non rilanciarla per ottenere una
 distribuzione diversa fra i backend:
 
 ```bash
@@ -2171,19 +2182,19 @@ run_e20_service_attribution
 
 Il runner mostra risposte, correlazione CT/LB e diff informative. Ispezionare
 anche l'osservazione Hubble conservata, che include finestra, sorgente,
-destinazione, protocollo e verdict; la provenienza è l'agent
-`$CILIUM_AGENT0` esplicitato dal comando observer:
+destinazione, protocollo e verdict; l'agent di origine è
+`$CILIUM_AGENT0`, come mostra il comando:
 
 ```bash
 ls -la "$SERVICE_DIR"
 sed -n '1,160p' "$SERVICE_DIR/hubble-service.json"
 ```
 
-Il PASS richiede nuove entry CT coerenti con backend e reverse Network Address
-Translation (RevNAT), correlazione Hubble e nessun delta nei contatori
-kube-proxy pertinenti. La distribuzione dei backend non è un criterio. La
-conclusione vale soltanto per questi sei flussi e non implica che kube-proxy
-sia globalmente inattivo.
+Il risultato è positivo se compaiono nuove entry CT coerenti con backend e
+reverse Network Address Translation (RevNAT), correlazione Hubble e nessun
+delta nei contatori kube-proxy pertinenti. La distribuzione dei backend non è
+un criterio. La conclusione vale soltanto per questi sei flussi e non implica
+che kube-proxy sia globalmente inattivo.
 
 Il confronto con B01 è quindi circoscritto ai profili testati:
 
@@ -2196,8 +2207,9 @@ E20 / Cilium 1.19.6: Service → BPF LB/CT + RevNAT → Hubble
 ### 11.7 Matrice NetworkPolicy
 
 Il protocollo mantiene separati quattro passaggi: mutazione della NetworkPolicy,
-convergenza del policy plane Cilium, una sola matrice HTTP autorevole e
-osservazione del dataplane. La relazione verificata per ogni stato è:
+convergenza del policy plane Cilium, una sola matrice HTTP usata per il
+risultato e osservazione del data plane. La relazione verificata per ogni stato
+è:
 
 ```text
 NetworkPolicy API
@@ -2215,9 +2227,8 @@ Hubble multi-agent nella finestra della matrice
 interpretazione
 ```
 
-I due moduli Cilium mantengono negli helper validati polling, finestre temporali
-e raccolta multi-agent. Caricarli dopo i moduli comuni già importati all'inizio
-di E20:
+I due moduli Cilium gestiscono polling, finestre temporali e raccolta
+multi-agent. Caricarli dopo i moduli comuni già importati all'inizio di E20:
 
 ```bash
 source scripts/cni/cilium/policy-observers.sh
@@ -2228,6 +2239,11 @@ export CILIUM_POLICY_TIMEOUT=120
 export CILIUM_HUBBLE_TIMEOUT=20
 ```
 
+Le evidence storiche E20 conservano i tre stati baseline, default deny e allow
+selettiva. Il quarto passaggio `restored` verifica nella procedura corrente il
+ritorno effettivo alla baseline e non costituisce una configurazione
+sperimentale aggiuntiva.
+
 `snapshot_cilium_policy_revisions` scopre placement, agent `Running`, Pod e
 revisioni correnti. Nessun nome agent, endpoint ID, identity o BPF map ID
 deriva dalle evidence storiche.
@@ -2237,11 +2253,11 @@ di 120 secondi. Per ogni agent richiede che la revisione sia avanzata,
 che il documento importato contenga esattamente le policy previste dallo stato,
 che `cilium-dbg policy wait` raggiunga la revisione e che tutti gli endpoint
 workload locali siano `ready`, con revisione richiesta e realizzata coincidenti
-e non inferiori al target. Il gate non genera traffico e non richiama la
+e non inferiori al target. Il controllo non genera traffico e non richiama la
 matrice HTTP.
 
-Gli helper mantengono visibili e usano, per gli agent e gli intervalli scoperti
-a runtime, queste interfacce di osservazione già validate:
+Gli helper usano, per gli agent e gli intervalli scoperti a runtime, i comandi
+di osservazione seguenti:
 
 ```text
 kubectl --context "$TESI_CONTEXT" get networkpolicy -n net-lab -o yaml
@@ -2272,7 +2288,7 @@ sulla stessa finestra assoluta RFC3339Nano. L'eventuale polling ripete soltanto
 la lettura della finestra chiusa e non genera traffico workload.
 
 Hubble deve interrogare separatamente tutti gli agent pertinenti perché i
-workload non sono tutti sullo stesso nodo. L'aggregato conserva la provenienza
+workload non sono tutti sullo stesso nodo. L'aggregato conserva l'origine
 dell'agent, evitando di attribuire un flusso al nodo sbagliato. Anche le BPF
 policy map sono node-local: `capture_cilium_bpf_policy_maps` esegue
 `cilium-dbg bpf policy get --all` per agent e mantiene il mapping con endpoint
@@ -2305,7 +2321,8 @@ kubectl --context "$TESI_CONTEXT" apply \
 wait_for_cilium_policy_convergence default-deny
 ```
 
-Se il gate fallisce, fermarsi senza generare traffico. Dopo il successo:
+Se il controllo di convergenza fallisce, fermarsi senza generare traffico.
+Quando termina correttamente:
 
 ```bash
 capture_cilium_policy_state default-deny deny-all
@@ -2313,7 +2330,8 @@ capture_cilium_policy_state default-deny deny-all
 
 #### Allow selettiva: 4/6 connessioni consentite
 
-Ripetere snapshot, mutazione e gate prima dell'unica matrice dello stato:
+Ripetere snapshot, mutazione e controllo di convergenza prima dell'unica
+matrice dello stato:
 
 ```bash
 snapshot_cilium_policy_revisions
@@ -2322,7 +2340,8 @@ kubectl --context "$TESI_CONTEXT" apply \
 wait_for_cilium_policy_convergence selective-allow
 ```
 
-Se il gate fallisce, non proseguire. Dopo il successo:
+Se il controllo di convergenza fallisce, non proseguire. Quando termina
+correttamente:
 
 ```bash
 capture_cilium_policy_state selective-allow selective-allow
@@ -2344,8 +2363,9 @@ kubectl --context "$TESI_CONTEXT" delete \
 wait_for_cilium_policy_convergence restored
 ```
 
-Se il gate fallisce, fermarsi. Dopo il successo acquisire l'unica matrice
-finale e gli stessi observer multi-agent:
+Se il controllo di convergenza fallisce, fermarsi. Quando termina
+correttamente, acquisire l'unica matrice finale e le stesse osservazioni
+multi-agent:
 
 ```bash
 capture_cilium_policy_state restored allow-all
@@ -2356,13 +2376,13 @@ Per ogni stato controllare:
 
 - `<stato>-networkpolicy.yaml`, oggetti API;
 - `<stato>-endpoints.yaml`, stato, identity e revisioni requested/realized;
-- `<stato>-bpf-policy-<agent>.log`, policy map con provenienza per-agent;
+- `<stato>-bpf-policy-<agent>.log`, policy map con origine per agent;
 - `<stato>-bpf-policy.log`, indice multi-agent;
 - `<stato>-hubble.json`, sorgente, destinazione, protocollo, verdict e agent
   nella finestra congelata.
 
-La policy non è pronta solo perché l'oggetto API esiste: il gate richiede che
-la revisione globale/agent sia avanzata e che ogni endpoint abbia revisioni
+La policy non è pronta solo perché l'oggetto API esiste: il controllo richiede
+che la revisione globale/agent sia avanzata e che ogni endpoint abbia revisioni
 requested e realized coincidenti e almeno pari al target. I verdict attesi
 sono `FORWARDED` oppure `DROPPED` con
 `drop_reason_desc=POLICY_DENIED`. Matrice, endpoint, BPF policy map e Hubble
@@ -2455,177 +2475,267 @@ La rimozione deve riguardare solo E20. Non eliminare manualmente programmi o
 mappe eBPF, route, regole netfilter o reti Docker senza avere prima dimostrato
 un residuo specifico.
 
-## 12. Controllo finale e dati da conservare
+## 12. Chiusura del laboratorio e dati da conservare
 
 ### 12.1 Controllo conclusivo dell'host
 
-Dopo avere eliminato l'ultimo cluster, verificare che non restino i cluster,
-i container nodo o i listener API creati dalla guida. Il source idempotente del
-modulo di cattura rende disponibile anche il controllo dei processi `tcpdump`:
+Dopo avere eliminato E20, ispezionare direttamente le risorse che la guida può
+avere lasciato sull'host:
 
 ```bash
-source scripts/cni/common/lab-env.sh
-source scripts/cni/common/capture.sh
+k3d cluster list
 
-run_final_host_check() {
-  local cluster_list
-  local container_list
-  local listener_list
-  local parser_rc
+docker ps -a \
+  --filter 'name=k3d-tesi-' \
+  --format '{{.Names}}\t{{.Image}}\t{{.Status}}'
 
-  if ! cluster_list="$(k3d cluster list)"
-  then
-    printf 'ERROR: inventario finale k3d non leggibile.\n' >&2
-    return 1
-  fi
-  printf '%s\n' "$cluster_list"
-  if awk '$1 ~ /^tesi-/ { found=1 } END { exit !found }' \
-      <<<"$cluster_list"
-  then
-    parser_rc=0
-  else
-    parser_rc=$?
-  fi
-  case "$parser_rc" in
-    0)
-      printf 'FAIL: sono ancora presenti cluster tesi.\n' >&2
-      return 1
-      ;;
-    1) ;;
-    *)
-      printf 'ERROR: parser inventario cluster fallito (awk rc=%s).\n' \
-        "$parser_rc" >&2
-      return 1
-      ;;
-  esac
+kubectl config get-contexts
 
-  if ! container_list="$(docker ps -a --filter 'name=k3d-tesi-' \
-      --format '{{.Names}}\t{{.Image}}\t{{.Status}}')"
-  then
-    printf 'ERROR: inventario finale dei container non leggibile.\n' >&2
-    return 1
-  fi
-  printf '%s\n' "$container_list"
-  if [[ -n "$container_list" ]]
-  then
-    printf 'FAIL: sono ancora presenti container nodo tesi.\n' >&2
-    return 1
-  fi
+ss -H -ltn \
+  'sport = :6445 or sport = :6446 or sport = :6447 or sport = :6448 or sport = :6449'
 
-  kubectl config get-contexts || return 1
-  if ! listener_list="$(ss -H -ltn \
-      'sport = :6445 or sport = :6446 or sport = :6447 or sport = :6448 or sport = :6449')"
-  then
-    printf 'ERROR: inventario finale dei listener API non leggibile.\n' >&2
-    return 1
-  fi
-  if [[ -n "$listener_list" ]]
-  then
-    printf 'FAIL: sono ancora presenti listener API del laboratorio:\n%s\n' \
-      "$listener_list" >&2
-    return 1
-  fi
-
-  verify_no_tcpdump_processes || return 1
-  printf 'PASS: nessun cluster, container nodo, listener API o tcpdump residuo.\n'
-}
-
-run_final_host_check
+pgrep -af tcpdump || true
+pgrep -af hubble || true
+pgrep -af kubectl || true
 ```
 
-L'elenco non deve contenere i cluster E01, E02, E10 o E20. Non rimuovere
-risorse estranee al laboratorio soltanto perché compaiono negli inventari.
+Al termine non devono rimanere cluster `tesi-*`, container `k3d-tesi-*`,
+listener API sulle porte 6445–6449 o processi di cattura avviati dagli
+esperimenti. `k3d cluster list` può mostrare la propria intestazione; gli
+output filtrati di `docker ps` e `ss` devono essere vuoti. In
+`kubectl config get-contexts` non devono restare contesti `k3d-tesi-*`.
 
-### 12.2 Troubleshooting essenziale
+Le query Hubble della guida sono sincrone. Se `pgrep` mostra `tcpdump`, Hubble
+o `kubectl`, verificare la riga di comando e terminare soltanto processi
+riconducibili a questo laboratorio. Non rimuovere cluster, container, contesti
+o processi estranei soltanto perché compaiono negli inventari.
+
+### 12.2 Directory temporanee
+
+Le directory seguenti sono create con `mktemp -d`: contengono chart e
+rendering Calico/Cilium, catture, snapshot Service e osservazioni policy. Prima
+di cancellarle, copiarne gli output scelti come documentazione della replica.
+Visualizzare i path ancora disponibili nella shell:
+
+```bash
+printf 'CALICO_CHART_DIR=%s\n' "${CALICO_CHART_DIR:-<non impostata>}"
+printf 'CALICO_RENDER_DIR=%s\n' "${CALICO_RENDER_DIR:-<non impostata>}"
+printf 'E20_DIR=%s\n' "${E20_DIR:-<non impostata>}"
+printf 'CAPTURE_DIR=%s\n' "${CAPTURE_DIR:-<non impostata>}"
+printf 'SERVICE_DIR=%s\n' "${SERVICE_DIR:-<non impostata>}"
+printf 'POLICY_DIR=%s\n' "${POLICY_DIR:-<non impostata>}"
+```
+
+Verificare che ogni valore non vuoto sia il path `mktemp` creato nella sezione
+pertinente. Rimuovere soltanto quelle directory esplicite ancora referenziate:
+
+In ciascuna riga `test -z ... || rm -rf ...` esegue la rimozione solo quando la
+variabile contiene un path non vuoto; un valore vuoto lascia quindi intatto il
+filesystem.
+
+```bash
+test -z "${CALICO_CHART_DIR:-}" || rm -rf -- "$CALICO_CHART_DIR"
+test -z "${CALICO_RENDER_DIR:-}" || rm -rf -- "$CALICO_RENDER_DIR"
+test -z "${E20_DIR:-}" || rm -rf -- "$E20_DIR"
+test -z "${CAPTURE_DIR:-}" || rm -rf -- "$CAPTURE_DIR"
+test -z "${SERVICE_DIR:-}" || rm -rf -- "$SERVICE_DIR"
+test -z "${POLICY_DIR:-}" || rm -rf -- "$POLICY_DIR"
+```
+
+Non usare wildcard su `/tmp` e non eliminare directory non mostrate dalla
+shell. Se gli esperimenti sono stati eseguiti in shell diverse, i relativi
+temporanei devono essere rimossi al termine della loro sezione usando il path
+stampato in quella sessione.
+
+### 12.3 Troubleshooting essenziale
+
+Questa sezione è facoltativa: usarla soltanto quando il percorso normale ha
+prodotto uno dei sintomi descritti.
+
+#### Cluster, container o porta API ancora presenti
+
+**Sintomo:** il controllo finale mostra un cluster `tesi-*`, un container
+`k3d-tesi-*` o un listener su una porta 6445–6449.
+
+**Cosa controllare:** correlare nome del cluster, container e porta senza
+agire sulle altre risorse dell'host.
+
+**Comandi:**
+
+```bash
+k3d cluster list
+docker ps -a --filter 'name=k3d-tesi-' \
+  --format '{{.Names}}\t{{.Status}}'
+ss -H -ltnp \
+  'sport = :6445 or sport = :6446 or sport = :6447 or sport = :6448 or sport = :6449'
+```
+
+**Cosa dovrebbe risultare:** dopo avere ripetuto il comando di delete della
+sezione sperimentale interessata, i tre inventari non devono più mostrare la
+risorsa. Non usare `docker rm` o `kill` su target non identificati.
 
 #### Docker socket non accessibile
 
 **Sintomo:** `docker info` restituisce `permission denied` su
 `/run/docker.sock` dopo `usermod`.
 
-**Possibile contesto:** la shell corrente conserva i gruppi acquisiti al
-login.
+**Cosa controllare:** gruppo della shell e proprietà del socket.
 
-**Controllo:** `id -nG` deve contenere `docker`; `stat -c '%a %U:%G %n'
-/run/docker.sock` deve mostrare `root:docker` e modo `660`.
+**Comandi:**
 
-**Ripristino verificato:** logout/login; per un controllo temporaneo usare
+```bash
+id -nG
+stat -c '%a %U:%G %n' /run/docker.sock
+docker info
+```
+
+**Cosa dovrebbe risultare:** i gruppi includono `docker`; il socket è
+`root:docker` con modo `660`. Se la shell conserva i gruppi precedenti, fare
+logout/login; per il solo controllo temporaneo usare
 `sg docker -c 'docker version'`.
 
-#### Nodi NotReady durante il bootstrap di Calico o Cilium
+#### Nodi o CNI non convergenti
 
-**Sintomo:** subito dopo `k3d cluster create`, i nodi senza Flannel sono
-`NotReady`.
+**Sintomo:** i nodi restano `NotReady` oppure Calico/Cilium non completano la
+readiness entro il timeout documentato.
 
-**Possibile contesto:** con `--flannel-backend=none` la rete primaria non è
-ancora installata.
+**Cosa controllare:** stato dei nodi, Pod ed eventi; per il CNI installato,
+usare anche il relativo comando di osservazione già impiegato in E10 o E20.
 
-**Controllo:** verificare che il cluster API risponda e che l'assenza del CNI
-sia la causa riportata dai Pod o dagli eventi.
+**Comandi:**
 
-**Soluzione:** completare l'installazione prevista del CNI e attendere il
-timeout indicato. Non aggiungere Flannel né un secondo plugin per rendere
-prematuramente `Ready` i nodi.
+```bash
+kubectl --context "$TESI_CONTEXT" get nodes -o wide
+kubectl --context "$TESI_CONTEXT" get pods -A -o wide
+kubectl --context "$TESI_CONTEXT" get events -A \
+  --sort-by=.lastTimestamp
+```
+
+Per Calico:
+
+```bash
+kubectl --context "$TESI_CONTEXT" get tigerastatus
+```
+
+Per Cilium, dopo avere rilevato nuovamente `CILIUM_AGENT0` come nella sezione
+11.3:
+
+```bash
+kubectl --context "$TESI_CONTEXT" exec -n kube-system \
+  "$CILIUM_AGENT0" -- cilium-dbg status --verbose
+```
+
+**Cosa dovrebbe risultare:** con `--flannel-backend=none`, `NotReady` prima
+dell'installazione del CNI è transitorio. Dopo la convergenza tutti i nodi e i
+componenti pertinenti devono essere disponibili. Eseguire soltanto il comando
+di osservazione del CNI in uso; non aggiungere Flannel o un secondo plugin.
 
 #### Identificativi cambiati dopo un riavvio
 
 **Sintomo:** `nsenter`, una route o un filtro di cattura usa un PID, un IP o
-una veth non più esistente.
+un'interfaccia non più esistente.
 
-**Possibile contesto:** Docker ha riavviato o ricreato nodi e sandbox.
+**Cosa controllare:** rileggere placement, indirizzi e PID con gli stessi
+comandi di acquisizione runtime della sezione interessata.
 
-**Controllo:** ripetere `docker inspect`, `kubectl get pods -o wide`,
-`crictl pods`, `CiliumEndpoint` o la funzione Pod–veth pertinente.
+**Comandi:**
 
-**Soluzione:** rigenerare tutte le variabili runtime; non correggere
-manualmente route o stato CNI sulla base dei valori storici.
+```bash
+kubectl --context "$TESI_CONTEXT" get pods -A -o wide
+docker inspect -f '{{.State.Pid}}' "$SOURCE_NODE"
+docker inspect \
+  -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{"\n"}}{{end}}' \
+  "$SOURCE_NODE"
+```
+
+**Cosa dovrebbe risultare:** i nuovi valori devono riferirsi ai container e
+Pod correnti. Rigenerare tutte le variabili runtime; non correggere route o
+stato CNI usando identificativi storici.
 
 #### DNS influenzato da un search suffix
 
-**Sintomo:** il nome `servers.net-lab.svc.cluster.local` viene risolto verso
-un indirizzo estraneo al cluster.
+**Sintomo:** `servers.net-lab.svc.cluster.local` viene risolto verso un
+indirizzo estraneo al cluster.
 
-**Possibile contesto:** il resolver aggiunge un suffisso dell'ambiente host.
+**Cosa controllare:** confrontare la risoluzione con e senza il punto finale.
 
-**Controllo:** confrontare `nslookup` sul nome con e senza punto finale.
+**Comandi:**
 
-**Soluzione verificata:** usare il nome assoluto
-`servers.net-lab.svc.cluster.local.` per la prova E01.
+```bash
+kubectl --context "$TESI_CONTEXT" exec -n net-lab client -- \
+  nslookup servers.net-lab.svc.cluster.local
+kubectl --context "$TESI_CONTEXT" exec -n net-lab client -- \
+  nslookup servers.net-lab.svc.cluster.local.
+```
 
-#### Terminazione di tcpdump impedita dal profilo di sicurezza
+**Cosa dovrebbe risultare:** per la prova E01 usare il nome assoluto
+`servers.net-lab.svc.cluster.local.` quando il resolver host introduce il
+suffix inatteso.
 
-**Sintomo:** `timeout` non termina la cattura o restano processi diagnostici.
+#### Processo di cattura non terminato
 
-**Possibile contesto:** un profilo AppArmor del terminale impedisce a
-`tcpdump` di ricevere il segnale.
+**Sintomo:** `timeout` non termina la cattura oppure il controllo finale mostra
+un processo diagnostico.
 
-**Controllo:** leggere `cat /proc/$$/attr/current`, controllare i processi con
-`pgrep` e consultare gli eventuali dinieghi del kernel.
+**Cosa controllare:** riga di comando, profilo di sicurezza della shell ed
+eventuali dinieghi AppArmor.
 
-**Soluzione:** usare un terminale non confinato compatibile con le policy
-dell'host oppure configurare una regola locale strettamente limitata ai
-segnali necessari. Non disabilitare AppArmor. Una regola AppArmor locale non
-è un prerequisito generale.
+**Comandi:**
 
-L'incoerenza underlay osservata una volta in E20 è trattata separatamente
-nella sezione 11.8, perché diagnosi e ripristino riguardano soltanto quel
-sintomo.
+```bash
+pgrep -af tcpdump || true
+pgrep -af hubble || true
+pgrep -af kubectl || true
+cat /proc/$$/attr/current
+journalctl -k --grep='apparmor' --since='30 minutes ago'
+```
 
-### 12.3 Dati da conservare
+**Cosa dovrebbe risultare:** dopo la cattura non devono restare processi
+avviati dal laboratorio. Terminare soltanto il PID verificato. Se AppArmor
+impedisce il segnale, usare un terminale non confinato compatibile oppure una
+regola locale limitata ai segnali necessari; non disabilitare AppArmor.
 
-Per rendere verificabile una nuova esecuzione, conservare separatamente:
+#### Cilium dopo un riavvio Docker
 
-- ambiente, versioni, hash di chart e immagini effettive;
-- comando di creazione e configurazione del cluster;
+**Sintomo:** in E20 i flussi intra-node funzionano ma quelli inter-node verso
+`agent-1` falliscono dopo il riavvio di Docker.
+
+**Cosa controllare:** underlay corrente, `CiliumNode`, node list e BPF IP
+cache, usando gli identificativi rilevati nuovamente.
+
+**Comandi:** eseguire esclusivamente il blocco diagnostico della sezione 11.9.
+
+**Cosa dovrebbe risultare:** il tunnel endpoint deve coincidere con l'underlay
+corrente. L'eventuale riallineamento documentato in 11.9 è facoltativo e vale
+solo per questo sintomo; non fa parte della procedura normale e non dimostra
+una proprietà generale di Cilium.
+
+### 12.4 Dati da conservare
+
+Per rendere riproducibile la configurazione, conservare:
+
+- commit o tag della repository;
+- versioni, chart, checksum e digest delle immagini;
+- manifest e file values effettivamente utilizzati;
+- comandi di creazione e configurazione dei cluster.
+
+Per documentare una specifica esecuzione, conservare una selezione piccola ma
+sufficiente a sostenere il risultato:
+
 - stato di nodi, componenti, workload e allocazioni IPAM;
-- route, interfacce, CNI, identificativi runtime e singola cattura pertinente;
-- richieste applicative distinte dagli output delle catture;
-- snapshot prima/dopo per Service e per ciascuno stato NetworkPolicy;
-- log del componente al quale viene attribuito il comportamento;
-- stato finale, rimozione del cluster e controllo post-delete.
+- route, interfacce, endpoint e output dei comandi di osservazione del data
+  plane;
+- catture pertinenti e risposte applicative tenute separate;
+- snapshot BEFORE/AFTER dei Service e dei quattro stati NetworkPolicy;
+- finestre Hubble, log di attribuzione ed esiti del cleanup;
+- checksum dei file scelti come evidence della replica.
 
-Non includere kubeconfig, token o altri segreti. I README degli esperimenti
-collegano una selezione degli output originali pubblicati e il relativo indice
-SHA-256. Una nuova replica deve usare una directory di raccolta propria: non è
-atteso che IP, PID, timestamp, veth, porte o identity coincidano byte per byte,
-ma che siano riprodotti i comportamenti e le proprietà osservate pertinenti.
+IP, PID, timestamp, veth, porte sorgenti, endpoint ID e identity sono dati
+runtime temporanei: servono a correlare la singola esecuzione, ma possono
+essere eliminati insieme alle directory `mktemp` dopo avere copiato le evidence
+necessarie. Non devono coincidere byte per byte con le evidence storiche.
+
+Non conservare kubeconfig, token, Secret o altre credenziali. I README degli
+esperimenti collegano la selezione degli output originali pubblicati e i
+relativi indici SHA-256; una nuova replica deve usare una directory di raccolta
+propria senza modificare quelle evidence.

@@ -7,10 +7,11 @@ Repository tecnica della tesi magistrale:
 
 Questa versione documenta la prima fase dello studio, dedicata al networking
 Kubernetes e alla Container Network Interface (CNI) in ambito single-cluster.
-Il campione sperimentale comprende Flannel VXLAN nello stack K3s, Calico Open
-Source 3.32.1 con VXLAN e data plane Linux iptables, e Cilium 1.19.6 con VXLAN
-e data plane eBPF. Il confronto riguarda configurazioni precise, non i
-progetti in astratto.
+L'obiettivo è confrontare concretamente approcci differenti alla rete dei Pod,
+al traffico fra nodi, ai Service e alle NetworkPolicy. Il campione comprende
+Flannel VXLAN nello stack K3s, Calico Open Source 3.32.1 con VXLAN e data plane
+Linux iptables, e Cilium 1.19.6 con VXLAN e data plane eBPF. Il confronto
+riguarda configurazioni precise, non i progetti in astratto.
 
 Il campione rappresenta tre profili architetturali: Flannel come baseline
 semplice di networking L3 con overlay VXLAN, senza enforcement NetworkPolicy
@@ -89,27 +90,30 @@ esperimenti esistenti.
         └── service.sh
 ```
 
-I manifest comuni fissano workload e NetworkPolicy; le directory Calico e
-Cilium contengono le configurazioni specifiche. I moduli comuni ricostruiscono
-l'ambiente di shell e condividono cattura e attribuzione Service; i moduli
-specifici implementano gli observer e i gate dei singoli esperimenti. Il
-post-renderer Calico blocca l'immagine del Tigera Operator.
+I manifest fissano workload, NetworkPolicy e configurazioni dei CNI. Gli script
+raccolgono le operazioni ripetibili di preparazione, cattura e osservazione;
+la guida di riproduzione mostra i comandi, il loro scopo e gli output da
+controllare.
 
 ## Percorso di lettura
 
 1. La [panoramica CNI](docs/cni-overview.md) introduce il modello CNI, i
    principali approcci al networking Kubernetes e le soluzioni considerate.
-2. I README dei [singoli esperimenti](experiments/cni/) descrivono le domande
+2. La [guida di riproduzione](docs/reproduction-guide.md) prepara l'ambiente e
+   accompagna nell'esecuzione di E01, E02, E10 ed E20.
+3. I README dei [singoli esperimenti](experiments/cni/) riepilogano le domande
    sperimentali, le configurazioni utilizzate, i risultati osservati e le
    relative attribuzioni.
-3. Il [confronto controllato](docs/cni-comparison.md) mette a confronto
+4. Il [confronto controllato](docs/cni-comparison.md) mette a confronto
    Flannel, Calico e Cilium sulla base delle configurazioni effettivamente
    studiate.
-4. I [limiti](docs/limitations.md) definiscono l'ambito nel quale i risultati
+5. I [limiti](docs/limitations.md) definiscono l'ambito nel quale i risultati
    possono essere interpretati e generalizzati.
 
-Per chi vuole replicare il laboratorio, la [guida di riproduzione](docs/reproduction-guide.md) descrive la procedura completa per preparare l'ambiente ed eseguire E01, E02, E10 ed E20. La riproducibilità è stata verificata su un secondo sistema Linux in due fasi: una prima replica è partita da un'installazione Linux pulita, includendo la preparazione e la verifica della toolchain, e ha validato la versione del laboratorio allora disponibile; successivamente, dopo il consolidamento metodologico degli esperimenti, la procedura aggiornata al commit `d392dfb9b54753eb7e998d9620e02b01dbc36a2a` è stata rieseguita integralmente sullo stesso validator già predisposto, partendo da uno stato sperimentale pulito. In quest'ultima full validation, Docker Engine/CLI `29.7.2`, containerd.io host `2.3.4` e Docker Buildx `0.36.1` sono stati verificati ed E01, E02, E10, E20 e il cleanup finale hanno tutti avuto esito PASS. La cronologia e la distinzione tra le due validation sono documentate nella guida di riproduzione.
-
+La procedura è stata verificata end-to-end, includendo una riproduzione
+avviata da un'installazione Linux pulita. Ambiente, versioni e riferimenti
+necessari sono documentati nella guida; le evidence pubblicate sono protette
+da checksum SHA-256.
 
 La baseline usa k3d `v5.9.0`, K3s `v1.34.9+k3s1`, Kubernetes `1.34.9`,
 `kubectl` `v1.34.9`, Helm `v3.21.3` e BusyBox `1.38.0`. Le immagini K3s e

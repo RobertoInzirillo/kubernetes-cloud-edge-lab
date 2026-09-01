@@ -2,10 +2,10 @@
 
 ## 1. Domanda sperimentale
 
-Mantenendo invariati K3s, topologia, CIDR, workload, kube-proxy e matrici di
-E01/E02, quali componenti e artefatti realizza Calico Open Source in modalità
-VXLAN con data plane Linux, e quali differenze sono attribuibili a CNI, IPAM e
-policy engine Calico?
+K3s, topologia, CIDR, workload, kube-proxy e matrici di E01/E02 restano
+controllati. In questo contesto, quali componenti e artefatti realizza Calico
+Open Source in modalità VXLAN con data plane Linux, e quali differenze sono
+attribuibili a CNI, IPAM e motore di policy Calico?
 
 ## 2. Configurazione
 
@@ -61,10 +61,15 @@ Download e verifica dei chart, rendering, installazione dell'operator,
 ImageSet, Installation, API server e prove del data plane sono descritti nella
 [sezione E10 del manuale](../../../docs/reproduction-guide.md#10-e10--calico-vxlan-con-data-plane-linux).
 
-La configurazione pubblica applica direttamente lo stato consolidato con
+La configurazione pubblica applica direttamente la configurazione corrente con
 Calico API server abilitato.
 
-## 6. Risultati osservati
+Le evidence storiche conservano i tre stati NetworkPolicy baseline, default
+deny e allow selettiva. La guida corrente aggiunge un restore finale per
+verificare il ritorno alla baseline; non è una quarta configurazione
+scientifica del confronto.
+
+## 6. Risultati osservati nella sessione storica
 
 - tre nodi `Ready`; Calico CNI/IPAM attivi, Flannel e controller K3s assenti;
 - IPPool `10.42.0.0/16`, blocchi `/26`, MTU 1450 e `vxlan.calico` su UDP 4789,
@@ -87,11 +92,12 @@ Calico CNI collega gli endpoint; Calico IPAM assegna gli indirizzi mediante
 pool e blocchi. Felix calcola e programma route, VXLAN e artefatti policy del
 data plane Linux. Il kernel applica forwarding e filtraggio.
 
-In Kubernetes Datastore, `calico-kube-controllers` eseguiva soltanto i
-controller `node,loadbalancer`. La traduzione e programmazione delle policy
-osservate vanno attribuite al calculation graph e a Felix, non al policy
-controller valido per il datastore etcd. Kube-proxy, mantenuto intenzionalmente,
-ha realizzato i flussi Service osservati.
+In Kubernetes Datastore, Felix calcolava lo stato del data plane a partire da
+oggetti e configurazione osservati, processo descritto da Calico come
+calculation graph, e programmava le policy. `calico-kube-controllers` eseguiva
+invece soltanto i controller `node,loadbalancer`: non va quindi confuso con il
+policy controller documentato per il datastore etcd. Kube-proxy, mantenuto
+intenzionalmente, ha realizzato i flussi Service osservati.
 
 ## 8. Evidenze pubbliche
 
@@ -99,6 +105,15 @@ La [selezione delle evidenze originali](evidence/) documenta configurazione
 finale, CNI/IPAM, percorso L3/VXLAN, attribuzione Service e NetworkPolicy.
 L'indice distingue output, catture, matrici e riepiloghi originali e ne
 definisce il perimetro; `SHA256SUMS` verifica l'integrità della selezione.
+
+Dalla directory dell'esperimento, verificare l'integrità della selezione con:
+
+```bash
+cd evidence
+sha256sum -c SHA256SUMS
+```
+
+Tutti i file devono risultare `OK`.
 
 ## 9. Limiti
 

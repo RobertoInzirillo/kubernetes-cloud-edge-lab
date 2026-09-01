@@ -34,6 +34,12 @@ ma non implementa da solo ogni tratto del percorso. Occorre distinguere:
 La coesistenza nello stesso cluster non implica che tutte queste funzioni
 appartengano al componente chiamato “CNI”.
 
+In questa distinzione, il **control plane** mantiene e decide lo stato
+desiderato del cluster; il **data plane** comprende invece i meccanismi che
+elaborano concretamente i pacchetti, per esempio route, regole di filtro o
+programmi eBPF. Un controller può quindi tradurre un oggetto Kubernetes in
+stato del data plane senza attraversare direttamente il flusso osservato.
+
 ## Container Network Interface
 
 La [specifica Container Network Interface](https://www.cni.dev/docs/spec/)
@@ -93,6 +99,14 @@ Calico, blocchi per nodo in `CiliumNode` con Cluster Pool IPAM.
 
 ## Collegamento fra Pod e nodo
 
+Al **livello 2 (L2)** i dispositivi inoltrano frame nello stesso segmento di
+rete usando indirizzi Media Access Control (MAC). Al **livello 3 (L3)** il
+kernel o un router instrada invece pacchetti IP fra reti o subnet differenti.
+Nel laboratorio, il bridge locale `cni0` svolge una funzione L2, mentre una
+route verso un PodCIDR remoto svolge una funzione L3. Questa distinzione
+descrive funzioni del percorso e non classifica un'intera soluzione CNI come
+esclusivamente L2 o L3.
+
 Il runtime crea il namespace del Pod. Una coppia virtual Ethernet (veth)
 collega normalmente l'interfaccia `eth0` del Pod a un'interfaccia nel
 namespace del nodo. Da questo punto le implementazioni divergono:
@@ -111,6 +125,8 @@ programmi eBPF agli endpoint osservati.
 
 L'**underlay** è la rete che rende raggiungibili i nodi. Un **overlay** crea
 una rete logica sopra di essa, di solito incapsulando il pacchetto originale.
+Nel laboratorio, VXLAN è l'overlay che trasporta il traffico virtuale sopra
+l'underlay dei nodi.
 
 VXLAN trasporta frame della rete virtuale dentro datagrammi User Datagram
 Protocol (UDP). Occorre distinguere:
@@ -126,6 +142,11 @@ La sola presenza di un'interfaccia VXLAN prova che il tunnel è configurato,
 non che uno specifico flusso lo abbia attraversato. Una dimostrazione causale
 correla il pacchetto interno e quello esterno mediante interfacce, timestamp,
 indirizzi, porte e payload.
+
+Cilium associa agli endpoint **security identity** numeriche derivate dalle
+label rilevanti per le policy. Queste identità non sostituiscono gli indirizzi
+IP: aggiungono un riferimento usato da policy e osservabilità e devono essere
+rilevate nuovamente a runtime.
 
 Tutte e tre le configurazioni sperimentate hanno usato VXLAN, ma con
 interfacce e parametri differenti: `flannel.1` su UDP 8472 e VNI 1,
@@ -148,6 +169,21 @@ di una soluzione: Calico può disabilitarlo in una rete esclusivamente VXLAN.
 Flannel `host-gw` e Calico BGP/no-overlay non sono inclusi nel campione;
 nessun percorso no-overlay è stato verificato nel laboratorio.
 
+## Netfilter, iptables, nftables e IPSet
+
+**Netfilter** è il framework del kernel Linux che offre punti di elaborazione
+e filtraggio dei pacchetti. `iptables` e `nftables` sono interfacce e toolchain
+con cui i componenti di rete programmano chain e regole; IPSet rappresenta
+insiemi di indirizzi o reti che tali regole possono consultare. Per questo E02
+ed E10 osservano insieme chain, regole e IPSet: l'oggetto NetworkPolicy
+nell'API non dimostra da solo che il kernel stia applicando il filtro.
+
+Il **conntrack** mantiene stato relativo alle connessioni o ai flussi. Lo stack
+Linux tradizionale usa il tracciamento delle connessioni associato a netfilter;
+Cilium mantiene anche stato conntrack in mappe BPF dedicate. Le due
+implementazioni non vanno confuse, anche quando descrivono lo stesso flusso
+applicativo.
+
 ## eBPF
 
 Extended Berkeley Packet Filter (eBPF) consente di caricare programmi
@@ -155,12 +191,19 @@ verificati nel kernel e collegarli a hook del percorso di rete. Una
 piattaforma può usare programmi e mappe eBPF per forwarding, policy,
 bilanciamento dei Service, Network Address Translation (NAT) e osservabilità.
 
+TCX è un meccanismo moderno del kernel Linux per collegare programmi eBPF al
+percorso traffic-control delle interfacce. Nel laboratorio permette di
+riconoscere gli hook Cilium associati alle veth dei Pod.
+
 eBPF non determina automaticamente il trasporto inter-node: può convivere con
 un tunnel o con routing nativo. Nel caso Cilium verificato, il data plane veth
-eBPF è stato combinato con VXLAN e con kube-proxy ancora attivo. Per i due
-flussi ClusterIP controllati, nuove entry conntrack eBPF e contatori
-kube-proxy invariati hanno attribuito selezione del backend e reverse NAT a
-Cilium; la conclusione non viene estesa ad altri percorsi o tipi di Service.
+eBPF è stato combinato con VXLAN e con kube-proxy ancora attivo. Nella sessione
+sperimentale storica, due flussi ClusterIP controllati hanno prodotto nuove
+entry conntrack eBPF mentre i contatori kube-proxy sono rimasti invariati,
+attribuendo a Cilium la selezione del backend e il reverse NAT. La procedura
+B02 corrente applica lo stesso metodo a sei connessioni per rafforzare la
+correlazione; le evidence originali a due flussi restano invariate. La
+conclusione non viene estesa ad altri percorsi o tipi di Service.
 
 ## Trasporto inter-node e packet processing: due assi distinti
 
@@ -192,8 +235,9 @@ Nel laboratorio:
   la selezione pubblica E01 non conserva output autonomi di questi test e non
   li presenta quindi come risultati pubblicamente dimostrati;
 - E10 ha attribuito i flussi osservati a kube-proxy iptables;
-- E20 ha attribuito due connessioni controllate al data plane eBPF Cilium,
-  pur mantenendo kube-proxy installato.
+- la sessione storica E20 ha attribuito due connessioni controllate al data
+  plane eBPF Cilium, pur mantenendo kube-proxy installato; la procedura B02
+  corrente usa sei connessioni con lo stesso criterio di attribuzione.
 
 ## NetworkPolicy
 
@@ -219,6 +263,12 @@ Legenda: **N** = funzione nativa; **O** = modalità o modulo opzionale; **D** =
 delegata; **C** = composizione; **—** = non è un obiettivo proprio. La matrice
 riassume famiglie di configurazioni documentate e non sostituisce la modalità
 effettivamente installata.
+
+Per esempio, la riga Flannel mostra una soluzione focalizzata sulla
+connettività della rete Pod: nel profilo studiato bridge e IPAM derivano dalla
+composizione CNI, mentre NetworkPolicy e Service dipendono da componenti
+separati. Le altre righe vanno lette nello stesso modo, distinguendo capacità
+documentate e configurazione effettivamente provata.
 
 | Soluzione | Ruolo | Rete Pod e IPAM | Trasporto/routing inter-node | Data plane / packet processing | Policy | Service |
 |---|---|---|---|---|---|---|
@@ -255,8 +305,10 @@ IP-in-IP o routing senza overlay. BGP può distribuire la raggiungibilità, ma
 non è necessario in una rete solo VXLAN. Calico dispone anche di data plane
 eBPF, nftables e VPP, che sono configurazioni distinte.
 
-Nel Kubernetes Datastore, Felix riceve gli aggiornamenti rilevanti e applica
-la policy; il policy controller di `calico-kube-controllers` documentato per
+Nel Kubernetes Datastore, Felix calcola lo stato del data plane a partire dagli
+oggetti e dalla configurazione osservata; la documentazione Calico descrive
+questo processo come **calculation graph**. Felix applica poi lo stato
+risultante. Il policy controller di `calico-kube-controllers` documentato per
 il datastore etcd non va attribuito alla configurazione provata. Con i data
 plane Linux iptables/nftables i Service restano normalmente a kube-proxy; il
 [data plane eBPF](https://docs.tigera.io/calico/latest/operations/ebpf/use-cases-ebpf)
