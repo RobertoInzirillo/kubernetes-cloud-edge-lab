@@ -4,17 +4,15 @@
 
 ### 1.1 Ottenere la repository
 
-La procedura richiede un account con `sudo` e accesso a Internet. Da una nuova
-installazione Ubuntu 24.04 Noble o dal sistema compatibile di riferimento,
-verificare `sudo` e installare Git se non è già disponibile:
+La procedura parte da una nuova installazione Zorin OS o Ubuntu compatibile con
+Ubuntu 24.04 Noble, architettura `amd64`. Servono un account con `sudo` e
+accesso a Internet. Installare Git, che verrà usato per ottenere la repository
+e registrare con precisione lo snapshot riprodotto:
 
 ```bash
 sudo -v
-if ! command -v git >/dev/null 2>&1
-then
-  sudo apt-get update
-  sudo apt-get install -y git
-fi
+sudo apt-get update
+sudo apt-get install -y git
 git --version
 ```
 
@@ -28,10 +26,10 @@ git status --short --branch
 git rev-parse --verify HEAD
 ```
 
-La validation end-to-end documentata nella sezione successiva ha usato il
-commit `d392dfb9b54753eb7e998d9620e02b01dbc36a2a`. Una riproduzione destinata a
-essere archiviata o citata deve registrare il tag o il commit selezionato e il
-valore restituito da `git rev-parse`.
+La validation end-to-end documentata di seguito ha usato il commit
+`d392dfb9b54753eb7e998d9620e02b01dbc36a2a`. Per ogni nuova riproduzione,
+registrare il tag o commit selezionato e il valore restituito da
+`git rev-parse`.
 
 ### 1.2 Percorso della guida
 
@@ -43,10 +41,10 @@ eseguono dalla radice della repository clonata. Ogni esperimento usa un
 cluster distinto; eliminarlo al termine evita che interfacce, route o regole
 residue influenzino il caso successivo.
 
-La guida presenta la procedura consolidata necessaria a riprodurre
-configurazioni, esperimenti, osservazioni e attribuzioni. Non ricostruisce la
-cronologia delle sessioni di sviluppo o dei tentativi intermedi che non
-influiscono sul risultato sperimentale.
+La guida presenta la procedura consolidata per riprodurre configurazioni,
+esperimenti, osservazioni e attribuzioni. Gli output già pubblicati descrivono
+i risultati osservati nel laboratorio; una nuova esecuzione deve riprodurre i
+comportamenti pertinenti, non gli stessi identificativi runtime.
 
 Percorso di lavoro:
 
@@ -57,35 +55,28 @@ Percorso di lavoro:
 5. eseguire uno o più esperimenti dal relativo punto di ingresso;
 6. controllare la rimozione dei cluster creati.
 
-La configurazione sperimentale descritta è quella validata nel laboratorio.
-Una prima validation incrementale di E01, E02, E10 ed E20 è stata completata
-e marcata con il tag `validation-pass-2026-08` sul commit
-`ac33de8c31dc3d27efe1542b79ec05e4a4d886ae`. Dopo quel tag sono state
-introdotte ulteriori correzioni tecniche e metodologiche, verificate
-inizialmente con esecuzioni mirate o incrementali.
-
-Successivamente, la guida sul singolo commit
-`d392dfb9b54753eb7e998d9620e02b01dbc36a2a` è stata eseguita integralmente da
-stato sperimentale pulito sul validator già predisposto, con Docker Engine e
-CLI `29.7.2`, containerd.io host `2.3.4` e Docker Buildx `0.36.1`. E01, E02,
-E10, E20 e il cleanup finale hanno avuto esito PASS. Questa esecuzione
-end-to-end non è partita da una nuova installazione Linux vergine. Gli output
-indicati come risultati appartengono agli esperimenti pubblicati e non vanno
-assunti come output dell'esecuzione end-to-end appena descritta.
+La prima validation incrementale di E01, E02, E10 ed E20 è marcata dal tag
+`validation-pass-2026-08` sul commit
+`ac33de8c31dc3d27efe1542b79ec05e4a4d886ae`. Successivamente, la guida al
+commit `d392dfb9b54753eb7e998d9620e02b01dbc36a2a` è stata eseguita integralmente
+da stato sperimentale pulito su un validator già predisposto, con Docker Engine
+e CLI `29.7.2`, containerd.io host `2.3.4` e Docker Buildx `0.36.1`. E01, E02,
+E10, E20 e cleanup finale hanno avuto esito PASS. Questa validation non è
+partita da una nuova installazione Linux vergine e non sostituisce gli output
+originali pubblicati come risultati degli esperimenti.
 
 ## 2. Ambiente di riferimento
 
 Il validator già predisposto usato per la validation end-to-end eseguiva Zorin
 OS 18.1, basato su Ubuntu 24.04 Noble, architettura `amd64`, control group v2
 (cgroup v2) e Berkeley Packet Filter filesystem (bpffs). Prima della full
-validation vi era stato osservato il kernel `7.0.0-30-generic`; la repository
-non conserva però un output della full validation che permetta di attribuire
-con certezza quella release all'intera esecuzione. Le evidence storiche E20
-registrano invece `7.0.0-28-generic` e non vengono uniformate alla sessione
-successiva. La procedura Advanced Package Tool (APT) seguente è scritta per
-Ubuntu Noble `amd64` e per il sistema compatibile usato nel laboratorio. Altre
-distribuzioni Linux possono essere compatibili, ma i loro comandi di
-installazione non sono stati verificati.
+validation era stato osservato il kernel `7.0.0-30-generic`, ma non è
+disponibile un output che lo attribuisca con certezza all'intera esecuzione. Le
+evidence storiche E20 registrano invece `7.0.0-28-generic` e restano invariate.
+
+I comandi APT seguenti sono scritti per Ubuntu Noble `amd64` e per il sistema
+compatibile usato nel laboratorio. Altre distribuzioni possono essere
+compatibili, ma non sono state verificate.
 
 La macchina deve avere accesso a Internet per repository APT, registry delle
 immagini, release binarie e chart Helm. Le catture richiedono `sudo` perché
@@ -95,28 +86,23 @@ entrano nel network namespace dei container nodo e aprono interfacce di rete.
 
 ### Immagine container, tag e digest OCI
 
-Un'immagine container contiene filesystem, metadati e configurazione necessari
-per avviare un container. Docker la scarica da un registry; k3d usa immagini
-K3s per creare i nodi e Kubernetes usa l'immagine BusyBox per i Pod del test.
+Un'immagine container contiene filesystem e configurazione necessari per
+avviare un container. k3d usa l'immagine K3s per creare i nodi; Kubernetes usa
+l'immagine BusyBox per i Pod del laboratorio.
 
-Un **tag**, per esempio `rancher/k3s:v1.34.9-k3s1`, è un nome pubblicato nel
-registry. Identifica una versione logica, ma il proprietario del repository
-può associarlo in seguito a contenuto diverso. Un **digest Open Container
-Initiative (OCI)**, per esempio `rancher/k3s@sha256:...`, identifica invece
-uno specifico manifest pubblicato. Gli esperimenti usano il digest del
-manifest `linux/amd64` per ridurre l'ambiguità.
+Un **tag**, per esempio `rancher/k3s:v1.34.9-k3s1`, identifica una versione
+logica ma può essere riassegnato. Un **digest Open Container Initiative (OCI)**,
+per esempio `rancher/k3s@sha256:...`, identifica invece uno specifico manifest.
+Gli esperimenti usano il digest `linux/amd64` per evitare ambiguità.
 
-Anche il checksum di un file può usare SHA-256, ma risponde a una domanda
-diversa. Il digest OCI identifica un manifest o un'immagine nel registry;
-`sha256sum file.tgz` verifica i byte di un file già scaricato. In questa guida
-si usano entrambi e non sono intercambiabili.
+Un checksum SHA-256 verifica invece i byte di un file scaricato. Digest OCI e
+checksum possono usare lo stesso algoritmo, ma identificano oggetti diversi.
 
 ### Helm, chart, values e post-renderer
 
-Helm gestisce pacchetti di risorse Kubernetes. Un **chart Helm** contiene
-template, metadati e valori predefiniti; un file `values.yaml` personalizza il
-rendering. `helm template` genera localmente i manifest senza installarli e
-permette quindi di ispezionare cosa verrebbe inviato al cluster.
+Un **chart Helm** contiene template e valori predefiniti per risorse
+Kubernetes; un file `values.yaml` ne personalizza il rendering. `helm template`
+genera i manifest localmente senza installarli.
 
 Un **post-renderer** riceve i manifest prodotti da Helm e li modifica prima
 dell'applicazione. In E10 lo script versionato
@@ -133,65 +119,58 @@ responsabilità; qui i termini sono usati soltanto per leggere i comandi.
 
 ### Identificativi effimeri
 
-Pod IP, ClusterIP dei Service, indirizzi underlay Docker, process identifier
-(PID) dei nodi, sandbox, veth, porte TCP sorgenti e security identity possono
-cambiare dopo una ricreazione o un riavvio. Non copiarli dagli output
-pubblicati.
-Le sezioni operative mostrano come rileggerli prima di ogni controllo.
+Pod IP, ClusterIP, indirizzi underlay Docker, PID dei nodi, sandbox, veth,
+porte sorgenti e security identity possono cambiare dopo una ricreazione o un
+riavvio. Non vanno copiati dagli output pubblicati: le sezioni operative li
+rileggono a runtime.
 
 ## 4. Preparazione dell'host
 
-Su Ubuntu 24.04 Noble o sul sistema compatibile di riferimento, installare i
-pacchetti che forniscono le utility richieste:
+Installare le utility di download, verifica e diagnostica di rete richieste dal
+laboratorio. Git è già stato installato per clonare la repository.
 
 ```bash
 sudo apt-get update
 sudo apt-get install -y \
-  ca-certificates curl git gpg file coreutils diffutils tar gzip grep sed mawk \
-  tcpdump util-linux iproute2 iptables nftables procps kmod
+  ca-certificates \
+  curl \
+  gpg \
+  file \
+  coreutils \
+  diffutils \
+  tar \
+  gzip \
+  grep \
+  sed \
+  mawk \
+  tcpdump \
+  util-linux \
+  iproute2 \
+  iptables \
+  nftables \
+  procps \
+  kmod
 ```
 
-Questo passaggio prepara utility di download e verifica, strumenti per
-namespace e rete, diagnostica dei processi e ispezione del kernel. È un
-prerequisito operativo della guida pubblica, non una variabile scientifica.
-Il blocco APT fa parte della procedura ed è stato incluso nella validation
-end-to-end.
+Questo passaggio prepara anche `tcpdump`, `nsenter`, `ip`, `bridge`, `iptables`
+e `nft`, usati più avanti per osservare namespace e data plane.
 
-Verificare sistema operativo, architettura, risorse e caratteristiche di base:
+Controllare sistema, architettura e risorse disponibili:
 
 ```bash
 cat /etc/os-release
 uname -srmo
 dpkg --print-architecture
 getconf LONG_BIT
-test "$(dpkg --print-architecture)" = amd64 && printf 'PASS: architettura amd64\n'
-test "$(getconf LONG_BIT)" -eq 64 && printf 'PASS: sistema a 64 bit\n'
 nproc
 free -h
 df -h /
-lsmod | grep -E '(^| )(br_netfilter|vxlan|overlay)( |$)' || true
-sysctl net.ipv4.ip_forward
-findmnt -T /sys/fs/cgroup
-findmnt -T /sys/fs/bpf || true
 stat -fc '%T %n' /sys/fs/cgroup
-test "$(stat -fc '%T' /sys/fs/cgroup)" = cgroup2fs && \
-  printf 'PASS: cgroup v2\n'
-if test -r /sys/kernel/btf/vmlinux
-then
-  printf 'PASS: BTF disponibile\n'
-else
-  printf 'ATTENZIONE: BTF non rilevato; fermarsi prima di E20\n' >&2
-fi
 ```
 
 Il risultato deve indicare Ubuntu Noble o il sistema compatibile di
-riferimento, `amd64`, 64 bit e `cgroup2fs` per `/sys/fs/cgroup`; fermarsi se
-architettura o cgroup non corrispondono. L'assenza di un modulo da `lsmod` non
-prova da sola un'incompatibilità: può essere integrato nel kernel o caricato al
-primo uso. Il forwarding può essere ancora `0` prima dell'avvio di Docker, ma
-deve risultare `1` nel controllo finale della toolchain; in caso contrario
-fermarsi prima di creare cluster. Per E20 verificare inoltre BTF e, dopo
-l'installazione di Cilium, il mount bpffs e i prerequisiti eBPF dentro i nodi.
+riferimento, `amd64`, 64 bit e `cgroup2fs` per `/sys/fs/cgroup`. Architettura e
+cgroup v2 sono requisiti della baseline; se non corrispondono, non proseguire.
 
 Per questo laboratorio a tre nodi sono raccomandati operativamente almeno 4
 thread CPU, 8 GiB di RAM e 20 GiB liberi. Non sono minimi ufficiali di
@@ -199,92 +178,51 @@ Kubernetes o Cilium: se la macchina offre meno risorse, ridurre il carico
 estraneo o prevedere timeout e possibili mancate convergenze durante la
 replica.
 
-Controllare quindi tutte le utility richieste:
+Controllare forwarding, moduli di rete e prerequisiti eBPF. Il forwarding può
+essere ancora `0` prima dell'avvio di Docker, ma dovrà risultare `1` nella
+verifica finale. BTF e bpffs saranno necessari in E20.
 
 ```bash
-for cmd in gpg file sha256sum diff tar gzip grep sed awk \
+sysctl net.ipv4.ip_forward
+lsmod | grep -E '(^| )(br_netfilter|vxlan|overlay)( |$)' || true
+ls -l /sys/kernel/btf/vmlinux
+findmnt /sys/fs/bpf || true
+```
+
+Infine verificare che le utility installate siano disponibili nel `PATH`:
+
+```bash
+command -v gpg file sha256sum diff tar gzip grep sed awk \
   tcpdump nsenter timeout ip bridge ss iptables nft pgrep lsmod sysctl
-do
-  path="$(type -P "$cmd")" || {
-    printf 'ERROR: utility non trovata nel PATH: %s\n' "$cmd" >&2
-    exit 1
-  }
-  if test -z "$path" || ! test -x "$path"
-  then
-    printf 'ERROR: utility non eseguibile nel PATH: %s\n' "$cmd" >&2
-    exit 1
-  fi
-  printf '%s\n' "$path"
-done
 iptables --version
 nft --version
 ```
 
-Il ciclo deve produrre per ogni utility il percorso dell'eseguibile risolto
-tramite `PATH`. Le sezioni successive usano anche i percorsi assoluti previsti
-dai pacchetti Ubuntu Noble.
+Se un comando richiesto non viene trovato, risolvere il problema prima di
+installare la toolchain.
 
 ## 5. Installazione della toolchain
 
 ### 5.1 Docker Engine
 
-La procedura usa il repository APT ufficiale Docker per Ubuntu Noble e rende
-esplicite le versioni della baseline consolidata. Prima di configurarlo,
-controllare senza rimuovere nulla se sono installati pacchetti che la
-documentazione Docker considera confliggenti:
+Docker fungerà da runtime per i container che k3d userà come nodi K3s del
+laboratorio. La procedura usa il repository APT ufficiale Docker per Ubuntu
+Noble e installa le versioni della baseline consolidata.
+
+Su un sistema appena installato non dovrebbero essere presenti pacchetti
+Docker o containerd confliggenti. Controllarli senza rimuovere nulla:
 
 ```bash
-DPKG_PREFLIGHT_RC=0
-if DPKG_INVENTORY="$(dpkg-query -W \
-    -f='${binary:Package}\t${db:Status-Abbrev}\n' 2>&1)"
-then
-  if DPKG_CONFLICTS="$(awk '
-    $1 ~ /^(docker\.io|docker-compose|docker-compose-v2|docker-doc|docker-buildx|podman-docker|containerd|runc)(:[^[:space:]]+)?$/ &&
-    $2 ~ /^ii/ { print; found=1 }
-    END { exit !found }
-  ' <<<"$DPKG_INVENTORY")"
-  then
-    DPKG_FILTER_RC=0
-  else
-    DPKG_FILTER_RC=$?
-  fi
-  case "$DPKG_FILTER_RC" in
-    0)
-      printf '%s\n' "$DPKG_CONFLICTS"
-      printf 'STOP: pacchetti Docker confliggenti installati.\n' >&2
-      DPKG_PREFLIGHT_RC=1
-      ;;
-    1)
-      printf 'PASS: nessun pacchetto Docker confliggente installato.\n'
-      ;;
-    *)
-      printf 'ERROR: filtro inventario dpkg fallito (awk rc=%s).\n' \
-        "$DPKG_FILTER_RC" >&2
-      DPKG_PREFLIGHT_RC=1
-      ;;
-  esac
-else
-  DPKG_RC=$?
-  printf 'ERROR: interrogazione dpkg fallita (rc=%s):\n%s\n' \
-    "$DPKG_RC" "$DPKG_INVENTORY" >&2
-  DPKG_PREFLIGHT_RC=1
-fi
-unset DPKG_INVENTORY DPKG_CONFLICTS DPKG_FILTER_RC DPKG_RC
-if [[ "$DPKG_PREFLIGHT_RC" -ne 0 ]]
-then
-  unset DPKG_PREFLIGHT_RC
-  false
-else
-  unset DPKG_PREFLIGHT_RC
-fi
+dpkg-query -W -f='${binary:Package}\t${db:Status-Abbrev}\n' |
+awk '
+  $1 ~ /^(docker\.io|docker-compose|docker-compose-v2|docker-doc|docker-buildx|podman-docker|containerd|runc)(:[^[:space:]]+)?$/ &&
+  $2 ~ /^ii/ { print }
+'
 ```
 
-L'esito atteso è `PASS: nessun pacchetto Docker confliggente installato` con
-codice zero. Un inventario non leggibile produce `ERROR`; la presenza di uno
-o più pacchetti elencati produce `STOP` e codice non-zero. In entrambi i casi
-fermarsi prima dell'installazione: valutarne consapevolmente rimozione e dati
-associati seguendo la documentazione Docker, senza cancellarli come effetto
-automatico di questa guida.
+L'output deve essere vuoto. Se vengono mostrati pacchetti confliggenti,
+fermarsi e verificarli prima di proseguire. La guida non li rimuove
+automaticamente.
 
 Installare quindi certificati e client HTTP, poi il keyring e la definizione
 del repository:
@@ -315,19 +253,12 @@ sudo apt-get update
 La chiave deve essere intestata a `Docker Release (CE deb)` e mostrare la
 fingerprint `9DC8 5822 9FC7 DD38 854A E2D8 8D81 803C 0EBF CD88`.
 
-Controllare origine e disponibilità dei pacchetti, poi simulare
-l'installazione senza modificare l'host:
+Controllare origine e disponibilità dei pacchetti:
 
 ```bash
 apt-cache policy \
   docker-ce docker-ce-cli containerd.io \
   docker-buildx-plugin
-
-apt-get --simulate install \
-  docker-ce=5:29.7.2-1~ubuntu.24.04~noble \
-  docker-ce-cli=5:29.7.2-1~ubuntu.24.04~noble \
-  containerd.io=2.3.4-1~ubuntu.24.04~noble \
-  docker-buildx-plugin=0.36.1-1~ubuntu.24.04~noble
 ```
 
 I candidati devono provenire da `download.docker.com`, suite Noble, canale
@@ -346,29 +277,15 @@ sudo apt-get install -y \
 ```
 
 Il laboratorio usa il daemon Docker di sistema e `docker buildx imagetools`.
-Non usa Docker Compose né la modalità rootless; i relativi plugin non fanno
-quindi parte della baseline consolidata.
-
-Verificare pacchetti, servizi e socket:
+Docker Compose e la modalità rootless non fanno parte della baseline.
+Controllare che Docker e containerd siano attivi:
 
 ```bash
-dpkg-query -W \
-  docker-ce docker-ce-cli containerd.io \
-  docker-buildx-plugin
-systemctl is-active docker docker.socket containerd
-systemctl is-enabled docker docker.socket containerd
-stat -c '%a %U:%G %n' /run/docker.sock
-docker --version
-containerd --version
-runc --version
-docker buildx version
+systemctl is-active docker containerd
 ```
 
-I servizi `docker` e `containerd` e il socket Docker devono essere attivi; il
-socket deve appartenere a
-`root:docker`. Dopo avere ottenuto l'accesso utente nella sezione successiva,
-`docker info` dovrà riportare storage driver `overlayfs`, cgroup v2 e cgroup
-driver `systemd`.
+Entrambi i servizi devono risultare `active`. Versioni e configurazione del
+daemon verranno controllate insieme al termine dell'installazione.
 
 ### 5.2 Accesso al daemon Docker
 
@@ -382,20 +299,18 @@ sudo usermod -aG docker "$USER"
 L'appartenenza al gruppo `docker` consente di avviare container privilegiati
 e concede di fatto privilegi elevati sull'host. A questo punto effettuare
 logout e login e **non proseguire nella vecchia shell**. Dopo il nuovo login,
-tornare esplicitamente nella repository e verificare il nuovo gruppo:
+tornare esplicitamente nella repository e verificare l'accesso:
 
 ```bash
 cd "$HOME/kubernetes-cloud-edge-lab"
 git status --short --branch
 id -nG
-docker version
-docker info --format \
-  'Server={{.ServerVersion}}; Driver={{.Driver}}; Cgroup={{.CgroupDriver}}; CgroupVersion={{.CgroupVersion}}'
+docker info
 ```
 
-Se il socket continua a restituire `permission denied`, non usare `sudo
-docker` come soluzione permanente: controllare `id -nG`, chiudere la sessione
-e accedere nuovamente.
+`id -nG` deve includere `docker` e `docker info` deve rispondere senza `sudo`.
+Se restituisce `permission denied`, chiudere completamente la sessione e
+accedere nuovamente; non usare `sudo docker` come soluzione permanente.
 
 Creare soltanto ora la directory temporanea usata per kubectl, Helm e k3d:
 
@@ -409,51 +324,36 @@ variabili definite prima del logout.
 
 ### 5.3 kubectl
 
-kubectl `v1.34.9` usa la stessa minor di Kubernetes/K3s del laboratorio. Si
-scaricano binario e checksum pubblicato, poi si confrontano con il checksum
-atteso:
+kubectl è il client usato per interrogare l'API server Kubernetes durante tutti
+gli esperimenti. La versione `v1.34.9` usa la stessa minor di Kubernetes/K3s
+del laboratorio. Scaricare il binario e verificarlo con il checksum validato:
 
 ```bash
-export KUBECTL_FILE="$TOOLCHAIN_DIR/kubectl-v1.34.9-linux-amd64"
-export KUBECTL_SHA256='73bb6f5063caadae1e73a39de018d8ad21755984bea35358484db817859e7634'
+KUBECTL_FILE="$TOOLCHAIN_DIR/kubectl-v1.34.9-linux-amd64"
+KUBECTL_SHA256='73bb6f5063caadae1e73a39de018d8ad21755984bea35358484db817859e7634'
 
 curl --fail --location --retry 3 \
   --output "$KUBECTL_FILE" \
   https://dl.k8s.io/release/v1.34.9/bin/linux/amd64/kubectl
-curl --fail --location --retry 3 \
-  --output "$TOOLCHAIN_DIR/kubectl.sha256" \
-  https://dl.k8s.io/release/v1.34.9/bin/linux/amd64/kubectl.sha256
-
-test "$(tr -d '[:space:]' < "$TOOLCHAIN_DIR/kubectl.sha256")" = \
-  "$KUBECTL_SHA256"
 printf '%s  %s\n' "$KUBECTL_SHA256" "$KUBECTL_FILE" | sha256sum --check -
-file "$KUBECTL_FILE"
-chmod 0755 "$KUBECTL_FILE"
-"$KUBECTL_FILE" version --client -o yaml
-```
 
-Installare soltanto dopo il confronto positivo:
-
-```bash
 sudo install -o root -g root -m 0755 \
   "$KUBECTL_FILE" /usr/local/bin/kubectl
-command -v kubectl
 kubectl version --client -o yaml
-sha256sum /usr/local/bin/kubectl
 ```
 
-Il comando deve risolvere `/usr/local/bin/kubectl`, riportare `v1.34.9` e
-conservare lo SHA-256 atteso.
+Il checksum deve risultare `OK` e la versione finale deve riportare `v1.34.9`.
+Se la verifica SHA-256 fallisce, non installare il file.
 
 ### 5.4 Helm
 
-Helm verrà usato per scaricare, renderizzare e installare i chart Calico e
-Cilium. Scaricare e verificare la release `v3.21.3`:
+Helm verrà usato per renderizzare e installare componenti come Calico e
+Cilium. Scaricare l'archivio `v3.21.3`, verificarlo e installare il binario:
 
 ```bash
-export HELM_ARCHIVE="$TOOLCHAIN_DIR/helm-v3.21.3-linux-amd64.tar.gz"
-export HELM_EXTRACT_DIR="$TOOLCHAIN_DIR/helm-v3.21.3-extract"
-export HELM_ARCHIVE_SHA256='15e041a93a590dce8100f39385cd98c84a765c9e36aeeb9e2dc6ff9e4769e2e0'
+HELM_ARCHIVE="$TOOLCHAIN_DIR/helm-v3.21.3-linux-amd64.tar.gz"
+HELM_EXTRACT_DIR="$TOOLCHAIN_DIR/helm-v3.21.3-extract"
+HELM_ARCHIVE_SHA256='15e041a93a590dce8100f39385cd98c84a765c9e36aeeb9e2dc6ff9e4769e2e0'
 
 curl --fail --location --retry 3 \
   --output "$HELM_ARCHIVE" \
@@ -462,78 +362,65 @@ printf '%s  %s\n' "$HELM_ARCHIVE_SHA256" "$HELM_ARCHIVE" | \
   sha256sum --check -
 mkdir -p "$HELM_EXTRACT_DIR"
 tar -xzf "$HELM_ARCHIVE" -C "$HELM_EXTRACT_DIR"
-file "$HELM_EXTRACT_DIR/linux-amd64/helm"
-"$HELM_EXTRACT_DIR/linux-amd64/helm" version --short
-```
-
-Installare e confrontare il binario sorgente con quello copiato:
-
-```bash
 sudo install -o root -g root -m 0755 \
   "$HELM_EXTRACT_DIR/linux-amd64/helm" /usr/local/bin/helm
-command -v helm
 helm version --short
-sha256sum "$HELM_EXTRACT_DIR/linux-amd64/helm" /usr/local/bin/helm
 ```
 
-Helm deve riportare `v3.21.3+g1ad6e68`; entrambi i binari devono avere
-SHA-256 `46870487d8cbd7f304b93dc38bb6d91e4813d5c9bfab061538f474d775006f42`.
+Il checksum dell'archivio deve risultare `OK` e Helm deve riportare
+`v3.21.3+g1ad6e68`. Il binario validato ha SHA-256
+`46870487d8cbd7f304b93dc38bb6d91e4813d5c9bfab061538f474d775006f42`.
 
 ### 5.5 k3d
 
-k3d crea cluster K3s i cui nodi sono container Docker. Il suo default K3s
-incorporato non determina la versione degli esperimenti, perché ogni comando
-di creazione passa esplicitamente l'immagine K3s bloccata.
+k3d crea cluster K3s i cui nodi vengono eseguiti come container Docker,
+permettendo di costruire una topologia multi-node sul singolo host. Il suo
+default K3s incorporato non determina la versione degli esperimenti: ogni
+comando di creazione usa esplicitamente l'immagine K3s bloccata.
 
 ```bash
-export K3D_FILE="$TOOLCHAIN_DIR/k3d-v5.9.0-linux-amd64"
-export K3D_SHA256='06d8f25bc3a971c4eb29e0ff08429b180402db0f4dec838c9eac427e296800a0'
+K3D_FILE="$TOOLCHAIN_DIR/k3d-v5.9.0-linux-amd64"
+K3D_SHA256='06d8f25bc3a971c4eb29e0ff08429b180402db0f4dec838c9eac427e296800a0'
 
 curl --fail --location --retry 3 \
   --output "$K3D_FILE" \
   https://github.com/k3d-io/k3d/releases/download/v5.9.0/k3d-linux-amd64
-chmod 0755 "$K3D_FILE"
 printf '%s  %s\n' "$K3D_SHA256" "$K3D_FILE" | sha256sum --check -
-file "$K3D_FILE"
-"$K3D_FILE" version
 
 sudo install -o root -g root -m 0755 \
   "$K3D_FILE" /usr/local/bin/k3d
-command -v k3d
 k3d version
-sha256sum "$K3D_FILE" /usr/local/bin/k3d
 ```
 
-Il risultato deve indicare k3d `v5.9.0`; il default incorporato
-`v1.35.5-k3s1` non verrà usato. Il binario installato deve conservare lo
-SHA-256 atteso.
+Il checksum deve risultare `OK` e la versione deve indicare k3d `v5.9.0`. Il
+default incorporato `v1.35.5-k3s1` non verrà usato.
 
 ### 5.6 Verifica finale della toolchain
 
 Al termine delle installazioni, eseguire il controllo complessivo:
 
 ```bash
-id
 id -nG
-getent group docker
 docker --version
+containerd --version
+docker buildx version
 docker info --format \
   'Server={{.ServerVersion}}; Driver={{.Driver}}; Cgroup={{.CgroupDriver}}; CgroupVersion={{.CgroupVersion}}'
 kubectl version --client -o yaml
 helm version --short
 k3d version
-lsmod | grep -E '(^| )(br_netfilter|vxlan|overlay)( |$)' || true
+stat -fc '%T %n' /sys/fs/cgroup
 sysctl net.ipv4.ip_forward
-test "$(sysctl -n net.ipv4.ip_forward)" -eq 1 && \
-  printf 'PASS: forwarding IPv4 abilitato\n'
-mount | grep -E 'cgroup2|bpf' || true
+ls -l /sys/kernel/btf/vmlinux
+findmnt /sys/fs/bpf || true
 ```
 
 Verificare che l'utente appartenga al gruppo `docker`, che il daemon risponda
-senza `sudo`, che usi `overlayfs`, cgroup v2 e driver `systemd`, e che le tre
-Command Line Interface (CLI) riportino le versioni previste. Non devono
-comparire errori evidenti del daemon e `net.ipv4.ip_forward` deve valere `1`;
-se vale ancora `0`, fermarsi prima di creare cluster.
+senza `sudo`, che usi storage driver `overlayfs`, cgroup v2 e cgroup driver
+`systemd`. Le CLI devono riportare le versioni bloccate e
+`net.ipv4.ip_forward` deve valere `1`; in caso contrario non creare cluster.
+BTF deve essere disponibile prima di E20. Il mount bpffs può essere verificato
+nuovamente dentro i nodi dopo l'installazione di Cilium.
 
 `TOOLCHAIN_DIR` serve soltanto durante la sezione 5. Dopo un esito positivo si
 può eliminarla con il comando seguente; in caso di errore conservarla finché
@@ -541,9 +428,6 @@ non sono stati ispezionati file e checksum:
 
 ```bash
 rm -rf -- "$TOOLCHAIN_DIR"
-unset TOOLCHAIN_DIR KUBECTL_FILE KUBECTL_SHA256 \
-  HELM_ARCHIVE HELM_EXTRACT_DIR HELM_ARCHIVE_SHA256 \
-  K3D_FILE K3D_SHA256
 ```
 
 ## 6. Versioni, immagini e artefatti bloccati
@@ -577,13 +461,19 @@ il manifest `linux/amd64` usato dai nodi era:
 sha256:0487bcfa1ea34f02a80c93122520fb70af434663a3bcdb61a697a0b5ab37e69d
 ```
 
-Ispezionare tag e manifest, quindi scaricare il digest effettivamente usato:
+Scaricare il manifest `linux/amd64` effettivamente usato dai nodi:
+
+```bash
+docker pull --platform linux/amd64 \
+  docker.io/rancher/k3s@sha256:0487bcfa1ea34f02a80c93122520fb70af434663a3bcdb61a697a0b5ab37e69d
+```
+
+L'ispezione dettagliata dell'indice OCI è facoltativa e non serve per
+proseguire:
 
 ```bash
 docker buildx imagetools inspect \
   docker.io/rancher/k3s:v1.34.9-k3s1
-docker pull --platform linux/amd64 \
-  docker.io/rancher/k3s@sha256:0487bcfa1ea34f02a80c93122520fb70af434663a3bcdb61a697a0b5ab37e69d
 docker image inspect \
   --format 'RepoDigests={{json .RepoDigests}}; OS={{.Os}}; Architecture={{.Architecture}}; Size={{.Size}}' \
   docker.io/rancher/k3s@sha256:0487bcfa1ea34f02a80c93122520fb70af434663a3bcdb61a697a0b5ab37e69d
@@ -605,9 +495,14 @@ sha256:1cfa4e2b09e127b9c4ed43578d3f3c18e7d44ea47b9ea98475c0cbe9086525f8
 ```
 
 ```bash
-docker buildx imagetools inspect docker.io/library/busybox:1.38.0
 docker pull --platform linux/amd64 \
   docker.io/library/busybox@sha256:1cfa4e2b09e127b9c4ed43578d3f3c18e7d44ea47b9ea98475c0cbe9086525f8
+```
+
+Anche per BusyBox l'ispezione OCI dettagliata è facoltativa:
+
+```bash
+docker buildx imagetools inspect docker.io/library/busybox:1.38.0
 docker image inspect \
   --format 'RepoDigests={{json .RepoDigests}}; OS={{.Os}}; Architecture={{.Architecture}}; Size={{.Size}}' \
   docker.io/library/busybox@sha256:1cfa4e2b09e127b9c4ed43578d3f3c18e7d44ea47b9ea98475c0cbe9086525f8
@@ -616,23 +511,6 @@ docker image inspect \
 BusyBox fornisce `sh`, `sleep`, `httpd`, `ping`, `wget` e `nslookup`, cioè
 gli strumenti minimi del workload. Il manifest comune conserva il digest e
 non richiede di riscriverlo durante gli esperimenti.
-
-Verificare infine file e script pubblici:
-
-```bash
-test -f manifests/cni/common/workload.yaml
-test -f manifests/cni/common/default-deny-ingress.yaml
-test -f manifests/cni/common/allow-client-to-http-servers.yaml
-test -f manifests/cni/calico/tigera-operator-values.yaml
-test -f manifests/cni/calico/imageset.yaml
-test -f manifests/cni/calico/installation.yaml
-test -f manifests/cni/cilium/values.yaml
-test -f scripts/cni/common/lab-env.sh
-test -f scripts/cni/common/service.sh
-test -f scripts/cni/common/capture.sh
-test -f scripts/cni/calico/e10-service.sh
-test -x scripts/cni/calico/pin-tigera-operator-image.sh
-```
 
 ## 7. Convenzioni e variabili comuni
 
