@@ -26,10 +26,7 @@ git status --short --branch
 git rev-parse --verify HEAD
 ```
 
-La procedura è stata verificata end-to-end sul commit
-`d392dfb9b54753eb7e998d9620e02b01dbc36a2a`. Per ogni nuova riproduzione,
-registrare il tag o commit selezionato e il valore restituito da
-`git rev-parse`.
+La procedura è stata verificata end-to-end. Per ogni nuova riproduzione, registrare il tag o commit utilizzato e il valore restituito da git rev-parse HEAD.
 
 ### 1.2 Percorso della guida
 
