@@ -839,10 +839,19 @@ ss -ltn 'sport = :6445'
 
 ## 9. E02 — attribuzione delle NetworkPolicy nello stack K3s
 
-E02 confronta due cluster equivalenti: controller NetworkPolicy K3s attivo
-(ON) e disabilitato (OFF). La domanda è se il comportamento NetworkPolicy
-osservato dipenda da Flannel oppure da un componente separato dello stack
-K3s. Eseguire i cluster in sequenza per evitare ambiguità.
+In E01 abbiamo osservato come Flannel configura e trasporta il traffico Pod.
+E02 separa una funzione diversa: l'enforcement delle NetworkPolicy. Il
+confronto non usa due CNI differenti, ma due cluster con lo stesso networking
+Flannel:
+
+- nel caso ON il controller NetworkPolicy integrato in K3s è attivo;
+- nel caso OFF lo stesso componente è disabilitato con
+  `--disable-network-policy`.
+
+Se gli stessi oggetti NetworkPolicy modificano il traffico soltanto nel caso
+ON e producono lì le relative strutture kernel, possiamo attribuire
+l'enforcement al controller K3s anziché a Flannel. I due cluster vanno eseguiti
+in sequenza per evitare ambiguità.
 
 Questo è il punto di ingresso E02 anche in una nuova shell:
 
@@ -852,18 +861,14 @@ source scripts/cni/common/lab-env.sh
 source scripts/cni/k3s/e02-policy.sh
 ```
 
-La matrice comprende `client → server-a`, `client → server-b` e
-`server-a → server-b`, con due nuove connessioni per ogni flusso. La funzione
-`run_policy_matrix` della sezione 7.1 esegue esplicitamente le sei richieste e
-verifica il risultato atteso.
+`e02-policy.sh` fornisce il gate di convergenza e gli observer specifici del
+policy plane K3s. La matrice autoritativa comprende due nuove connessioni per
+ognuno dei flussi `client → server-a`, `client → server-b` e
+`server-a → server-b`, per un totale di sei richieste per stato.
 
-Per capire se una policy è stata tradotta nel data plane, leggiamo i log del
-controller e cerchiamo catene iptables e insiemi IPSet con prefisso `KUBE-`.
-La funzione usa il prefisso nodo del cluster corrente.
-
-La definizione è fornita da `scripts/cni/k3s/e02-policy.sh`. Per ciascun
-nodo il controllo mantiene visibili questi observer, senza generare traffico
-workload:
+La presenza dell'oggetto NetworkPolicy nell'API non basta a dimostrare
+l'enforcement. `inspect_k3s_policy_plane` mantiene osservabili, su ciascun
+nodo, log del controller, iptables e IPSet attraverso questi comandi:
 
 ```text
 docker logs "$NODE"
@@ -873,13 +878,35 @@ docker exec "$NODE" /bin/aux/iptables-save -c
 docker exec "$NODE" /bin/ipset save
 ```
 
-I log identificano il controller kube-router; `iptables-save` espone le
-catene `KUBE-NWPLCY-*` e `KUBE-POD-FW-*`, mentre `ipset save` mostra gli
-insiemi Kubernetes usati dai selector. Il gate di convergenza collega i
-marker semantici delle policy alle catene prima che la matrice HTTP produca
-le sei connessioni autorevoli.
+I log identificano il controller basato su kube-router. Le chain
+`KUBE-NWPLCY-*` rappresentano regole derivate dalle policy; le chain
+`KUBE-POD-FW-*` collegano tali regole ai Pod interessati. Gli IPSet con
+prefisso `KUBE-` materializzano indirizzi e selector usati dalle regole:
 
-### 9.1 Controllo ON
+```text
+NetworkPolicy API
+        ↓
+controller K3s
+        ↓
+chain iptables e IPSet
+        ↓
+traffico consentito o bloccato
+```
+
+Dopo ogni modifica nel caso ON,
+`wait_for_k3s_policy_convergence STATO` attende che chain e collegamenti
+corrispondano allo stato richiesto. Il gate legge soltanto il data plane, non
+genera traffico workload e non sostituisce la matrice autoritativa, che viene
+eseguita una sola volta dopo la convergenza.
+
+I blocchi di ogni stato sono sequenziali: eseguire il successivo soltanto se il
+precedente termina correttamente. In particolare, non avviare mai una matrice
+se la mutazione API o il gate che la precede falliscono.
+
+### 9.1 Controller ON
+
+Il primo cluster usa la configurazione K3s standard: Flannel e controller
+NetworkPolicy sono entrambi attivi.
 
 ```bash
 check_experiment_preflight tesi-e02-flannel-netpol-on 6446
@@ -896,72 +923,125 @@ kubectl --context "$TESI_CONTEXT" wait \
   --for=condition=Ready node --all --timeout=120s
 ```
 
-Applicare il workload con il blocco della sezione 7.1. La baseline, senza
-NetworkPolicy, deve consentire tutte le sei connessioni:
+#### Baseline — 6/6 consentite
+
+Applicare il workload e controllare il placement. Senza NetworkPolicy, tutte le
+sei connessioni della matrice devono riuscire:
 
 ```bash
-deploy_common_workload &&
-run_policy_matrix allow-all &&
+deploy_common_workload
+kubectl --context "$TESI_CONTEXT" get pods -n net-lab -o wide
+```
+
+Quando i tre Pod sono Ready e collocati sui nodi previsti, eseguire la singola
+matrice baseline e osservare il policy plane:
+
+```bash
+run_policy_matrix allow-all
 inspect_k3s_policy_plane
 ```
 
-Applicare il default deny, controllare l'oggetto API ed eseguire di nuovo la
-matrice. `wait_for_k3s_policy_convergence` attende le relazioni semanticamente
-marcate fra
-`KUBE-NWPLCY-*`, `KUBE-POD-FW-*` e i nomi delle policy, senza dipendere dagli
-hash delle chain:
+Questa matrice `6/6` è la baseline autoritativa prima dell'introduzione delle
+policy.
+
+#### Default deny — 0/6 consentite
+
+Applicare la policy, mostrarne l'oggetto API, attendere la traduzione nel data
+plane e soltanto dopo generare la matrice:
 
 ```bash
 kubectl --context "$TESI_CONTEXT" apply \
-  -f manifests/cni/common/default-deny-ingress.yaml &&
+  -f manifests/cni/common/default-deny-ingress.yaml
 kubectl --context "$TESI_CONTEXT" get networkpolicy \
-  default-deny-ingress -n net-lab -o yaml &&
-wait_for_k3s_policy_convergence default-deny &&
-run_policy_matrix deny-all &&
+  default-deny-ingress -n net-lab -o yaml
+```
+
+La presenza nell'API è soltanto il primo passaggio. Attendere ora la
+convergenza delle chain:
+
+```bash
+wait_for_k3s_policy_convergence default-deny
+```
+
+Soltanto dopo il PASS del gate, eseguire la matrice autoritativa e acquisire gli
+observer:
+
+```bash
+run_policy_matrix deny-all
 inspect_k3s_policy_plane
 ```
 
-Le sei connessioni devono fallire, mentre i Pod restano `Ready`. Catene,
-IPSet e contatori devono mostrare la traduzione del deny. Il gate precedente
-legge soltanto il dataplane: la singola matrice resta la verifica applicativa
-autorevole e l'unica sorgente di nuovo traffico workload in questa fase.
+Le sei connessioni devono essere negate, mentre i Pod restano Ready. Le chain
+`KUBE-NWPLCY-*`, il linkage da `KUBE-POD-FW-*` e gli IPSet devono mostrare la
+traduzione concreta del default deny.
 
-Applicare quindi l'allow mirata e ripetere la matrice:
+#### Selective allow — 4/6 consentite
+
+Applicare l'allow mirata senza rimuovere il default deny, attendere nuovamente
+la convergenza ed eseguire una sola matrice:
 
 ```bash
 kubectl --context "$TESI_CONTEXT" apply \
-  -f manifests/cni/common/allow-client-to-http-servers.yaml &&
-kubectl --context "$TESI_CONTEXT" get networkpolicy -n net-lab -o yaml &&
-wait_for_k3s_policy_convergence selective-allow &&
-run_policy_matrix selective-allow &&
+  -f manifests/cni/common/allow-client-to-http-servers.yaml
+kubectl --context "$TESI_CONTEXT" get networkpolicy -n net-lab -o yaml
+```
+
+Attendere che il data plane rappresenti entrambe le policy:
+
+```bash
+wait_for_k3s_policy_convergence selective-allow
+```
+
+Soltanto dopo il PASS del gate, eseguire la matrice e gli observer:
+
+```bash
+run_policy_matrix selective-allow
 inspect_k3s_policy_plane
 ```
 
 Devono riuscire quattro richieste dal client e fallire le due da `server-a`.
-Gli artefatti kernel devono essere coerenti con l'allow selettiva. Rimuovere
-quindi entrambe le policy e richiedere il ripristino della matrice baseline:
+Chain, linkage e IPSet devono essere coerenti con entrambe le policy presenti.
+
+#### Restore — 6/6 consentite
+
+Rimuovere entrambe le policy, attendere la scomparsa dei relativi collegamenti
+dal data plane e verificare il ritorno alla baseline:
 
 ```bash
 kubectl --context "$TESI_CONTEXT" delete \
   -f manifests/cni/common/allow-client-to-http-servers.yaml \
-  --ignore-not-found &&
+  --ignore-not-found
 kubectl --context "$TESI_CONTEXT" delete \
   -f manifests/cni/common/default-deny-ingress.yaml \
-  --ignore-not-found &&
-wait_for_k3s_policy_convergence restored &&
-run_policy_matrix allow-all &&
+  --ignore-not-found
+```
+
+Attendere la rimozione delle strutture policy-specifiche:
+
+```bash
+wait_for_k3s_policy_convergence restored
+```
+
+Soltanto dopo il PASS del gate, verificare il ritorno alla baseline:
+
+```bash
+run_policy_matrix allow-all
 inspect_k3s_policy_plane
 ```
 
-Il controllo ON è causalmente valido soltanto se anche questo ripristino
-riesce. Terminare quindi il cluster:
+Il controllo ON è completo soltanto se anche il restore torna a `6/6`.
+Eliminare quindi esclusivamente il cluster ON:
 
 ```bash
 kubectl --context "$TESI_CONTEXT" get pods -n net-lab -o wide
 k3d cluster delete tesi-e02-flannel-netpol-on
 ```
 
-### 9.2 Controllo OFF
+### 9.2 Controller OFF
+
+Il secondo cluster conserva Flannel e la stessa topologia, ma disabilita il
+controller con `--disable-network-policy`. Questa è l'unica differenza causale
+pertinente rispetto al caso ON.
 
 ```bash
 check_experiment_preflight tesi-e02-flannel-netpol-off 6447
@@ -979,62 +1059,121 @@ kubectl --context "$TESI_CONTEXT" wait \
   --for=condition=Ready node --all --timeout=120s
 ```
 
-Applicare il workload con la sezione 7.1. Poiché il controller è disabilitato,
-in tutti e tre gli stati l'esito atteso resta `allow-all`:
+#### Baseline — 6/6 consentite
+
+Applicare lo stesso workload. Prima delle policy, la matrice deve nuovamente
+consentire tutte le connessioni:
 
 ```bash
-deploy_common_workload &&
+deploy_common_workload
+kubectl --context "$TESI_CONTEXT" get pods -n net-lab -o wide
+```
 
-# Baseline senza policy
-run_policy_matrix allow-all &&
-inspect_k3s_policy_plane &&
+Quando i Pod sono Ready, eseguire la matrice baseline e gli observer:
 
-# Default deny dichiarato nell'API
-kubectl --context "$TESI_CONTEXT" apply \
-  -f manifests/cni/common/default-deny-ingress.yaml &&
-kubectl --context "$TESI_CONTEXT" get networkpolicy \
-  default-deny-ingress -n net-lab -o yaml &&
-run_policy_matrix allow-all &&
-inspect_k3s_policy_plane &&
-
-# Default deny più allow selettiva
-kubectl --context "$TESI_CONTEXT" apply \
-  -f manifests/cni/common/allow-client-to-http-servers.yaml &&
-kubectl --context "$TESI_CONTEXT" get networkpolicy -n net-lab -o yaml &&
-run_policy_matrix allow-all &&
+```bash
+run_policy_matrix allow-all
 inspect_k3s_policy_plane
 ```
 
-Nel caso OFF gli oggetti API devono essere presenti, ma tutte le 18
-connessioni devono riuscire. I dump policy-specifici devono rimanere invariati
-e i log dei tre nodi non devono mostrare l'avvio del controller. Questo
-controllo separa l'API dichiarativa dall'enforcement e attribuisce il
-comportamento del caso ON al controller K3s basato su kube-router, non a
-Flannel.
+#### Default deny presente nell'API — ancora 6/6
+
+Applicare lo stesso default deny del caso ON e verificare che l'API Kubernetes
+lo conservi. Poiché il controller è disabilitato, non si attende la creazione
+di chain di enforcement e la matrice resta `allow-all`:
+
+```bash
+kubectl --context "$TESI_CONTEXT" apply \
+  -f manifests/cni/common/default-deny-ingress.yaml
+kubectl --context "$TESI_CONTEXT" get networkpolicy \
+  default-deny-ingress -n net-lab -o yaml
+```
+
+Solo dopo avere osservato l'oggetto nell'API, eseguire la singola matrice e
+controllare l'assenza delle strutture di enforcement:
+
+```bash
+run_policy_matrix allow-all
+inspect_k3s_policy_plane
+```
+
+#### Selective allow presente nell'API — ancora 6/6
+
+Applicare anche l'allow mirata. Entrambi gli oggetti devono essere visibili
+nell'API, ma il traffico deve continuare a essere consentito:
+
+```bash
+kubectl --context "$TESI_CONTEXT" apply \
+  -f manifests/cni/common/allow-client-to-http-servers.yaml
+kubectl --context "$TESI_CONTEXT" get networkpolicy -n net-lab -o yaml
+```
+
+Con entrambi gli oggetti visibili nell'API, eseguire una sola matrice e gli
+observer:
+
+```bash
+run_policy_matrix allow-all
+inspect_k3s_policy_plane
+```
+
+Nei primi tre stati OFF tutte le 18 connessioni devono riuscire. I log dei tre
+nodi non devono mostrare l'avvio del controller e non devono comparire le
+strutture policy-specifiche osservate nel caso ON. Kubernetes ha accettato gli
+oggetti NetworkPolicy, ma manca il componente che li traduce nel data plane.
 
 Per rendere confrontabili gli snapshot dei tre stati, salvare integralmente
 gli output dei comandi mostrati e documentare qualunque normalizzazione dei
-campi effimeri prima di usare un confronto byte per byte. Prima del cleanup,
-rimuovere le due NetworkPolicy e verificare nuovamente `allow-all`:
+campi effimeri prima di usare un confronto byte per byte.
+
+#### Restore — ancora 6/6
+
+Rimuovere le policy e verificare un'ultima volta la baseline. Nel caso OFF non
+invochiamo il gate del caso ON, perché le strutture che esso attende devono
+restare assenti; la matrice viene comunque eseguita una sola volta:
 
 ```bash
 kubectl --context "$TESI_CONTEXT" delete \
   -f manifests/cni/common/allow-client-to-http-servers.yaml \
-  --ignore-not-found &&
+  --ignore-not-found
 kubectl --context "$TESI_CONTEXT" delete \
   -f manifests/cni/common/default-deny-ingress.yaml \
-  --ignore-not-found &&
-run_policy_matrix allow-all &&
+  --ignore-not-found
+```
+
+Dopo la rimozione API, eseguire la matrice finale e gli observer:
+
+```bash
+run_policy_matrix allow-all
 inspect_k3s_policy_plane
 ```
 
-La rimozione successiva elimina il cluster dedicato.
+Eliminare esclusivamente il cluster OFF e controllare che entrambi i cluster
+E02 e i relativi listener non siano più presenti:
 
 ```bash
 k3d cluster delete tesi-e02-flannel-netpol-off
 k3d cluster list
 ss -ltn 'sport = :6446 or sport = :6447'
 ```
+
+### 9.3 Sintesi causale
+
+```text
+Controller ON:
+NetworkPolicy API
+→ chain iptables/IPSet
+→ traffico 6/6 → 0/6 → 4/6 → 6/6
+
+Controller OFF:
+NetworkPolicy API presente
+→ strutture di enforcement assenti
+→ traffico 6/6 → 6/6 → 6/6 → 6/6
+```
+
+Il confronto controllato mostra quindi che, nella configurazione K3s studiata,
+Flannel continua a fornire la rete Pod in entrambi i cluster, mentre
+l'enforcement delle NetworkPolicy dipende dal controller K3s basato su
+kube-router e dalle strutture iptables/IPSet che esso crea.
 
 ## 10. E10 — Calico VXLAN con data plane Linux
 
