@@ -1177,6 +1177,12 @@ kube-router e dalle strutture iptables/IPSet che esso crea.
 
 ## 10. E10 — Calico VXLAN con data plane Linux
 
+E10 sostituisce Flannel con Calico 3.32.1 nel profilo VXLAN con data plane
+Linux iptables. Osserveremo separatamente networking Pod, forwarding dei
+Service e NetworkPolicy: `cali*` collega i workload al nodo,
+`vxlan.calico` trasporta il traffico inter-node, kube-proxy gestisce i Service
+studiati e Felix traduce lo stato Calico e le policy nel data plane del nodo.
+
 Questo è il punto di ingresso E10 anche in una nuova shell:
 
 ```bash
@@ -1231,186 +1237,53 @@ helm lint "$CALICO_OPERATOR_CHART"
 bash -n scripts/cni/calico/pin-tigera-operator-image.sh
 ```
 
-Gli hash devono coincidere esattamente con i checksum attesi.
-In caso contrario non installare i chart: una nuova pubblicazione con la
-stessa versione non può essere assunta equivalente. Prima di creare il
-cluster controlliamo inoltre rendering, valori finali e pin dell'immagine
-operator.
+Gli hash devono coincidere esattamente con i checksum attesi. In caso contrario
+non installare i chart: una nuova pubblicazione con la stessa versione non può
+essere assunta equivalente.
+
+Prima di creare il cluster renderizziamo separatamente CRD e Tigera Operator.
+Il secondo comando usa i values pubblici, esclude gli hook e applica il
+post-renderer che sostituisce l'immagine tagged dell'operator con il digest
+`linux/amd64` bloccato:
 
 ```bash
 export CALICO_RENDER_DIR="$(mktemp -d)"
 export CALICO_OPERATOR_RENDERED="$CALICO_RENDER_DIR/tigera-operator-rendered.yaml"
 
-render_calico_static() {
-  local AWK_RC
-  local FILTER_RC
-  local PINNED_IMAGE_COUNT
-  local PINNED_OPERATOR_IMAGE='quay.io/tigera/operator@sha256:9ca16aacd5676df68535e08e77529f6c1988ffecbff451e0ff5777e1b126dd91'
-  local TAGGED_OPERATOR_IMAGE='quay.io/tigera/operator:v1.42.3'
+helm template calico-crds "$CALICO_CRD_CHART" \
+  --output-dir "$CALICO_RENDER_DIR"
 
-  if ! helm template calico-crds "$CALICO_CRD_CHART" \
-      --output-dir "$CALICO_RENDER_DIR"
-  then
-    printf 'ERROR: rendering statico delle CRD Calico fallito.\n' >&2
-    return 1
-  fi
-
-  if ! helm template calico "$CALICO_OPERATOR_CHART" \
-      --namespace tigera-operator \
-      --values manifests/cni/calico/tigera-operator-values.yaml \
-      --no-hooks \
-      --post-renderer scripts/cni/calico/pin-tigera-operator-image.sh \
-      >"$CALICO_OPERATOR_RENDERED"
-  then
-    printf 'ERROR: rendering statico Calico fallito.\n' >&2
-    return 1
-  fi
-  if [[ ! -s "$CALICO_OPERATOR_RENDERED" ]]
-  then
-    printf 'FAIL: rendering Tigera Operator vuoto: %s.\n' \
-      "$CALICO_OPERATOR_RENDERED" >&2
-    return 1
-  fi
-
-  if PINNED_IMAGE_COUNT="$(awk -v expected="$PINNED_OPERATOR_IMAGE" '
-      $1 == "image:" && $2 == expected { count++ }
-      END { print count + 0 }
-    ' "$CALICO_OPERATOR_RENDERED")"
-  then
-    AWK_RC=0
-  else
-    AWK_RC=$?
-  fi
-  if [[ "$AWK_RC" -ne 0 ]]
-  then
-    printf 'ERROR: parser immagine operator fallito (awk rc=%s).\n' \
-      "$AWK_RC" >&2
-    return 1
-  fi
-  if [[ "$PINNED_IMAGE_COUNT" -ne 1 ]]
-  then
-    printf 'FAIL: attesa una immagine Tigera Operator pinned, trovate %s.\n' \
-      "$PINNED_IMAGE_COUNT" >&2
-    return 1
-  fi
-
-  if grep -F -n "$TAGGED_OPERATOR_IMAGE" "$CALICO_OPERATOR_RENDERED"
-  then
-    printf 'FAIL: immagine Tigera Operator tagged ancora presente.\n' >&2
-    return 1
-  else
-    FILTER_RC=$?
-  fi
-  if [[ "$FILTER_RC" -gt 1 ]]
-  then
-    printf 'ERROR: filtro immagine operator tagged fallito (grep rc=%s).\n' \
-      "$FILTER_RC" >&2
-    return 1
-  fi
-
-  if awk '
-      $1 == "image:" {
-        image=$2
-        gsub(/^"|"$/, "", image)
-        if (image ~ /:latest(@sha256:[[:xdigit:]]+)?$/) { found=1 }
-      }
-      END { exit !found }
-    ' "$CALICO_OPERATOR_RENDERED"
-  then
-    AWK_RC=0
-  else
-    AWK_RC=$?
-  fi
-  case "$AWK_RC" in
-    0)
-      printf 'FAIL: immagine con tag latest inattesa nel rendering Calico.\n' >&2
-      return 1
-      ;;
-    1) ;;
-    *)
-      printf 'ERROR: parser tag image fallito (awk rc=%s).\n' \
-        "$AWK_RC" >&2
-      return 1
-      ;;
-  esac
-
-  if awk '
-      function inspect_document(lower_name) {
-        lower_name=tolower(object_name)
-        if (object_kind != "" && \
-            lower_name ~ /(^|[-.])(goldmane|whisker)([-.]|$)/) {
-          printf "oggetto inatteso: kind=%s metadata.name=%s\n", \
-            object_kind, object_name > "/dev/stderr"
-          found=1
-        }
-      }
-      function reset_document() {
-        object_kind=""
-        object_name=""
-        in_metadata=0
-        metadata_child_indent=0
-      }
-      BEGIN { reset_document() }
-      /^---[[:space:]]*$/ {
-        inspect_document()
-        reset_document()
-        next
-      }
-      /^kind:[[:space:]]*/ {
-        object_kind=$0
-        sub(/^kind:[[:space:]]*/, "", object_kind)
-        next
-      }
-      /^metadata:[[:space:]]*$/ {
-        in_metadata=1
-        metadata_child_indent=0
-        next
-      }
-      /^[^[:space:]#][^:]*:/ { in_metadata=0 }
-      in_metadata && /^[[:space:]]+[^[:space:]#][^:]*:/ {
-        current_indent=match($0, /[^[:space:]]/) - 1
-        if (metadata_child_indent == 0 || \
-            current_indent < metadata_child_indent) {
-          metadata_child_indent=current_indent
-        }
-        if (current_indent == metadata_child_indent && \
-            $0 ~ /^[[:space:]]+name:[[:space:]]*/) {
-          object_name=$0
-          sub(/^[[:space:]]+name:[[:space:]]*/, "", object_name)
-          gsub(/^"|"$/, "", object_name)
-        }
-      }
-      END {
-        inspect_document()
-        exit !found
-      }
-    ' "$CALICO_OPERATOR_RENDERED"
-  then
-    AWK_RC=0
-  else
-    AWK_RC=$?
-  fi
-  case "$AWK_RC" in
-    0)
-      printf 'FAIL: componente Goldmane/Whisker inatteso nel rendering Calico.\n' >&2
-      return 1
-      ;;
-    1) ;;
-    *)
-      printf 'ERROR: parser oggetti Calico fallito (awk rc=%s).\n' \
-        "$AWK_RC" >&2
-      return 1
-      ;;
-  esac
-
-  printf 'PASS: operator pinned; tag latest e componenti Goldmane/Whisker assenti.\n'
-}
-
-render_calico_static
+helm template calico "$CALICO_OPERATOR_CHART" \
+  --namespace tigera-operator \
+  --values manifests/cni/calico/tigera-operator-values.yaml \
+  --no-hooks \
+  --post-renderer scripts/cni/calico/pin-tigera-operator-image.sh \
+  >"$CALICO_OPERATOR_RENDERED"
 ```
 
-Non devono esserci tag `latest` né workload Goldmane o Whisker. Il
-Deployment operator deve usare il digest bloccato dal post-renderer.
+Elencare i manifest CRD prodotti e le parti principali del rendering operator:
+
+```bash
+find "$CALICO_RENDER_DIR" -maxdepth 6 -type f -print
+grep -nE '^kind:|^[[:space:]]+name:|^[[:space:]]+image:' \
+  "$CALICO_OPERATOR_RENDERED"
+grep -nF \
+  'quay.io/tigera/operator@sha256:9ca16aacd5676df68535e08e77529f6c1988ffecbff451e0ff5777e1b126dd91' \
+  "$CALICO_OPERATOR_RENDERED"
+```
+
+Il Deployment operator deve mostrare esattamente il digest bloccato. I
+controlli seguenti sono ispezioni negative: l'output deve restare vuoto.
+
+```bash
+grep -nE 'quay\.io/tigera/operator:v1\.42\.3|image:.*:latest' \
+  "$CALICO_OPERATOR_RENDERED" || true
+grep -niE '^[[:space:]]+name:[[:space:]]+.*(goldmane|whisker)' \
+  "$CALICO_OPERATOR_RENDERED" || true
+```
+
+Non procedere se ricompaiono l'immagine tagged, un tag `latest` oppure workload
+Goldmane o Whisker.
 
 ### 10.2 Creazione del cluster e installazione
 
@@ -1471,39 +1344,29 @@ fermarsi e conservare lo stato per la diagnosi.
 
 ### 10.3 Verifica di Calico, CNI e IPAM
 
+Prima di generare traffico aspettiamo che Calico abbia completato la
+convergenza. I nodi devono essere Ready e i quattro `TigeraStatus` necessari
+devono esistere, risultare `Available=True` e `Degraded=False`.
+
 ```bash
-wait_for_tigera_statuses() {
-  local STATUS
-
-  for STATUS in apiserver calico ippools tiers
-  do
-    if ! kubectl --context "$TESI_CONTEXT" wait \
-        --for=create "tigerastatus/$STATUS" --timeout=300s
-    then
-      printf 'ERROR: TigeraStatus %s non creato entro il timeout.\n' \
-        "$STATUS" >&2
-      return 1
-    fi
-    if ! kubectl --context "$TESI_CONTEXT" wait \
-        --for=condition=Available=True "tigerastatus/$STATUS" --timeout=300s
-    then
-      printf 'ERROR: TigeraStatus %s non è diventato Available=True.\n' \
-        "$STATUS" >&2
-      return 1
-    fi
-    if ! kubectl --context "$TESI_CONTEXT" wait \
-        --for=condition=Degraded=False "tigerastatus/$STATUS" --timeout=300s
-    then
-      printf 'ERROR: TigeraStatus %s è rimasto Degraded.\n' \
-        "$STATUS" >&2
-      return 1
-    fi
-  done
-}
-
 kubectl --context "$TESI_CONTEXT" wait \
-  --for=condition=Ready node --all --timeout=600s &&
-wait_for_tigera_statuses && {
+  --for=condition=Ready node --all --timeout=600s
+
+for status in apiserver calico ippools tiers
+do
+  kubectl --context "$TESI_CONTEXT" wait \
+    --for=create "tigerastatus/$status" --timeout=300s
+  kubectl --context "$TESI_CONTEXT" wait \
+    --for=condition=Available=True "tigerastatus/$status" --timeout=300s
+  kubectl --context "$TESI_CONTEXT" wait \
+    --for=condition=Degraded=False "tigerastatus/$status" --timeout=300s
+done
+```
+
+Se una condizione non viene raggiunta entro il timeout, non proseguire. Dopo il
+completamento dei wait, ispezionare componenti, configurazione e risorse IPAM:
+
+```bash
 kubectl --context "$TESI_CONTEXT" get nodes -o wide
 kubectl --context "$TESI_CONTEXT" get pods -A -o wide
 kubectl --context "$TESI_CONTEXT" get tigerastatus
@@ -1519,96 +1382,107 @@ kubectl --context "$TESI_CONTEXT" get \
   blockaffinities.crd.projectcalico.org -o yaml
 kubectl --context "$TESI_CONTEXT" get \
   ipamblocks.crd.projectcalico.org -o yaml
-}
 ```
 
 Tutti i `TigeraStatus` devono essere disponibili e non degraded. Verificare
 IPPool `10.42.0.0/16`, blocchi `/26`, VXLAN sempre attivo, BGP disabilitato e
 immagini per digest.
 
-Ispezionare i tre namespace nodo:
+Nel profilo E10 Calico sostituisce il networking Flannel. Invece di `cni0` e
+`flannel.1`, i workload sono collegati tramite interfacce host-side `cali*` e
+il traffico inter-node usa `vxlan.calico`. Ispezionare direttamente i tre
+namespace nodo:
+
+```text
+Pod → cali* → route del nodo → vxlan.calico → nodo remoto → cali* → Pod
+```
 
 ```bash
-NODE_INVENTORY_FAILED=0
-for NODE in \
+for node in \
   k3d-tesi-e10-calico-vxlan-server-0 \
   k3d-tesi-e10-calico-vxlan-agent-0 \
   k3d-tesi-e10-calico-vxlan-agent-1
 do
-  docker exec "$NODE" ip -br link || NODE_INVENTORY_FAILED=1
-  docker exec "$NODE" ip route || NODE_INVENTORY_FAILED=1
-  docker exec "$NODE" ip -details link show vxlan.calico || \
-    NODE_INVENTORY_FAILED=1
-  docker exec "$NODE" sh -c \
-    'ls -la /etc/cni/net.d && sed -n "1,240p" /etc/cni/net.d/10-calico.conflist' || \
-    NODE_INVENTORY_FAILED=1
+  docker exec "$node" ip -br link
+  docker exec "$node" ip route
+  docker exec "$node" ip -details link show vxlan.calico
+  docker exec "$node" sh -c \
+    'ls -la /etc/cni/net.d && sed -n "1,240p" /etc/cni/net.d/10-calico.conflist'
 done
 
-if [[ "$NODE_INVENTORY_FAILED" -ne 0 ]]
-then
-  printf 'ERROR: inventario data plane E10 incompleto.\n' >&2
-  unset NODE_INVENTORY_FAILED
-  false
-elif ! docker exec k3d-tesi-e10-calico-vxlan-agent-0 true
-then
-  unset NODE_INVENTORY_FAILED
-  printf 'ERROR: nodo E10 non accessibile; impossibile verificare cni0.\n' >&2
-  false
-else
-  unset NODE_INVENTORY_FAILED
-  if docker exec k3d-tesi-e10-calico-vxlan-agent-0 \
-      test -e /sys/class/net/cni0
-  then
-    printf 'FAIL: cni0 non atteso in E10\n' >&2
-    false
-  else
-    CNI0_RC=$?
-    if [[ "$CNI0_RC" -eq 1 ]]
-    then
-      unset CNI0_RC
-      printf 'PASS: cni0 assente come atteso\n'
-    else
-      printf 'ERROR: verifica cni0 fallita (docker exec rc=%s).\n' \
-        "$CNI0_RC" >&2
-      unset CNI0_RC
-      false
-    fi
-  fi
-fi
+docker exec k3d-tesi-e10-calico-vxlan-agent-0 \
+  test ! -e /sys/class/net/cni0
 ```
 
-Il controllo deve registrare `PASS` perché `cni0` non esiste. Le interfacce dei
-Pod sono `cali*`, il tunnel è `vxlan.calico`, con UDP 4789 e VNI 4096.
+L'ultimo comando deve terminare senza output: conferma che `cni0` non esiste.
+Le interfacce dei Pod sono `cali*`; `vxlan.calico` deve riportare VNI 4096 e
+usa UDP 4789 nel profilo studiato.
 
 ### 10.4 Workload, percorso e cattura
 
-Applicare il workload comune, eseguire la matrice baseline e rileggere gli
-indirizzi:
+Applicare il workload comune e controllare il placement. `client` e
+`server-a` devono trovarsi su `agent-0`, mentre `server-b` deve trovarsi su
+`agent-1`:
 
 ```bash
-deploy_common_workload &&
-run_policy_matrix allow-all &&
-_tesi_export_runtime CLIENT_IP ipv4 kubectl --context "$TESI_CONTEXT" \
-  -n net-lab get pod client -o jsonpath='{.status.podIP}' &&
-_tesi_export_runtime SERVER_A_IP ipv4 kubectl --context "$TESI_CONTEXT" \
-  -n net-lab get pod server-a -o jsonpath='{.status.podIP}' &&
-_tesi_export_runtime SERVER_B_IP ipv4 kubectl --context "$TESI_CONTEXT" \
-  -n net-lab get pod server-b -o jsonpath='{.status.podIP}' &&
-_tesi_export_runtime SERVICE_IP ipv4 kubectl --context "$TESI_CONTEXT" \
-  -n net-lab get svc servers -o jsonpath='{.spec.clusterIP}' &&
-kubectl --context "$TESI_CONTEXT" get pods -n net-lab -o wide &&
-docker exec k3d-tesi-e10-calico-vxlan-agent-0 ip -br link &&
-docker exec k3d-tesi-e10-calico-vxlan-agent-0 ip route &&
-docker exec k3d-tesi-e10-calico-vxlan-agent-1 ip -br link &&
+deploy_common_workload
+kubectl --context "$TESI_CONTEXT" get pods -n net-lab -o wide
+```
+
+La prima matrice verifica la connettività del workload prima degli esperimenti
+Service e NetworkPolicy:
+
+```bash
+run_policy_matrix allow-all
+```
+
+Rilevare gli indirizzi correnti e osservare link e route sui due agent:
+
+```bash
+CLIENT_IP="$(kubectl --context "$TESI_CONTEXT" -n net-lab \
+  get pod client -o jsonpath='{.status.podIP}')"
+SERVER_A_IP="$(kubectl --context "$TESI_CONTEXT" -n net-lab \
+  get pod server-a -o jsonpath='{.status.podIP}')"
+SERVER_B_IP="$(kubectl --context "$TESI_CONTEXT" -n net-lab \
+  get pod server-b -o jsonpath='{.status.podIP}')"
+SERVICE_IP="$(kubectl --context "$TESI_CONTEXT" -n net-lab \
+  get svc servers -o jsonpath='{.spec.clusterIP}')"
+
+printf 'client=%s server-a=%s server-b=%s service=%s\n' \
+  "$CLIENT_IP" "$SERVER_A_IP" "$SERVER_B_IP" "$SERVICE_IP"
+
+docker exec k3d-tesi-e10-calico-vxlan-agent-0 ip -br link
+docker exec k3d-tesi-e10-calico-vxlan-agent-0 ip route
+docker exec k3d-tesi-e10-calico-vxlan-agent-1 ip -br link
 docker exec k3d-tesi-e10-calico-vxlan-agent-1 ip route
 ```
 
+Le quattro variabili devono mostrare indirizzi IPv4 non vuoti. Per collegare
+ciascun Pod all'interfaccia host-side, chiedere al kernel quale route usa verso
+il Pod locale:
+
+```bash
+docker exec k3d-tesi-e10-calico-vxlan-agent-0 \
+  ip -o route get "$CLIENT_IP"
+docker exec k3d-tesi-e10-calico-vxlan-agent-0 \
+  ip -o route get "$SERVER_A_IP"
+docker exec k3d-tesi-e10-calico-vxlan-agent-1 \
+  ip -o route get "$SERVER_B_IP"
+
+docker exec k3d-tesi-e10-calico-vxlan-agent-0 \
+  ip -o route get "$SERVER_B_IP"
+```
+
+Le prime tre route devono selezionare un'interfaccia `cali*`: è la veth
+host-side associata al workload locale. L'ultima query parte da `agent-0` verso
+il Pod remoto su `agent-1` e mostra il percorso inter-node attraverso la route
+Calico e `vxlan.calico`.
+
 Nel Kubernetes API datastore usato da E10, WorkloadEndpoint resta il modello
-logico Calico dell'endpoint, ma gli endpoint dei workload sono basati sui Pod
-Kubernetes e non è esposta una CRD WorkloadEndpoint interrogabile con il
-comando `kubectl` precedentemente pubblicato. La correlazione osservabile usa
-quindi Pod IP e nodo, interfacce `cali*`, route, IPAMBlock e BlockAffinity.
-Il percorso intra-node è routing L3 fra veth, senza bridge.
+logico Calico dell'endpoint, ma non è esposta una CRD WorkloadEndpoint
+interrogabile con `kubectl`. La correlazione osservabile usa quindi Pod IP,
+nodo, route `cali*`, IPAMBlock e BlockAffinity. Il percorso intra-node è routing
+L3 fra veth, senza bridge.
 
 Per la cattura inter-node, rileggere PID e underlay e usare un GET singolo.
 Come in E01, entriamo nel namespace del nodo sorgente perché contiene
@@ -1618,18 +1492,33 @@ Come in E01, entriamo nel namespace del nodo sorgente perché contiene
 ```bash
 export SOURCE_NODE='k3d-tesi-e10-calico-vxlan-agent-0'
 export DESTINATION_NODE='k3d-tesi-e10-calico-vxlan-agent-1'
-_tesi_export_runtime SOURCE_PID positive-integer docker inspect \
-  -f '{{.State.Pid}}' "$SOURCE_NODE" &&
-_tesi_export_runtime SOURCE_UNDERLAY ipv4 docker inspect \
+SOURCE_PID="$(docker inspect -f '{{.State.Pid}}' "$SOURCE_NODE")"
+SOURCE_UNDERLAY="$(docker inspect \
   -f '{{with index .NetworkSettings.Networks "k3d-tesi-e10-calico-vxlan"}}{{.IPAddress}}{{end}}' \
-  "$SOURCE_NODE" &&
-_tesi_export_runtime DESTINATION_UNDERLAY ipv4 docker inspect \
+  "$SOURCE_NODE")"
+DESTINATION_UNDERLAY="$(docker inspect \
   -f '{{with index .NetworkSettings.Networks "k3d-tesi-e10-calico-vxlan"}}{{.IPAddress}}{{end}}' \
-  "$DESTINATION_NODE" &&
-export CAPTURE_DIR="$(mktemp -d)" &&
-sudo -v &&
-TCPDUMP_FILTER="((host $CLIENT_IP and host $SERVER_B_IP and tcp port 8080) or (host $SOURCE_UNDERLAY and host $DESTINATION_UNDERLAY and udp port 4789))" &&
-if run_dual_view_capture \
+  "$DESTINATION_NODE")"
+CAPTURE_DIR="$(mktemp -d)"
+
+printf 'pid=%s source_underlay=%s destination_underlay=%s capture_dir=%s\n' \
+  "$SOURCE_PID" "$SOURCE_UNDERLAY" "$DESTINATION_UNDERLAY" "$CAPTURE_DIR"
+```
+
+Il PID deve essere positivo e gli underlay devono essere indirizzi IPv4
+correnti distinti. La cattura nel namespace del nodo sorgente usa `-i any` per
+mostrare due viste dello stesso GET `client → server-b`:
+
+- traffico inner con IP Pod e TCP/8080;
+- traffico outer fra gli underlay con UDP/4789.
+
+Il filtro e il comando `tcpdump` restano espliciti; l'helper orchestra un solo
+stimolo HTTP e verifica entrambe le viste:
+
+```bash
+sudo -v
+TCPDUMP_FILTER="((host $CLIENT_IP and host $SERVER_B_IP and tcp port 8080) or (host $SOURCE_UNDERLAY and host $DESTINATION_UNDERLAY and udp port 4789))"
+run_dual_view_capture \
   E10 \
   "$CAPTURE_DIR/calico-inter-node.log" \
   "$CAPTURE_DIR/http-client.log" \
@@ -1641,22 +1530,25 @@ if run_dual_view_capture \
     /usr/bin/nsenter --target "$SOURCE_PID" --net \
     /usr/bin/tcpdump -i any -tttt -nn -e -vv -A -s 0 -l \
     "$TCPDUMP_FILTER"
-then
-  sed -n '1,260p' "$CAPTURE_DIR/calico-inter-node.log" &&
-    cat "$CAPTURE_DIR/http-client.log"
-else
-  false
-fi
 ```
 
-Correlare gli IP dei Pod all'interno e gli IP underlay all'esterno; cercare
-UDP 4789, `vxlan.calico` e VNI 4096. Per la cattura sono accettati exit code
-`0`, `124` o `143`; gli altri indicano un errore da diagnosticare.
+Se l'helper termina con errore, non proseguire. In caso di successo, leggere
+cattura e risposta HTTP:
+
+```bash
+sed -n '1,260p' "$CAPTURE_DIR/calico-inter-node.log"
+cat "$CAPTURE_DIR/http-client.log"
+```
+
+Correlare gli IP dei Pod nella vista inner e gli IP underlay nella vista outer;
+cercare `vxlan.calico`, UDP 4789 e VNI 4096. La risposta separata deve
+confermare che il GET ha raggiunto `server-b`. La gestione dei codici di
+terminazione e dei processi `tcpdump` resta nell'helper validato.
 
 `CAPTURE_DIR` va conservata in caso di errore. Dopo un esito positivo può
 essere rimossa con `rm -rf -- "$CAPTURE_DIR"`.
 
-### 10.5 Service e NetworkPolicy
+### 10.5 Attribuzione del Service a kube-proxy
 
 Per attribuire il Service verifichiamo separatamente i due backend Ready, poi
 confrontiamo catene e contatori kube-proxy prima e dopo nuove connessioni al
@@ -1683,16 +1575,24 @@ e un delta positivo viene richiesto soltanto per i backend realmente osservati.
 ```bash
 export TESI_CONTEXT='k3d-tesi-e10-calico-vxlan'
 export TESI_NODE_PREFIX='k3d-tesi-e10-calico-vxlan'
-_tesi_export_runtime SERVER_A_IP ipv4 kubectl --context "$TESI_CONTEXT" \
-  -n net-lab get pod server-a -o jsonpath='{.status.podIP}' &&
-_tesi_export_runtime SERVER_B_IP ipv4 kubectl --context "$TESI_CONTEXT" \
-  -n net-lab get pod server-b -o jsonpath='{.status.podIP}' &&
-_tesi_export_runtime SERVICE_IP ipv4 kubectl --context "$TESI_CONTEXT" \
-  -n net-lab get svc servers -o jsonpath='{.spec.clusterIP}' &&
-export CALICO_AGENT0="${TESI_NODE_PREFIX}-agent-0" &&
-export SERVICE_DIR="$(mktemp -d)" &&
+SERVER_A_IP="$(kubectl --context "$TESI_CONTEXT" -n net-lab \
+  get pod server-a -o jsonpath='{.status.podIP}')"
+SERVER_B_IP="$(kubectl --context "$TESI_CONTEXT" -n net-lab \
+  get pod server-b -o jsonpath='{.status.podIP}')"
+SERVICE_IP="$(kubectl --context "$TESI_CONTEXT" -n net-lab \
+  get svc servers -o jsonpath='{.spec.clusterIP}')"
+export CALICO_AGENT0="${TESI_NODE_PREFIX}-agent-0"
+export SERVICE_DIR="$(mktemp -d)"
+
+printf 'server-a=%s server-b=%s service=%s service_dir=%s\n' \
+  "$SERVER_A_IP" "$SERVER_B_IP" "$SERVICE_IP" "$SERVICE_DIR"
 run_e10_service_attribution
 ```
+
+Le tre variabili IP devono essere non vuote. L'helper si arresta se gli
+EndpointSlice non espongono esattamente i due backend Ready; esegue poi una
+sola batteria di **sei** nuove connessioni HTTP fra gli snapshot `before` e
+`after`. Non rilanciare il test per ottenere una distribuzione diversa.
 
 La distribuzione delle risposte fra i backend non è un criterio di successo.
 Per i flussi realmente osservati, catene `KUBE-SVC`/`KUBE-SEP`, Destination
@@ -1701,13 +1601,25 @@ l'attribuzione a kube-proxy iptables. Le evidence originali E10 registrarono
 due risposte `server-a`; quel risultato è coerente con la selezione
 probabilistica e non indebolisce l'attribuzione basata sui contatori.
 
-Per le policy vogliamo correlare il risultato applicativo con il lavoro di
-Felix. Nei log cerchiamo calcolo di policy, selector e IPSet; nel kernel
-cerchiamo gli insiemi `cali*`, le catene iptables e i loro contatori. Il gate
-`wait_for_calico_policy_convergence` attende nei dump iptables i commenti
-`KubernetesNetworkPolicy net-lab/<nome> ingress` prodotti da Felix,
-ricava dinamicamente i nomi delle chain e richiede i relativi jump dalle
-`cali-tw-*` associate via route ai Pod selezionati, senza codificare hash.
+### 10.6 NetworkPolicy: risultato applicativo e piano Felix
+
+**Felix** è l'agente nel container `calico-node` che osserva lo stato desiderato
+di endpoint e policy e lo traduce negli artefatti del data plane del nodo. In
+questo profilo tali artefatti sono IPSet e catene iptables; non è
+`calico-kube-controllers` ad applicare direttamente la policy ai pacchetti.
+
+La relazione causale verificata è:
+
+```text
+NetworkPolicy API → Felix/calico-node → cali-pi-* e IPSet
+                                      → cali-tw-* del workload → traffico
+```
+
+Nei log cerchiamo calcolo di policy, selector e IPSet; nel kernel cerchiamo gli
+insiemi `cali*`, le catene iptables e i loro contatori. Il gate
+`wait_for_calico_policy_convergence` attende nei dump iptables il commento
+semantico `KubernetesNetworkPolicy net-lab/<nome> ingress`, ricava i nomi delle
+chain e verifica il linkage fino al Pod interessato senza codificare hash.
 
 La definizione è fornita da `scripts/cni/calico/e10-policy.sh`. Il modulo
 mantiene separati l'inventario descrittivo e il gate di linkage; gli
@@ -1728,27 +1640,48 @@ Per ciascun Pod il gate legge nodo e IP dall'API, risolve con
 `ip route get <Pod IP>` l'interfaccia host `cali*`, seleziona la chain
 esatta `cali-tw-<interfaccia>` e ne verifica il jump alla `cali-pi-*`
 identificata dal commento semantico della policy. Nessun hash o nome storico
-di chain viene assunto.
+di chain viene assunto. Il gate è read-only e non genera traffico workload.
 
-Eseguire poi i tre stati in ordine:
+Eseguire i quattro stati in ordine e una sola volta.
+
+#### Baseline: 6/6 connessioni consentite
 
 ```bash
-# Baseline: sei connessioni consentite
-run_policy_matrix allow-all &&
-inspect_calico_policy_plane &&
+run_policy_matrix allow-all
+inspect_calico_policy_plane
+```
 
-# Default deny: sei connessioni negate
-kubectl --context "$TESI_CONTEXT" apply \
-  -f manifests/cni/common/default-deny-ingress.yaml &&
-wait_for_calico_policy_convergence default-deny &&
-run_policy_matrix deny-all &&
-inspect_calico_policy_plane &&
+#### Default deny: 0/6 connessioni consentite
 
-# Allow selettiva: quattro consentite, due negate
+Applicare la policy e attendere che il linkage Felix sia osservabile:
+
+```bash
 kubectl --context "$TESI_CONTEXT" apply \
-  -f manifests/cni/common/allow-client-to-http-servers.yaml &&
-wait_for_calico_policy_convergence selective-allow &&
-run_policy_matrix selective-allow &&
+  -f manifests/cni/common/default-deny-ingress.yaml
+wait_for_calico_policy_convergence default-deny
+```
+
+Se il gate fallisce, fermarsi prima della matrice. Dopo il successo:
+
+```bash
+run_policy_matrix deny-all
+inspect_calico_policy_plane
+```
+
+#### Allow selettiva: 4/6 connessioni consentite
+
+La nuova policy ammette soltanto il client previsto verso i server HTTP:
+
+```bash
+kubectl --context "$TESI_CONTEXT" apply \
+  -f manifests/cni/common/allow-client-to-http-servers.yaml
+wait_for_calico_policy_convergence selective-allow
+```
+
+Se il gate fallisce, non eseguire traffico. Dopo il successo:
+
+```bash
+run_policy_matrix selective-allow
 inspect_calico_policy_plane
 ```
 
@@ -1757,26 +1690,42 @@ qualitativa da baseline a deny e allow selettiva. Il gate legge gli artefatti
 Felix senza generare traffico; gli esiti applicativi autorevoli restano 6/6
 consentiti, 6/6 negati e quindi 4/6 consentiti nella singola esecuzione della
 matrice per stato. L'enforcement osservato è attribuito al calculation graph e
-a Felix; `calico-kube-controllers` non va descritto come policy controller in
-questa configurazione Kubernetes Datastore.
+a Felix.
 
-Rimuovere infine entrambe le policy e richiedere il ripristino della baseline:
+#### Baseline ripristinata: 6/6 connessioni consentite
+
+Rimuovere entrambe le policy e attendere che il gate read-only non trovi più i
+linkage di policy:
 
 ```bash
 kubectl --context "$TESI_CONTEXT" delete \
   -f manifests/cni/common/allow-client-to-http-servers.yaml \
-  --ignore-not-found &&
+  --ignore-not-found
 kubectl --context "$TESI_CONTEXT" delete \
   -f manifests/cni/common/default-deny-ingress.yaml \
-  --ignore-not-found &&
-wait_for_calico_policy_convergence restored &&
-run_policy_matrix allow-all &&
+  --ignore-not-found
+wait_for_calico_policy_convergence restored
+```
+
+Se il gate fallisce, fermarsi. Dopo il successo:
+
+```bash
+run_policy_matrix allow-all
 inspect_calico_policy_plane
 ```
 
 L'attribuzione causale è valida soltanto se la matrice torna a 6/6 consentiti.
 
-### 10.6 Rimozione del cluster
+### 10.7 Interpretazione complessiva
+
+Le tre osservazioni non vanno confuse: route, `cali*` e `vxlan.calico`
+dimostrano il networking Pod; le catene `KUBE-*` e i loro delta attribuiscono
+il Service a kube-proxy; marker semantici, linkage `cali-tw-* → cali-pi-*` e
+matrici applicative attribuiscono l'enforcement delle NetworkPolicy a
+Calico/Felix. Ogni conclusione combina quindi stato Kubernetes, artefatto del
+data plane e risultato del traffico pertinente.
+
+### 10.8 Rimozione del cluster
 
 ```bash
 kubectl --context "$TESI_CONTEXT" get tigerastatus
